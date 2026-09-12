@@ -87,10 +87,39 @@ pub fn candidates(kind: ClientKind) -> Vec<PathBuf> {
             }
         }
         ClientKind::Hdos => {
+            if cfg!(target_os = "macos") {
+                paths.push(PathBuf::from(
+                    "/Applications/HDOS.app/Contents/Resources/hdos-launcher.jar",
+                ));
+                if let Some(home) = &home {
+                    paths.push(
+                        home.join("Applications/HDOS.app/Contents/Resources/hdos-launcher.jar"),
+                    );
+                }
+            }
+            if cfg!(windows) {
+                if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+                    let local = PathBuf::from(local);
+                    paths.push(local.join("HDOS").join("hdos-launcher.jar"));
+                    paths.push(
+                        local
+                            .join("Programs")
+                            .join("HDOS")
+                            .join("hdos-launcher.jar"),
+                    );
+                }
+                if let Some(pf) = std::env::var_os("ProgramFiles") {
+                    paths.push(PathBuf::from(pf).join("HDOS").join("hdos-launcher.jar"));
+                }
+            }
             if let Some(home) = &home {
+                paths.push(home.join(".local/share/HDOS/hdos-launcher.jar"));
+                paths.push(home.join(".local/share/hdos/hdos-launcher.jar"));
+                paths.push(home.join("hdos/hdos-launcher.jar"));
                 paths.push(home.join("hdos-launcher.jar"));
                 paths.push(home.join("Downloads/hdos-launcher.jar"));
             }
+            paths.push(PathBuf::from("/opt/HDOS/hdos-launcher.jar"));
         }
     }
     paths

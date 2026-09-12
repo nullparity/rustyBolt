@@ -152,6 +152,41 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       color: var(--text-muted);
     }
 
+    .client-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .client-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0e0e11;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      gap: 12px;
+    }
+    .client-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .client-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .client-path {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -374,6 +409,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: 500;
+      flex-shrink: 0;
     }
     .tag-ok {
       background: var(--patina-dim);
@@ -434,57 +470,42 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
     <div class="card">
       <div class="card-header">
         <div class="card-title-group">
-          <div class="card-title">Client Detection</div>
-          <div class="card-desc">Jar lookup and override paths for installed game clients.</div>
+          <div class="card-title">Game Clients</div>
+          <div class="card-desc">Installed game clients detected on this system.</div>
         </div>
       </div>
       
-      <div class="grid-2">
-        <div style="border-right: 1px solid var(--card-border); padding-right: 16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:0.85rem; font-weight:600;">RuneLite</span>
-            <span id="runelite-status" class="tag tag-warn">Checking...</span>
+      <div class="client-list">
+        <div class="client-item">
+          <div class="client-meta">
+            <span class="client-name">RuneLite</span>
+            <span id="runelite-path" class="client-path">Checking...</span>
           </div>
-
-          <div class="toggle-row" style="padding-top:4px;">
-            <div class="toggle-text">
-              <span class="toggle-label">Custom Jar</span>
-              <span class="toggle-sub">Override detected RuneLite.jar</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="rl-use-custom" onchange="onToggleCustomJar()">
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="form-group" id="rl-custom-group" style="display:none; margin-top:8px;">
-            <label for="rl-custom-jar">Jar Path</label>
-            <input type="text" id="rl-custom-jar" class="font-mono" placeholder="/path/to/RuneLite.jar" oninput="markDirty()">
-          </div>
-
-          <div class="form-group" style="margin-top:10px;">
-            <label for="rl-template">Launch Template</label>
-            <input type="text" id="rl-template" class="font-mono" placeholder="%command% (default)" oninput="markDirty()">
-          </div>
+          <span id="runelite-status" class="tag tag-warn">Checking</span>
         </div>
 
-        <div style="padding-left: 8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:0.85rem; font-weight:600;">HDOS</span>
-            <span id="hdos-status" class="tag tag-warn">Checking...</span>
+        <div class="client-item">
+          <div class="client-meta">
+            <span class="client-name">HDOS</span>
+            <span id="hdos-path" class="client-path">Checking...</span>
           </div>
-
-          <div class="form-group" style="margin-top:10px;">
-            <label for="hdos-jar">Launcher Jar Path</label>
-            <input type="text" id="hdos-jar" class="font-mono" placeholder="/path/to/hdos-launcher.jar" oninput="markDirty()">
-          </div>
-
-          <div class="form-group">
-            <label for="hdos-template">Launch Template</label>
-            <input type="text" id="hdos-template" class="font-mono" placeholder="%command% (default)" oninput="markDirty()">
-          </div>
+          <span id="hdos-status" class="tag tag-warn">Checking</span>
         </div>
       </div>
+
+      <details style="margin-top: 12px;">
+        <summary style="font-size: 0.75rem; color: var(--text-subtle); cursor: pointer; user-select: none;">Path overrides</summary>
+        <div class="grid-2" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border);">
+          <div class="form-group">
+            <label for="rl-custom-jar">RuneLite Jar Path</label>
+            <input type="text" id="rl-custom-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+          </div>
+          <div class="form-group">
+            <label for="hdos-jar">HDOS Jar Path</label>
+            <input type="text" id="hdos-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="card">
@@ -494,82 +515,126 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           <div class="card-desc">Low-latency garbage collection and memory sizing for RuneLite.</div>
         </div>
         <label class="switch">
-          <input type="checkbox" id="tuning-enabled" onchange="markDirty()">
+          <input type="checkbox" id="tuning-enabled" onchange="onToggleTuning()">
           <span class="slider"></span>
         </label>
       </div>
 
-      <div class="form-group">
-        <label>Garbage Collector</label>
-        <div class="segmented">
-          <button type="button" class="seg-btn" data-gc="z" onclick="setGc('z')">ZGC (Generational)</button>
-          <button type="button" class="seg-btn" data-gc="g1" onclick="setGc('g1')">G1</button>
-          <button type="button" class="seg-btn" data-gc="parallel" onclick="setGc('parallel')">Parallel</button>
-          <button type="button" class="seg-btn" data-gc="default" onclick="setGc('default')">Default</button>
-        </div>
-      </div>
-
-      <div class="grid-2" style="margin-top: 14px;">
+      <div id="tuning-body">
         <div class="form-group">
-          <label for="heap-min">Initial Heap (-Xms)</label>
-          <input type="text" id="heap-min" class="font-mono" placeholder="2g" oninput="markDirty()">
+          <label>Garbage Collector</label>
+          <div class="segmented">
+            <button type="button" class="seg-btn" data-gc="z" onclick="setGc('z')">ZGC (Generational)</button>
+            <button type="button" class="seg-btn" data-gc="g1" onclick="setGc('g1')">G1</button>
+            <button type="button" class="seg-btn" data-gc="parallel" onclick="setGc('parallel')">Parallel</button>
+            <button type="button" class="seg-btn" data-gc="default" onclick="setGc('default')">Default</button>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="heap-max">Maximum Heap (-Xmx)</label>
-          <input type="text" id="heap-max" class="font-mono" placeholder="2g" oninput="markDirty()">
-        </div>
-      </div>
 
-      <div style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 4px;">
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label">Compact Object Headers</span>
-            <span class="toggle-sub">-XX:+UseCompactObjectHeaders (JDK 24+)</span>
+        <div class="grid-2" style="margin-top: 14px;">
+          <div class="form-group">
+            <label for="heap-min">Initial Heap (-Xms)</label>
+            <input type="text" id="heap-min" class="font-mono" placeholder="2g" oninput="markDirty()">
           </div>
-          <label class="switch">
-            <input type="checkbox" id="compact-headers" onchange="markDirty()">
-            <span class="slider"></span>
-          </label>
+          <div class="form-group">
+            <label for="heap-max">Maximum Heap (-Xmx)</label>
+            <input type="text" id="heap-max" class="font-mono" placeholder="2g" oninput="markDirty()">
+          </div>
         </div>
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label">String Deduplication</span>
-            <span class="toggle-sub">-XX:+UseStringDeduplication</span>
+
+        <div class="grid-2" style="margin-top: 14px;">
+          <div class="form-group">
+            <label for="launch-mode">Launch Mode (--launch-mode)</label>
+            <select id="launch-mode" onchange="markDirty()">
+              <option value="reflect">Reflect (Recommended)</option>
+              <option value="launcher">Launcher</option>
+              <option value="auto">Automatic</option>
+            </select>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="string-dedup" onchange="markDirty()">
-            <span class="slider"></span>
-          </label>
+          <div class="form-group">
+            <label for="hw-accel">Hardware Acceleration (--hw-accel)</label>
+            <select id="hw-accel" onchange="markDirty()">
+              <option value="metal">Metal (Recommended)</option>
+              <option value="opengl">OpenGL</option>
+              <option value="off">Off</option>
+              <option value="auto">Automatic</option>
+            </select>
+          </div>
         </div>
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label">Native Memory Access</span>
-            <span class="toggle-sub">--enable-native-access</span>
+
+        <div class="grid-2" style="margin-top: 14px;">
+          <div class="form-group">
+            <label for="direct-memory">Direct Memory (-XX:MaxDirectMemorySize)</label>
+            <input type="text" id="direct-memory" class="font-mono" placeholder="512m" oninput="markDirty()">
           </div>
-          <label class="switch">
-            <input type="checkbox" id="native-access" onchange="markDirty()">
-            <span class="slider"></span>
-          </label>
+          <div class="form-group">
+            <label for="metaspace">Metaspace (-XX:MaxMetaspaceSize)</label>
+            <input type="text" id="metaspace" class="font-mono" placeholder="1g" oninput="markDirty()">
+          </div>
         </div>
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label">Ahead-Of-Time Cache</span>
-            <span class="toggle-sub">Pre-loads classes on subsequent launches</span>
+
+        <div class="grid-2" style="margin-top: 14px;">
+          <div class="form-group">
+            <label for="code-cache">Code Cache (-XX:ReservedCodeCacheSize)</label>
+            <input type="text" id="code-cache" class="font-mono" placeholder="240m" oninput="markDirty()">
           </div>
-          <label class="switch">
-            <input type="checkbox" id="aot-cache" onchange="markDirty()">
-            <span class="slider"></span>
-          </label>
+          <div class="form-group">
+            <label for="native-memory">Native Memory Tracking (-XX:NativeMemoryTracking)</label>
+            <input type="text" id="native-memory" class="font-mono" placeholder="summary" oninput="markDirty()">
+          </div>
         </div>
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label">GC Diagnostic Logging</span>
-            <span class="toggle-sub">-Xlog:gc* into cache directory</span>
+
+        <div style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 4px;">
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="toggle-label">Compact Object Headers</span>
+              <span class="toggle-sub">-XX:+UseCompactObjectHeaders (JDK 24+)</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="compact-headers" onchange="markDirty()">
+              <span class="slider"></span>
+            </label>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="gc-log" onchange="markDirty()">
-            <span class="slider"></span>
-          </label>
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="toggle-label">String Deduplication</span>
+              <span class="toggle-sub">-XX:+UseStringDeduplication</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="string-dedup" onchange="markDirty()">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="toggle-label">Native Memory Access</span>
+              <span class="toggle-sub">--enable-native-access</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="native-access" onchange="markDirty()">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="toggle-label">Ahead-Of-Time Cache</span>
+              <span class="toggle-sub">Pre-loads classes on subsequent launches</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="aot-cache" onchange="markDirty()">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-text">
+              <span class="toggle-label">GC Diagnostic Logging</span>
+              <span class="toggle-sub">-Xlog:gc* into cache directory</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="gc-log" onchange="markDirty()">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -666,35 +731,45 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       onJavaSelectChange();
 
       const rlStatus = document.getElementById('runelite-status');
+      const rlPath = document.getElementById('runelite-path');
       if (state.clients.runelite_detected) {
         rlStatus.className = 'tag tag-ok';
-        rlStatus.textContent = 'Detected';
+        rlStatus.textContent = 'Installed';
+        rlPath.textContent = state.clients.runelite_detected;
       } else {
         rlStatus.className = 'tag tag-err';
         rlStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/RuneLite" target="_blank">Wiki</a>';
+        rlPath.textContent = 'No RuneLite.jar detected';
       }
 
       const hdosStatus = document.getElementById('hdos-status');
+      const hdosPath = document.getElementById('hdos-path');
       if (state.clients.hdos_detected) {
         hdosStatus.className = 'tag tag-ok';
-        hdosStatus.textContent = 'Detected';
+        hdosStatus.textContent = 'Installed';
+        hdosPath.textContent = state.clients.hdos_detected;
       } else {
         hdosStatus.className = 'tag tag-warn';
         hdosStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/HDOS" target="_blank">Wiki</a>';
+        hdosPath.textContent = 'No hdos-launcher.jar detected';
       }
 
-      document.getElementById('rl-use-custom').checked = !!config.runelite_use_custom_jar;
       document.getElementById('rl-custom-jar').value = config.runelite_custom_jar || '';
-      onToggleCustomJar();
-      document.getElementById('rl-template').value = config.runelite_launch_command || '';
-
       document.getElementById('hdos-jar').value = config.hdos_jar || '';
-      document.getElementById('hdos-template').value = config.hdos_launch_command || '';
 
       const tuning = config.runelite_tuning || {};
-      document.getElementById('tuning-enabled').checked = tuning.enabled !== false;
+      const tuningEnabled = tuning.enabled !== false;
+      document.getElementById('tuning-enabled').checked = tuningEnabled;
+      document.getElementById('tuning-body').style.display = tuningEnabled ? 'block' : 'none';
+
       document.getElementById('heap-min').value = tuning.heap_min || '';
       document.getElementById('heap-max').value = tuning.heap_max || '';
+      document.getElementById('launch-mode').value = tuning.launch_mode || 'reflect';
+      document.getElementById('hw-accel').value = tuning.hw_accel || 'metal';
+      document.getElementById('direct-memory').value = tuning.direct_memory_max || '';
+      document.getElementById('metaspace').value = tuning.metaspace_max || '';
+      document.getElementById('code-cache').value = tuning.code_cache_size || '';
+      document.getElementById('native-memory').value = tuning.native_memory_tracking || '';
       document.getElementById('compact-headers').checked = !!tuning.compact_object_headers;
       document.getElementById('string-dedup').checked = !!tuning.string_deduplication;
       document.getElementById('native-access').checked = !!tuning.native_access;
@@ -715,9 +790,9 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       markDirty();
     }
 
-    function onToggleCustomJar() {
-      const checked = document.getElementById('rl-use-custom').checked;
-      document.getElementById('rl-custom-group').style.display = checked ? 'block' : 'none';
+    function onToggleTuning() {
+      const enabled = document.getElementById('tuning-enabled').checked;
+      document.getElementById('tuning-body').style.display = enabled ? 'block' : 'none';
       markDirty();
     }
 
@@ -746,16 +821,12 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
         config.java_path = javaChoice;
       }
 
-      config.runelite_use_custom_jar = document.getElementById('rl-use-custom').checked;
       const customJar = document.getElementById('rl-custom-jar').value.trim();
-      config.runelite_custom_jar = customJar ? customJar : null;
-      const rlTemplate = document.getElementById('rl-template').value.trim();
-      config.runelite_launch_command = rlTemplate ? rlTemplate : null;
+      config.runelite_use_custom_jar = customJar.length > 0;
+      config.runelite_custom_jar = customJar.length > 0 ? customJar : null;
 
       const hdosJar = document.getElementById('hdos-jar').value.trim();
-      config.hdos_jar = hdosJar ? hdosJar : null;
-      const hdosTemplate = document.getElementById('hdos-template').value.trim();
-      config.hdos_launch_command = hdosTemplate ? hdosTemplate : null;
+      config.hdos_jar = hdosJar.length > 0 ? hdosJar : null;
 
       config.runelite_tuning = {
         enabled: document.getElementById('tuning-enabled').checked,
@@ -772,6 +843,12 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
         launcher_nojvm: true,
         application_name: "RuneLite",
         process_name: "RuneLite",
+        launch_mode: document.getElementById('launch-mode').value,
+        hw_accel: document.getElementById('hw-accel').value,
+        direct_memory_max: document.getElementById('direct-memory').value.trim() || null,
+        metaspace_max: document.getElementById('metaspace').value.trim() || null,
+        code_cache_size: document.getElementById('code-cache').value.trim() || null,
+        native_memory_tracking: document.getElementById('native-memory').value.trim() || null,
         extra_jvm_args: [],
         extra_app_args: []
       };

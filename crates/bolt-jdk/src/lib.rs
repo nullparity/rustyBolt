@@ -399,22 +399,43 @@ pub fn discover() -> Vec<JavaRuntime> {
     unique
 }
 
-/// Returns the first runtime that meets the minimum feature number.
+/// Returns the runtime with the highest feature number that meets `min_feature`.
 ///
-/// A runtime with a known version comes first. A runtime with no known version is
-/// the last resort.
+/// A newer runtime turns on the newer tuning, for example the compact object
+/// headers and the AOT cache. A tie keeps the discovery order. A runtime with no
+/// known version is the last resort.
 pub fn select(min_feature: u32) -> Option<JavaRuntime> {
-    let runtimes = discover();
-    runtimes
-        .iter()
-        .find(|runtime| {
-            runtime
-                .version
-                .as_ref()
-                .is_some_and(|version| version.feature >= min_feature)
-        })
-        .or_else(|| runtimes.iter().find(|runtime| runtime.version.is_none()))
-        .cloned()
+    pick_highest(&discover(), min_feature)
+}
+
+/// The function reads only the list, so a test can call it without a system. A
+/// tie keeps the first runtime of the list.
+fn pick_highest(runtimes: &[JavaRuntime], min_feature: u32) -> Option<JavaRuntime> {
+    let mut best: Option<&JavaRuntime> = None;
+    for runtime in runtimes {
+        let Some(version) = runtime.version.as_ref() else {
+            continue;
+        };
+        if version.feature < min_feature {
+            continue;
+        }
+        let better = match best {
+            None => true,
+            Some(current) => {
+                let current_feature = current.version.as_ref().map_or(0, |v| v.feature);
+                version.feature > current_feature
+            }
+        };
+        if better {
+            best = Some(runtime);
+        }
+    }
+    best.cloned().or_else(|| {
+        runtimes
+            .iter()
+            .find(|runtime| runtime.version.is_none())
+            .cloned()
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -727,6 +748,59 @@ mod tests {
 
         let selected = select(min).expect("a runtime of the minimum feature exists");
         assert!(runtimes.iter().any(|r| r.path == selected.path));
-        assert!(selected.version.as_ref().is_some_and(|v| v.feature >= min));
+        let highest = runtimes
+            .iter()
+            .filter_map(|r| r.version.as_ref().map(|v| v.feature))
+            .max()
+            .expect("the list is not empty");
+        assert_eq!(selected.version.as_ref().map(|v| v.feature), Some(highest));
+    }
+
+    /// Builds a runtime for a fixed list. The label is only a name.
+    fn runtime(label: &str, feature: Option<u32>) -> JavaRuntime {
+        JavaRuntime {
+            path: PathBuf::from(label),
+            home: None,
+            version: feature.map(|feature| JavaVersion {
+                feature,
+                raw: feature.to_string(),
+            }),
+            source: Source::SystemLocation,
+        }
+    }
+
+    #[test]
+    fn test_select_prefers_the_highest_feature() {
+        let runtimes = vec![
+            runtime("/jdk/21", Some(21)),
+            runtime("/jdk/25", Some(25)),
+            runtime("/jdk/17", Some(17)),
+        ];
+        let selected = pick_highest(&runtimes, 11).expect("a runtime exists");
+        assert_eq!(selected.path, PathBuf::from("/jdk/25"));
+    }
+
+    #[test]
+    fn test_select_skips_a_runtime_below_the_minimum() {
+        let runtimes = vec![runtime("/jdk/17", Some(17)), runtime("/jdk/25", Some(25))];
+        let selected = pick_highest(&runtimes, 21).expect("a runtime of feature 25 exists");
+        assert_eq!(selected.path, PathBuf::from("/jdk/25"));
+    }
+
+    #[test]
+    fn test_select_keeps_the_first_of_a_tie() {
+        let runtimes = vec![
+            runtime("/jdk/first", Some(25)),
+            runtime("/jdk/second", Some(25)),
+        ];
+        let selected = pick_highest(&runtimes, 11).expect("a runtime exists");
+        assert_eq!(selected.path, PathBuf::from("/jdk/first"));
+    }
+
+    #[test]
+    fn test_select_falls_back_to_a_runtime_without_a_version() {
+        let runtimes = vec![runtime("/jdk/8", Some(8)), runtime("/jdk/unknown", None)];
+        let selected = pick_highest(&runtimes, 11).expect("the last resort exists");
+        assert_eq!(selected.path, PathBuf::from("/jdk/unknown"));
     }
 }
