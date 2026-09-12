@@ -67,7 +67,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
 /// Runs `rustybolt tuning set <key> <value>`.
 fn set(args: &[String]) -> Result<(), CliError> {
     let key = args.first().ok_or_else(|| {
-        CliError::Usage(format!("`tuning set` needs a key. Valid keys: {}", KEYS.join(", ")))
+        CliError::Usage(format!(
+            "`tuning set` needs a key. Valid keys: {}",
+            KEYS.join(", ")
+        ))
     })?;
     let value = args
         .get(1)
@@ -110,9 +113,10 @@ fn flags(args: &[String]) -> Result<(), CliError> {
         match args[index].as_str() {
             "--feature" => {
                 let value = crate::flag_value(args, index)?;
-                feature = Some(value.parse::<u32>().map_err(|_| {
-                    CliError::Message(format!("`{value}` is not a whole number"))
-                })?);
+                feature =
+                    Some(value.parse::<u32>().map_err(|_| {
+                        CliError::Message(format!("`{value}` is not a whole number"))
+                    })?);
                 index += 2;
             }
             other => {

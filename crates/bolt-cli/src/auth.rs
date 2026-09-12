@@ -33,12 +33,14 @@ pub(crate) fn accounts(args: &[String]) -> Result<(), CliError> {
 
     let auth = AuthConfig::default();
     let http = HttpAuth::new(&auth);
-    let characters = http.characters(&session.session_id).map_err(|error| match error {
-        bolt_core::CoreError::SessionExpired => CliError::Message(
-            "the saved session expired. Run `rustybolt login` again.".to_string(),
-        ),
-        other => CliError::Core(other),
-    })?;
+    let characters = http
+        .characters(&session.session_id)
+        .map_err(|error| match error {
+            bolt_core::CoreError::SessionExpired => CliError::Message(
+                "the saved session expired. Run `rustybolt login` again.".to_string(),
+            ),
+            other => CliError::Core(other),
+        })?;
 
     if characters.is_empty() {
         println!("This account has no character.");
@@ -47,7 +49,9 @@ pub(crate) fn accounts(args: &[String]) -> Result<(), CliError> {
     // A character that the user opened inside the recent window comes first.
     let usage = UsageStore::load(&paths);
     let window = Config::load(&paths).usage_recent_window_secs;
-    for character in usage.order(&characters, window, |character| character.account_id.as_str()) {
+    for character in usage.order(&characters, window, |character| {
+        character.account_id.as_str()
+    }) {
         println!("{} ({})", character.display_name, character.account_id);
     }
     Ok(())

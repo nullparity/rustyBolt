@@ -174,10 +174,7 @@ mod tests {
         let overrides = PropertyOverrides::gpu_defaults();
 
         assert_eq!(apply_to_profiles(&dir, &overrides).unwrap(), 1);
-        assert_eq!(
-            fs::read_to_string(backup_path(&file)).unwrap(),
-            original
-        );
+        assert_eq!(fs::read_to_string(backup_path(&file)).unwrap(), original);
         let updated = fs::read_to_string(&file).unwrap();
         assert!(updated.starts_with("other.value=1\n"));
         assert!(updated.contains("gpu.fpsTarget=60\n"));

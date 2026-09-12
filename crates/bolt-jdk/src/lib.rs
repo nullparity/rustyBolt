@@ -143,10 +143,7 @@ fn parse_version_string(version_str: &str) -> Option<JavaVersion> {
 }
 
 fn determine_home(executable_path: &Path) -> Option<PathBuf> {
-    let bin_path = executable_path
-        .parent()?
-        .canonicalize()
-        .ok()?;
+    let bin_path = executable_path.parent()?.canonicalize().ok()?;
     let home = bin_path.parent()?;
     if home.join("lib").exists() || home.join("conf").exists() || home.join("jre").exists() {
         Some(home.to_path_buf())
@@ -314,7 +311,10 @@ fn system_location_executable_name() -> &'static str {
 fn find_java_in_candidates(candidates: &[PathBuf], exec_name: &str) -> Vec<PathBuf> {
     let mut found = vec![];
     for home in candidates {
-        for relative in [PathBuf::from("bin").join(exec_name), PathBuf::from(exec_name)] {
+        for relative in [
+            PathBuf::from("bin").join(exec_name),
+            PathBuf::from(exec_name),
+        ] {
             let path = home.join(relative);
             if path.is_file() {
                 found.push(path);
@@ -492,39 +492,31 @@ fn tokenize(template: &str) -> Result<Vec<String>, TemplateError> {
 
     for c in template.chars() {
         match c {
-        '\'' => {
-            if in_double {
-                current.push(c);
-            } else {
-                if in_single {
-                    in_single = false;
-                } else {
-                    in_single = true;
-                }
-            }
-        }
-        '"' => {
-            if in_single {
-                current.push(c);
-            } else {
+            '\'' => {
                 if in_double {
-                    in_double = false;
+                    current.push(c);
                 } else {
-                    in_double = true;
+                    in_single = !in_single;
                 }
             }
-        }
-        ' ' => {
-            if in_single || in_double {
-                current.push(c);
-            } else if !current.is_empty() {
-                tokens.push(current.clone());
-                current.clear();
+            '"' => {
+                if in_single {
+                    current.push(c);
+                } else {
+                    in_double = !in_double;
+                }
             }
-        }
-        _ => {
-            current.push(c);
-        }
+            ' ' => {
+                if in_single || in_double {
+                    current.push(c);
+                } else if !current.is_empty() {
+                    tokens.push(current.clone());
+                    current.clear();
+                }
+            }
+            _ => {
+                current.push(c);
+            }
         }
     }
 
@@ -542,18 +534,6 @@ fn tokenize(template: &str) -> Result<Vec<String>, TemplateError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn sample_runtime(path: &str, version: &str, _feature: u32) -> JavaRuntime {
-        let version = parse_version_string(version).unwrap();
-        let path = PathBuf::from(path);
-        let home = determine_home(&path);
-        JavaRuntime {
-            path,
-            home,
-            version: Some(version),
-            source: Source::Explicit,
-        }
-    }
 
     #[test]
     fn test_parse_version_openjdk() {
@@ -628,7 +608,10 @@ mod tests {
         let result = apply_template(template, &default).unwrap();
 
         assert_eq!(result.program, PathBuf::from("/usr/bin/java"));
-        assert_eq!(result.args, vec!["-Dkey=value", "-jar", "app.jar", "-jar", "my.jar"]);
+        assert_eq!(
+            result.args,
+            vec!["-Dkey=value", "-jar", "app.jar", "-jar", "my.jar"]
+        );
     }
 
     #[test]
@@ -657,10 +640,7 @@ mod tests {
         let result = apply_template(template, &default).unwrap();
 
         assert_eq!(result.program, PathBuf::from("/path with space/java"));
-        assert_eq!(
-            result.args,
-            vec!["-jar", "my.jar", "-jar", "app.jar"]
-        );
+        assert_eq!(result.args, vec!["-jar", "my.jar", "-jar", "app.jar"]);
     }
 
     #[test]
@@ -716,14 +696,21 @@ mod tests {
 
         let result = apply_template(&template, &default);
 
-        assert!(matches!(result, Err(TemplateError::TooManyArguments { .. })));
+        assert!(matches!(
+            result,
+            Err(TemplateError::TooManyArguments { .. })
+        ));
     }
 
     #[test]
     fn test_discover_returns_only_existing_paths() {
         let runtimes = discover();
         for runtime in &runtimes {
-            assert!(runtime.path.exists(), "Path {} does not exist", runtime.path.display());
+            assert!(
+                runtime.path.exists(),
+                "Path {} does not exist",
+                runtime.path.display()
+            );
         }
     }
 

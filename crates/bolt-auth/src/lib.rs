@@ -32,11 +32,9 @@ const VERIFIER_LEN: usize = 43;
 const STATE_LEN: usize = 12;
 
 /// Characters of the code verifier. The set is unreserved, so no encode is necessary.
-const VERIFIER_CHARS: &[u8] =
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._";
+const VERIFIER_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._";
 /// Characters of the state value and the nonce value.
-const STATE_CHARS: &[u8] =
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const STATE_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /// Endpoints and identifiers of the login flow.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -397,10 +395,7 @@ impl LoginFlow {
 pub fn accounts_request(config: &AuthConfig, session_id: &str) -> (String, (String, String)) {
     (
         format!("{}/game-session/v1/accounts", config.auth_origin),
-        (
-            "Authorization".to_string(),
-            format!("Bearer {session_id}"),
-        ),
+        ("Authorization".to_string(), format!("Bearer {session_id}")),
     )
 }
 
@@ -421,10 +416,7 @@ pub fn parse_accounts(body: &str) -> Result<Vec<Character>, AuthError> {
 /// Splits a nickname at the last number sign.
 fn split_nickname(nickname: &str) -> (String, String) {
     match nickname.rfind('#') {
-        Some(pos) => (
-            nickname[..pos].to_string(),
-            nickname[pos + 1..].to_string(),
-        ),
+        Some(pos) => (nickname[..pos].to_string(), nickname[pos + 1..].to_string()),
         None => (nickname.to_string(), String::new()),
     }
 }
@@ -534,18 +526,16 @@ fn decode(value: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         match bytes[i] {
-            b'%' if i + 2 < bytes.len() => {
-                match u8::from_str_radix(&value[i + 1..i + 3], 16) {
-                    Ok(byte) => {
-                        out.push(byte);
-                        i += 3;
-                    }
-                    Err(_) => {
-                        out.push(b'%');
-                        i += 1;
-                    }
+            b'%' if i + 2 < bytes.len() => match u8::from_str_radix(&value[i + 1..i + 3], 16) {
+                Ok(byte) => {
+                    out.push(byte);
+                    i += 3;
                 }
-            }
+                Err(_) => {
+                    out.push(b'%');
+                    i += 1;
+                }
+            },
             b'+' => {
                 out.push(b' ');
                 i += 1;
@@ -606,7 +596,11 @@ impl Url {
     }
 
     /// Returns a decoded value.
-    fn get(&self, values: &HashMap<String, String>, name: &'static str) -> Result<String, AuthError> {
+    fn get(
+        &self,
+        values: &HashMap<String, String>,
+        name: &'static str,
+    ) -> Result<String, AuthError> {
         values
             .get(name)
             .map(|value| decode(value))
@@ -614,7 +608,11 @@ impl Url {
     }
 
     /// Returns a value in its raw, still encoded form.
-    fn raw(&self, values: &HashMap<String, String>, name: &'static str) -> Result<String, AuthError> {
+    fn raw(
+        &self,
+        values: &HashMap<String, String>,
+        name: &'static str,
+    ) -> Result<String, AuthError> {
         values
             .get(name)
             .cloned()
@@ -661,17 +659,17 @@ mod tests {
     fn challenge_matches_rfc_7636_vector() {
         // Vector of RFC 7636 appendix B.
         let pkce = Pkce::from_verifier("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
-        assert_eq!(pkce.challenge, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+        assert_eq!(
+            pkce.challenge,
+            "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        );
     }
 
     #[test]
     fn generated_verifier_has_the_required_shape() {
         let pkce = Pkce::generate();
         assert_eq!(pkce.verifier.len(), VERIFIER_LEN);
-        assert!(pkce
-            .verifier
-            .bytes()
-            .all(|b| VERIFIER_CHARS.contains(&b)));
+        assert!(pkce.verifier.bytes().all(|b| VERIFIER_CHARS.contains(&b)));
         assert_ne!(pkce.verifier, Pkce::generate().verifier);
     }
 
@@ -683,7 +681,9 @@ mod tests {
         assert!(url.contains("code_challenge_method=S256"));
         assert!(url.contains(&format!("code_challenge={}", encode(&flow.pkce.challenge))));
         assert!(url.contains("state=STATEONE0001"));
-        assert!(url.contains("redirect_uri=https%3A%2F%2Fsecure.runescape.com%2Fm%3Dweblogin%2Flauncher-redirect"));
+        assert!(url.contains(
+            "redirect_uri=https%3A%2F%2Fsecure.runescape.com%2Fm%3Dweblogin%2Flauncher-redirect"
+        ));
         assert!(!url.contains(&flow.pkce.verifier));
     }
 
@@ -739,7 +739,10 @@ mod tests {
     #[test]
     fn unrelated_urls_are_ignored() {
         let mut flow = flow();
-        assert_eq!(flow.on_navigation("https://example.com/x").unwrap(), Action::Ignore);
+        assert_eq!(
+            flow.on_navigation("https://example.com/x").unwrap(),
+            Action::Ignore
+        );
         assert_eq!(flow.on_navigation("not a url").unwrap(), Action::Ignore);
         assert_eq!(flow.stage(), Stage::Authorize);
     }
@@ -781,8 +784,14 @@ mod tests {
     #[test]
     fn handlers_reject_a_wrong_stage() {
         let mut flow = flow();
-        assert_eq!(flow.on_token_response("{}").unwrap_err(), AuthError::WrongStage);
-        assert_eq!(flow.on_session_response("{}").unwrap_err(), AuthError::WrongStage);
+        assert_eq!(
+            flow.on_token_response("{}").unwrap_err(),
+            AuthError::WrongStage
+        );
+        assert_eq!(
+            flow.on_session_response("{}").unwrap_err(),
+            AuthError::WrongStage
+        );
     }
 
     #[test]
@@ -863,7 +872,10 @@ mod tests {
     fn accounts_request_uses_a_bearer_header() {
         let (url, header) = accounts_request(&AuthConfig::default(), "session-9");
         assert_eq!(url, "https://auth.jagex.com/game-session/v1/accounts");
-        assert_eq!(header, ("Authorization".to_string(), "Bearer session-9".to_string()));
+        assert_eq!(
+            header,
+            ("Authorization".to_string(), "Bearer session-9".to_string())
+        );
     }
 
     #[test]

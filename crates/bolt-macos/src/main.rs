@@ -25,7 +25,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{
     ns_string, NSObject, NSObjectNSThreadPerformAdditions, NSObjectProtocol, NSPoint, NSRect,
-    NSSize, NSString, NSURL, NSURLRequest,
+    NSSize, NSString, NSURLRequest, NSURL,
 };
 use objc2_web_kit::{
     WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate, WKWebView,
@@ -110,7 +110,7 @@ pub(crate) struct MainRef<T>(*const T);
 
 impl<T> Clone for MainRef<T> {
     fn clone(&self) -> MainRef<T> {
-        MainRef(self.0)
+        *self
     }
 }
 
@@ -390,8 +390,7 @@ impl LoginDelegate {
         match (window.as_ref(), web.as_ref()) {
             (Some(window), Some(web)) => {
                 let url = unsafe { web.URL() }
-                    .map(|url| url.absoluteString().map(|s| s.to_string()))
-                    .flatten()
+                    .and_then(|url| url.absoluteString().map(|s| s.to_string()))
                     .unwrap_or_else(|| "no url yet".to_string());
                 let frame = window.frame();
                 format!(
@@ -841,9 +840,9 @@ impl AppDelegate {
         self.refresh_sessions();
         self.set_status("Ready.");
 
-        if std::env::args().any(|argument| {
-            argument == "--self-check" || argument == "--self-check-advanced"
-        }) {
+        if std::env::args()
+            .any(|argument| argument == "--self-check" || argument == "--self-check-advanced")
+        {
             self.report_window(mtm);
         }
     }
@@ -969,7 +968,9 @@ impl AppDelegate {
         state.session_popup.removeAllItems();
         for session in state.store.sessions() {
             let title = format!("{} ({})", session.display_name, session.suffix);
-            state.session_popup.addItemWithTitle(&NSString::from_str(&title));
+            state
+                .session_popup
+                .addItemWithTitle(&NSString::from_str(&title));
         }
         state.character_popup.removeAllItems();
         state.characters.clear();
@@ -1119,10 +1120,7 @@ fn run_launch(job: &LaunchJob, app: MainRef<AppDelegate>) -> Result<u32, String>
         Some(client) => client,
         None => {
             let release = installer.latest(kind).map_err(|error| describe(&error))?;
-            post_status(
-                app,
-                format!("Downloading RuneLite {}.", release.version),
-            );
+            post_status(app, format!("Downloading RuneLite {}.", release.version));
             let mut shown = u64::MAX;
             installer
                 .install(kind, &release, &mut |done, total| {

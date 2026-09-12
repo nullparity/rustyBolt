@@ -143,7 +143,10 @@ fn linux_dirs(env: &Environment) -> io::Result<Dirs> {
 
 fn macos_dirs(env: &Environment) -> io::Result<Dirs> {
     let home = home_dir(env)?;
-    let support = home.join("Library").join("Application Support").join(DIR_NAME);
+    let support = home
+        .join("Library")
+        .join("Application Support")
+        .join(DIR_NAME);
     let caches = home.join("Library").join("Caches").join(DIR_NAME);
     Ok(Dirs {
         config: support.clone(),
@@ -154,12 +157,14 @@ fn macos_dirs(env: &Environment) -> io::Result<Dirs> {
 }
 
 fn windows_dirs(env: &Environment) -> io::Result<Dirs> {
-    let roaming = env.appdata.as_deref().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "APPDATA is not set")
-    })?;
-    let local = env.localappdata.as_deref().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "LOCALAPPDATA is not set")
-    })?;
+    let roaming = env
+        .appdata
+        .as_deref()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "APPDATA is not set"))?;
+    let local = env
+        .localappdata
+        .as_deref()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "LOCALAPPDATA is not set"))?;
     Ok(Dirs {
         config: roaming.join(DIR_NAME),
         data: roaming.join(DIR_NAME),
@@ -255,7 +260,10 @@ mod tests {
         let dirs = dirs_for(Platform::Windows, &env).unwrap();
         assert_eq!(dirs.config, env.appdata.clone().unwrap().join("rustybolt"));
         assert_eq!(dirs.data, dirs.config);
-        assert_eq!(dirs.cache, env.localappdata.clone().unwrap().join("rustybolt"));
+        assert_eq!(
+            dirs.cache,
+            env.localappdata.clone().unwrap().join("rustybolt")
+        );
         assert_eq!(dirs.runtime, dirs.cache);
     }
 
@@ -283,7 +291,10 @@ mod tests {
     #[test]
     fn file_accessors_extend_the_directories() {
         let paths = crate::test_support::paths(Path::new("/base"));
-        assert_eq!(paths.config_file(), PathBuf::from("/base/config/launcher.json"));
+        assert_eq!(
+            paths.config_file(),
+            PathBuf::from("/base/config/launcher.json")
+        );
         assert_eq!(
             paths.credentials_file(),
             PathBuf::from("/base/config/creds.json")

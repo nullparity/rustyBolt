@@ -7,6 +7,11 @@ fn main() {
             .as_ref()
             .map(|v| format!("{} (feature {})", v.raw, v.feature))
             .unwrap_or_else(|| "unknown".to_string());
-        println!("{:?}\t{}\t{}", runtime.source, version, runtime.path.display());
+        println!(
+            "{:?}\t{}\t{}",
+            runtime.source,
+            version,
+            runtime.path.display()
+        );
     }
 }

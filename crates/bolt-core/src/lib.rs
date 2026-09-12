@@ -5,11 +5,11 @@
 //! RuneLite and HDOS installers, and the child process launch.
 //! The crate uses `bolt-auth` for the OAuth2 flow and `bolt-jdk` for Java.
 
-mod import;
 mod config;
 mod credentials;
 mod file;
 mod http;
+mod import;
 mod install;
 mod launch;
 mod paths;
@@ -18,18 +18,20 @@ mod session;
 mod tuning;
 mod usage;
 
-pub use import::{import_apply, import_plan, ImportEntry, ImportPlan, RuneLiteHome, system_runelite_dir};
 pub use bolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};
 pub use config::{Config, DEFAULT_RECENT_WINDOW};
 pub use credentials::{CommandCredentials, CredentialFormat, CredentialSource};
 pub use http::HttpAuth;
-pub use install::{ClientKind, Installer, InstalledClient, Release};
+pub use import::{
+    import_apply, import_plan, system_runelite_dir, ImportEntry, ImportPlan, RuneLiteHome,
+};
+pub use install::{ClientKind, InstalledClient, Installer, Release};
 pub use launch::{
-    GameCredentials, LaunchPlan, LaunchRequest, client_invocation, client_options, launch, plan,
-    tuned_client_options,
+    client_invocation, client_options, launch, plan, tuned_client_options, GameCredentials,
+    LaunchPlan, LaunchRequest,
 };
 pub use paths::Paths;
-pub use profile::{PropertyOverrides, apply_to_profiles};
+pub use profile::{apply_to_profiles, PropertyOverrides};
 pub use session::SessionStore;
 pub use tuning::{GcChoice, TuningConfig};
 pub use usage::UsageStore;
@@ -58,10 +60,7 @@ pub enum CoreError {
     NoJava,
     /// The downloaded file does not have the digest that the release gives.
     #[error("sha256 mismatch: expected {expected}, got {actual}")]
-    DigestMismatch {
-        expected: String,
-        actual: String,
-    },
+    DigestMismatch { expected: String, actual: String },
     /// The server rejected the session. The user must log in again.
     #[error("the session expired")]
     SessionExpired,

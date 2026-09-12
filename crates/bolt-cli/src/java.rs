@@ -45,13 +45,15 @@ fn minimum(args: &[String]) -> Result<u32, CliError> {
         match args[index].as_str() {
             "--min" => {
                 let value = crate::flag_value(args, index)?;
-                min = value.parse::<u32>().map_err(|_| {
-                    CliError::Message(format!("`{value}` is not a whole number"))
-                })?;
+                min = value
+                    .parse::<u32>()
+                    .map_err(|_| CliError::Message(format!("`{value}` is not a whole number")))?;
                 index += 2;
             }
             other => {
-                return Err(CliError::Message(format!("`{other}` is not an argument of `java select`")))
+                return Err(CliError::Message(format!(
+                    "`{other}` is not an argument of `java select`"
+                )))
             }
         }
     }
@@ -87,7 +89,10 @@ fn list() -> Result<(), CliError> {
     }
 
     if let Some(path) = &chosen {
-        if !runtimes.iter().any(|runtime| same_path(path, &runtime.path)) {
+        if !runtimes
+            .iter()
+            .any(|runtime| same_path(path, &runtime.path))
+        {
             println!(
                 "The launcher uses {}, and this list does not hold that file.",
                 path.display()
@@ -120,9 +125,9 @@ fn select(min: u32) -> Result<(), CliError> {
 /// The function writes the config only after a good probe, so a bad path
 /// leaves the config as it was.
 fn use_runtime(args: &[String]) -> Result<(), CliError> {
-    let value = args.first().ok_or_else(|| {
-        CliError::Message("`java use` needs a path or `auto`".to_string())
-    })?;
+    let value = args
+        .first()
+        .ok_or_else(|| CliError::Message("`java use` needs a path or `auto`".to_string()))?;
     no_arguments(&args[1..])?;
 
     let paths = Paths::resolve()?;
@@ -137,7 +142,9 @@ fn use_runtime(args: &[String]) -> Result<(), CliError> {
 
     let path = PathBuf::from(value);
     let runtime = bolt_jdk::probe(&path).ok_or_else(|| {
-        CliError::Message(format!("`{value}` is not a Java binary that reports a version"))
+        CliError::Message(format!(
+            "`{value}` is not a Java binary that reports a version"
+        ))
     })?;
     let feature = runtime
         .version

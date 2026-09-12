@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use bolt_auth::Session;
 
-use crate::Paths;
 use crate::file::write_private;
+use crate::Paths;
 
 /// The sessions of the user, and the file that holds them.
 pub struct SessionStore {
@@ -37,7 +37,11 @@ impl SessionStore {
 
     /// Adds a session, or replaces the session with the same `sub` value.
     pub fn upsert(&mut self, session: Session) {
-        match self.sessions.iter_mut().find(|held| held.sub == session.sub) {
+        match self
+            .sessions
+            .iter_mut()
+            .find(|held| held.sub == session.sub)
+        {
             Some(held) => *held = session,
             None => self.sessions.push(session),
         }
@@ -57,7 +61,7 @@ impl SessionStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::{TempDir, paths};
+    use crate::test_support::{paths, TempDir};
 
     fn session(sub: &str, name: &str) -> Session {
         Session {

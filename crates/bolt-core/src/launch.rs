@@ -158,10 +158,7 @@ pub fn plan(paths: &Paths, request: &LaunchRequest) -> Result<LaunchPlan, CoreEr
         ));
     }
     #[cfg(unix)]
-    env.push((
-        "HOME".to_string(),
-        data_dir.to_string_lossy().into_owned(),
-    ));
+    env.push(("HOME".to_string(), data_dir.to_string_lossy().into_owned()));
 
     Ok(LaunchPlan {
         program: invocation.program,
@@ -333,7 +330,9 @@ pub fn tuned_client_options(
     }
 
     let tuning = tuning_config.to_tuning(log_dir, client_repository().as_deref());
-    options.system_properties.extend(tuning_config.system_properties());
+    options
+        .system_properties
+        .extend(tuning_config.system_properties());
     options.jvm_args.extend(tuning.flags(feature));
     options.jvm_args.extend(tuning_config.dock_args());
     options
@@ -364,7 +363,7 @@ pub fn client_invocation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::{TempDir, paths};
+    use crate::test_support::{paths, TempDir};
 
     fn arguments(kind: ClientKind, configure: bool) -> Vec<String> {
         let java = Path::new("/usr/bin/java");
@@ -447,8 +446,10 @@ mod tests {
 
     #[test]
     fn resolve_java_prefers_the_request_then_the_config() {
-        let mut config = Config::default();
-        config.java_path = Some(PathBuf::from("/config/java"));
+        let config = Config {
+            java_path: Some(PathBuf::from("/config/java")),
+            ..Default::default()
+        };
         assert_eq!(
             resolve_java(Some(Path::new("/request/java")), &config).unwrap(),
             PathBuf::from("/request/java")
@@ -473,8 +474,10 @@ mod tests {
             std::fs::set_permissions(&good, std::fs::Permissions::from_mode(0o755)).unwrap();
         }
 
-        let mut config = Config::default();
-        config.java_candidates = vec![missing, plain, good.clone()];
+        let config = Config {
+            java_candidates: vec![missing, plain, good.clone()],
+            ..Default::default()
+        };
         assert_eq!(resolve_java(None, &config).unwrap(), good);
         assert_eq!(java_feature(&temp.path().join("absent")), 11);
     }
@@ -536,9 +539,9 @@ mod tests {
         assert!(args.contains(&"/data/runelite.jar".to_string()));
         #[cfg(target_os = "macos")]
         assert!(args.contains(&"-Xdock:name=RuneLite".to_string()));
-        assert!(args.ends_with(
-            &["--hw-accel", "METAL", "--launch-mode", "REFLECT"].map(String::from)
-        ));
+        assert!(
+            args.ends_with(&["--hw-accel", "METAL", "--launch-mode", "REFLECT"].map(String::from))
+        );
     }
 
     #[test]
@@ -552,9 +555,7 @@ mod tests {
         assert!(args.contains(&"-XX:+UseZGC".to_string()));
         assert!(!args.contains(&"-XX:+UseCompactObjectHeaders".to_string()));
         assert!(!args.contains(&"-XX:+UseStringDeduplication".to_string()));
-        assert!(!args
-            .iter()
-            .any(|arg| arg.starts_with("-XX:AOTCache")));
+        assert!(!args.iter().any(|arg| arg.starts_with("-XX:AOTCache")));
     }
 
     #[test]

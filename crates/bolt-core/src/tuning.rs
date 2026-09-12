@@ -9,23 +9,18 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 /// The garbage collector of the client.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GcChoice {
     /// Let the JVM choose the collector.
     Default,
     /// The generational Z collector. This is the default of the source launcher.
+    #[default]
     Z,
     /// The G1 collector.
     G1,
     /// The parallel collector.
     Parallel,
-}
-
-impl Default for GcChoice {
-    fn default() -> Self {
-        GcChoice::Z
-    }
 }
 
 /// Where the icon of the installed client normally sits on macOS.
@@ -107,7 +102,10 @@ impl Default for TuningConfig {
             native_access: true,
             aot_cache: true,
             gc_log: false,
-            add_opens: DEFAULT_ADD_OPENS.iter().map(|name| name.to_string()).collect(),
+            add_opens: DEFAULT_ADD_OPENS
+                .iter()
+                .map(|name| name.to_string())
+                .collect(),
             java2d_metal: true,
             application_name: Some("RuneLite".to_string()),
             dock_icon: None,
@@ -356,11 +354,13 @@ mod tests {
     fn to_tuning_copies_the_stored_values() {
         let temp = TempDir::new("tuning-values");
         let log_dir = temp.path().join("logs");
-        let mut config = TuningConfig::default();
-        config.garbage_collector = GcChoice::Parallel;
-        config.heap_max = Some("4g".to_string());
-        config.gc_log = true;
-        config.extra_jvm_args = vec!["-XX:+AlwaysPreTouch".to_string()];
+        let config = TuningConfig {
+            garbage_collector: GcChoice::Parallel,
+            heap_max: Some("4g".to_string()),
+            gc_log: true,
+            extra_jvm_args: vec!["-XX:+AlwaysPreTouch".to_string()],
+            ..Default::default()
+        };
 
         let tuning = config.to_tuning(&log_dir, None);
         assert!(matches!(tuning.gc, bolt_jdk::Gc::Parallel));

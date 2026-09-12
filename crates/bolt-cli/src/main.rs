@@ -215,7 +215,9 @@ pub(crate) fn pick_session<'a>(
             .iter()
             .find(|session| session.sub == wanted)
             .ok_or_else(|| {
-                CliError::Message("no saved session has this sub. Run `rustybolt login` first.".to_string())
+                CliError::Message(
+                    "no saved session has this sub. Run `rustybolt login` first.".to_string(),
+                )
             }),
         None => store.sessions().first().ok_or_else(|| {
             CliError::Message("no saved session exists. Run `rustybolt login` first.".to_string())

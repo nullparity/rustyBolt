@@ -69,7 +69,12 @@ impl UsageStore {
     /// An item that the user opened inside `window` seconds comes first, and the
     /// newest of those wins. Every other item follows, ordered by its count, then
     /// by its time. An equal pair keeps the input order.
-    pub fn order<'a, T>(&self, items: &'a [T], window: u64, key: impl Fn(&T) -> &str) -> Vec<&'a T> {
+    pub fn order<'a, T>(
+        &self,
+        items: &'a [T],
+        window: u64,
+        key: impl Fn(&T) -> &str,
+    ) -> Vec<&'a T> {
         let now = now_secs();
         let mut held: Vec<(&'a T, Usage)> = items
             .iter()

@@ -233,8 +233,7 @@ pub fn branded_java(java: &Path, dir: &Path, name: &str) -> PathBuf {
 /// The function compares the canonical paths first. It compares the device and
 /// the inode second, because two hard links keep separate canonical paths.
 fn same_file(a: &Path, b: &Path) -> bool {
-    if let (Ok(canonical_a), Ok(canonical_b)) =
-        (std::fs::canonicalize(a), std::fs::canonicalize(b))
+    if let (Ok(canonical_a), Ok(canonical_b)) = (std::fs::canonicalize(a), std::fs::canonicalize(b))
     {
         if canonical_a == canonical_b {
             return true;
@@ -319,10 +318,7 @@ mod tests {
     }
 
     fn set_modified(path: &Path, seconds: u64) {
-        let file = std::fs::OpenOptions::new()
-            .write(true)
-            .open(path)
-            .unwrap();
+        let file = std::fs::OpenOptions::new().write(true).open(path).unwrap();
         file.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(seconds))
             .unwrap();
     }
@@ -378,9 +374,15 @@ mod tests {
     fn test_feature_gates_absent_below_24() {
         let flags = source_tuning().flags(21);
         assert!(flags.contains(&"-XX:+ZGenerational".to_string()));
-        assert!(!flags.iter().any(|f| f.starts_with("-XX:+UseCompactObjectHeaders")));
-        assert!(!flags.iter().any(|f| f.starts_with("--enable-native-access")));
-        assert!(!flags.iter().any(|f| f.starts_with("-XX:+UseStringDeduplication")));
+        assert!(!flags
+            .iter()
+            .any(|f| f.starts_with("-XX:+UseCompactObjectHeaders")));
+        assert!(!flags
+            .iter()
+            .any(|f| f.starts_with("--enable-native-access")));
+        assert!(!flags
+            .iter()
+            .any(|f| f.starts_with("-XX:+UseStringDeduplication")));
         assert!(!flags.iter().any(|f| f.starts_with("-XX:AOTCache")));
     }
 
@@ -447,7 +449,10 @@ mod tests {
             }),
             ..Tuning::default()
         };
-        assert_eq!(tuning.flags(25), vec!["-XX:AOTCacheOutput=/tmp/bolt/new.aot"]);
+        assert_eq!(
+            tuning.flags(25),
+            vec!["-XX:AOTCacheOutput=/tmp/bolt/new.aot"]
+        );
         assert!(tuning.flags(21).is_empty());
     }
 

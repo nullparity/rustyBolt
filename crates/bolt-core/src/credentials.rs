@@ -42,19 +42,14 @@ pub struct CommandCredentials {
 }
 
 /// Where the launcher takes the login values from.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialSource {
     /// The saved session file.
+    #[default]
     Session,
     /// An external command.
     Command(CommandCredentials),
-}
-
-impl Default for CredentialSource {
-    fn default() -> CredentialSource {
-        CredentialSource::Session
-    }
 }
 
 impl CommandCredentials {
@@ -94,7 +89,10 @@ impl CommandCredentials {
             .args(&args)
             .output()
             .map_err(|error| {
-                CoreError::Command(format!("cannot run the command {}: {}", self.program, error))
+                CoreError::Command(format!(
+                    "cannot run the command {}: {}",
+                    self.program, error
+                ))
             })?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -246,7 +244,8 @@ mod tests {
 
     #[test]
     fn parse_credentials_reads_the_json_object() {
-        let text = r#"{"JX_SESSION_ID": "sess", "JX_CHARACTER_ID": "char", "JX_DISPLAY_NAME": "Player"}"#;
+        let text =
+            r#"{"JX_SESSION_ID": "sess", "JX_CHARACTER_ID": "char", "JX_DISPLAY_NAME": "Player"}"#;
         let values = parse_credentials(CredentialFormat::Json, text).unwrap();
         assert_eq!(values.session_id, "sess");
         assert_eq!(values.character_id, "char");
@@ -255,7 +254,8 @@ mod tests {
 
     #[test]
     fn parse_credentials_reads_the_env_lines_and_removes_quotes() {
-        let text = "JX_SESSION_ID=\"sess\"\nJX_CHARACTER_ID=char\nJX_DISPLAY_NAME=\"Player Name\"\n";
+        let text =
+            "JX_SESSION_ID=\"sess\"\nJX_CHARACTER_ID=char\nJX_DISPLAY_NAME=\"Player Name\"\n";
         let values = parse_credentials(CredentialFormat::EnvLines, text).unwrap();
         assert_eq!(values.session_id, "sess");
         assert_eq!(values.character_id, "char");
@@ -267,7 +267,10 @@ mod tests {
         let text = r#"{"JX_CHARACTER_ID": "char", "JX_DISPLAY_NAME": "Player"}"#;
         let error = parse_credentials(CredentialFormat::Json, text).unwrap_err();
         let message = error.to_string();
-        assert!(message.contains(SESSION_ID), "unexpected message: {message}");
+        assert!(
+            message.contains(SESSION_ID),
+            "unexpected message: {message}"
+        );
     }
 
     #[cfg(unix)]
@@ -300,6 +303,9 @@ mod tests {
             format: CredentialFormat::Json,
         };
         let error = credentials.fetch("item").unwrap_err();
-        assert_eq!(error.to_string(), "credential command error: the item is absent");
+        assert_eq!(
+            error.to_string(),
+            "credential command error: the item is absent"
+        );
     }
 }

@@ -13,9 +13,7 @@ use std::thread;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject, Sel};
-use objc2::{
-    define_class, msg_send, sel, DefinedClass, MainThreadMarker, MainThreadOnly,
-};
+use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSBackingStoreType, NSButton,
     NSControl, NSOpenPanel, NSPopUpButton, NSScrollView, NSTextField, NSView, NSWindow,
@@ -26,8 +24,8 @@ use objc2_foundation::{
 };
 
 use bolt_core::{
-    import_apply, import_plan, plan, ClientKind, Config, CoreError, GcChoice, ImportPlan, Installer,
-    LaunchRequest, Paths, RuneLiteHome, TuningConfig,
+    import_apply, import_plan, plan, ClientKind, Config, CoreError, GcChoice, ImportPlan,
+    Installer, LaunchRequest, Paths, RuneLiteHome, TuningConfig,
 };
 use bolt_jdk::{JavaRuntime, Source};
 
@@ -450,7 +448,9 @@ fn fill_home_popup(state: &mut AdvancedState) {
         .addItemWithTitle(ns_string!("System home (~/.runelite)"));
     if let RuneLiteHome::Custom(dir) = &state.home_kind {
         let title = format!("Custom home: {}", dir.display());
-        state.home_popup.addItemWithTitle(&NSString::from_str(&title));
+        state
+            .home_popup
+            .addItemWithTitle(&NSString::from_str(&title));
     }
     state.home_popup.addItemWithTitle(ns_string!("Choose…"));
     state
@@ -544,9 +544,8 @@ fn env_names(env: &[(String, String)]) -> String {
 
 /// Builds the preview of a system without an installed RuneLite jar.
 fn plain_preview(state: &AdvancedState, config: &Config, feature: u32) -> String {
-    let mut lines = vec![
-        "No RuneLite jar is installed, so the jar arguments are absent.".to_string(),
-    ];
+    let mut lines =
+        vec!["No RuneLite jar is installed, so the jar arguments are absent.".to_string()];
     let tuning_config = &config.runelite_tuning;
     if !tuning_config.enabled {
         lines.push("The tuned profile is off.".to_string());
@@ -602,7 +601,7 @@ fn preview_text(state: &AdvancedState, config: &Config, feature: u32) -> String 
     };
     match plan(&paths, &request) {
         Ok(plan) => {
-            let lines = vec![
+            let lines = [
                 format!("Working directory: {}", plan.working_dir.display()),
                 format!("Environment names: {}", env_names(&plan.env)),
                 "Command line:".to_string(),
@@ -900,7 +899,11 @@ impl AdvancedDelegate {
 
         let mut rows = Rows { bottom: 810.0 };
 
-        let heading = make_label(mtm, "Java runtime", rect(20.0, rows.next(18.0), 740.0, 18.0));
+        let heading = make_label(
+            mtm,
+            "Java runtime",
+            rect(20.0, rows.next(18.0), 740.0, 18.0),
+        );
         add(&heading);
 
         let java_popup = NSPopUpButton::initWithFrame_pullsDown(
@@ -922,7 +925,11 @@ impl AdvancedDelegate {
         add(&feature_field);
 
         rows.bottom -= 10.0;
-        let heading = make_label(mtm, "Launch options", rect(20.0, rows.next(18.0), 740.0, 18.0));
+        let heading = make_label(
+            mtm,
+            "Launch options",
+            rect(20.0, rows.next(18.0), 740.0, 18.0),
+        );
         add(&heading);
 
         let enabled = make_check(
@@ -941,16 +948,30 @@ impl AdvancedDelegate {
         let row = rows.next(26.0);
         let heap_label = make_label(mtm, "Heap min", rect(20.0, row + 4.0, 66.0, 18.0));
         add(&heap_label);
-        let heap_min = make_field(mtm, target, sel!(optionChanged:), rect(90.0, row, 70.0, 24.0));
+        let heap_min = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(90.0, row, 70.0, 24.0),
+        );
         add(&heap_min);
         let heap_label = make_label(mtm, "Heap max", rect(176.0, row + 4.0, 66.0, 18.0));
         add(&heap_label);
-        let heap_max = make_field(mtm, target, sel!(optionChanged:), rect(246.0, row, 70.0, 24.0));
+        let heap_max = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(246.0, row, 70.0, 24.0),
+        );
         add(&heap_max);
         let stack_label = make_label(mtm, "Stack size", rect(328.0, row + 4.0, 66.0, 18.0));
         add(&stack_label);
-        let stack_size =
-            make_field(mtm, target, sel!(optionChanged:), rect(398.0, row, 66.0, 24.0));
+        let stack_size = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(398.0, row, 66.0, 24.0),
+        );
         add(&stack_size);
         let gc_label = make_label(mtm, "Collector", rect(480.0, row + 4.0, 66.0, 18.0));
         add(&gc_label);
@@ -990,38 +1011,69 @@ impl AdvancedDelegate {
                     rect(x, y, 350.0, 22.0),
                 );
                 add(&button);
-                checks.push(Check { button, field: *field });
+                checks.push(Check {
+                    button,
+                    field: *field,
+                });
             }
         }
 
         let row = rows.next(24.0);
         let name_label = make_label(mtm, "Process name", rect(20.0, row + 4.0, 96.0, 18.0));
         add(&name_label);
-        let process_name =
-            make_field(mtm, target, sel!(optionChanged:), rect(120.0, row, 240.0, 24.0));
+        let process_name = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(120.0, row, 240.0, 24.0),
+        );
         add(&process_name);
         let app_label = make_label(mtm, "Application name", rect(400.0, row + 4.0, 110.0, 18.0));
         add(&app_label);
-        let application_name =
-            make_field(mtm, target, sel!(optionChanged:), rect(515.0, row, 225.0, 24.0));
+        let application_name = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(515.0, row, 225.0, 24.0),
+        );
         add(&application_name);
 
         let row = rows.next(24.0);
-        let jvm_label = make_label(mtm, "Extra JVM arguments", rect(20.0, row + 4.0, 140.0, 18.0));
+        let jvm_label = make_label(
+            mtm,
+            "Extra JVM arguments",
+            rect(20.0, row + 4.0, 140.0, 18.0),
+        );
         add(&jvm_label);
-        let extra_jvm_args =
-            make_field(mtm, target, sel!(optionChanged:), rect(165.0, row, 575.0, 24.0));
+        let extra_jvm_args = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(165.0, row, 575.0, 24.0),
+        );
         add(&extra_jvm_args);
 
         let row = rows.next(24.0);
-        let app_args_label = make_label(mtm, "Extra app arguments", rect(20.0, row + 4.0, 140.0, 18.0));
+        let app_args_label = make_label(
+            mtm,
+            "Extra app arguments",
+            rect(20.0, row + 4.0, 140.0, 18.0),
+        );
         add(&app_args_label);
-        let extra_app_args =
-            make_field(mtm, target, sel!(optionChanged:), rect(165.0, row, 575.0, 24.0));
+        let extra_app_args = make_field(
+            mtm,
+            target,
+            sel!(optionChanged:),
+            rect(165.0, row, 575.0, 24.0),
+        );
         add(&extra_app_args);
 
         rows.bottom -= 10.0;
-        let heading = make_label(mtm, "RuneLite data", rect(20.0, rows.next(18.0), 740.0, 18.0));
+        let heading = make_label(
+            mtm,
+            "RuneLite data",
+            rect(20.0, rows.next(18.0), 740.0, 18.0),
+        );
         add(&heading);
 
         let home_popup = NSPopUpButton::initWithFrame_pullsDown(
@@ -1063,7 +1115,10 @@ impl AdvancedDelegate {
         let heading = make_label(mtm, "Preview", rect(20.0, rows.next(18.0), 740.0, 18.0));
         add(&heading);
 
-        let scroll = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rect(20.0, rows.next(150.0), 740.0, 150.0));
+        let scroll = NSScrollView::initWithFrame(
+            NSScrollView::alloc(mtm),
+            rect(20.0, rows.next(150.0), 740.0, 150.0),
+        );
         scroll.setHasVerticalScroller(true);
         let preview = make_text_view(rect(0.0, 0.0, 720.0, 150.0));
         scroll.setDocumentView(Some(&*preview));
@@ -1159,7 +1214,9 @@ impl AdvancedDelegate {
             let tuning = &config.runelite_tuning;
             state.heap_min.setStringValue(&shown_text(&tuning.heap_min));
             state.heap_max.setStringValue(&shown_text(&tuning.heap_max));
-            state.stack_size.setStringValue(&shown_text(&tuning.stack_size));
+            state
+                .stack_size
+                .setStringValue(&shown_text(&tuning.stack_size));
             state
                 .gc_popup
                 .selectItemAtIndex(gc_index(&tuning.garbage_collector));
@@ -1197,7 +1254,9 @@ impl AdvancedDelegate {
                 check.button.setEnabled(tuning_on);
             }
             if check.field.needs_feature_24() {
-                check.button.setTitle(&NSString::from_str(check.field.title(suffix)));
+                check
+                    .button
+                    .setTitle(&NSString::from_str(check.field.title(suffix)));
             }
         }
         for field in [
@@ -1251,7 +1310,11 @@ impl AdvancedDelegate {
             self.refresh();
             return;
         }
-        let Some(path) = panel.URL().and_then(|url| url.path()).map(|path| PathBuf::from(path.to_string())) else {
+        let Some(path) = panel
+            .URL()
+            .and_then(|url| url.path())
+            .map(|path| PathBuf::from(path.to_string()))
+        else {
             self.refresh();
             return;
         };
@@ -1278,11 +1341,7 @@ impl AdvancedDelegate {
             match runtime {
                 Some(runtime) => {
                     state.java_choice = Some(runtime.path.clone());
-                    if !state
-                        .runtimes
-                        .iter()
-                        .any(|item| item.path == runtime.path)
-                    {
+                    if !state.runtimes.iter().any(|item| item.path == runtime.path) {
                         state.runtimes.push(runtime);
                     }
                     fill_java_popup(state);
@@ -1494,9 +1553,7 @@ impl AdvancedDelegate {
                 println!("self-check: advanced feature \"{feature}\"");
                 println!("self-check: advanced preview lines {lines}");
                 println!("self-check: advanced home kind \"{kind}\" dir \"{home}\"");
-                println!(
-                    "self-check: advanced import button enabled={import} secrets={secrets}"
-                );
+                println!("self-check: advanced import button enabled={import} secrets={secrets}");
             }
             None => println!("self-check: the advanced window has no state"),
         }

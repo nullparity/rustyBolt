@@ -29,7 +29,10 @@ fn show() -> Result<(), CliError> {
         "RuneLite home:     {}",
         config.runelite_home(&paths).join(".runelite").display()
     );
-    println!("Profile directory: {}", config.profile_dir(&paths).display());
+    println!(
+        "Profile directory: {}",
+        config.profile_dir(&paths).display()
+    );
     match system_runelite_dir() {
         Some(dir) if dir.is_dir() => {
             println!("System home:       {} (present)", dir.display());

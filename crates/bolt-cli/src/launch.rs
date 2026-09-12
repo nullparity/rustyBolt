@@ -191,12 +191,14 @@ fn resolve_credentials(
 
     let config_http = AuthConfig::default();
     let http = HttpAuth::new(&config_http);
-    let characters = http.characters(&session.session_id).map_err(|error| match error {
-        bolt_core::CoreError::SessionExpired => CliError::Message(
-            "the saved session expired. Run `rustybolt login` again.".to_string(),
-        ),
-        other => CliError::Core(other),
-    })?;
+    let characters = http
+        .characters(&session.session_id)
+        .map_err(|error| match error {
+            bolt_core::CoreError::SessionExpired => CliError::Message(
+                "the saved session expired. Run `rustybolt login` again.".to_string(),
+            ),
+            other => CliError::Core(other),
+        })?;
 
     let usage = UsageStore::load(paths);
     let ordered = usage.order(&characters, config.usage_recent_window_secs, |character| {
@@ -242,4 +244,3 @@ fn pick_character<'a>(
             .ok_or_else(|| CliError::Message("this account has no character".to_string())),
     }
 }
-

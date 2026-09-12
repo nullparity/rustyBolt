@@ -38,6 +38,10 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
         let _ = out.flush();
     })?;
     println!();
-    println!("Installed {} version {}.", client.kind.name(), client.version);
+    println!(
+        "Installed {} version {}.",
+        client.kind.name(),
+        client.version
+    );
     Ok(())
 }

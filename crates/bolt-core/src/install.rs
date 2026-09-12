@@ -129,11 +129,15 @@ impl<'a> Installer<'a> {
     }
 
     fn version_path(&self, kind: ClientKind) -> PathBuf {
-        self.paths.client_dir().join(format!("{}.version", kind.name()))
+        self.paths
+            .client_dir()
+            .join(format!("{}.version", kind.name()))
     }
 
     fn part_path(&self, kind: ClientKind) -> PathBuf {
-        self.paths.client_dir().join(format!("{}.jar.part", kind.name()))
+        self.paths
+            .client_dir()
+            .join(format!("{}.jar.part", kind.name()))
     }
 
     fn latest_runelite(&self) -> Result<Release, CoreError> {
@@ -150,7 +154,9 @@ impl<'a> Installer<'a> {
         let assets = release
             .get("assets")
             .and_then(Value::as_array)
-            .ok_or_else(|| CoreError::Http("the newest RuneLite release has no assets".to_string()))?;
+            .ok_or_else(|| {
+                CoreError::Http("the newest RuneLite release has no assets".to_string())
+            })?;
         let asset = assets
             .iter()
             .find(|asset| {
@@ -168,9 +174,7 @@ impl<'a> Installer<'a> {
             Some(Value::Number(number)) => number.to_string(),
             Some(Value::String(text)) => text.clone(),
             _ => {
-                return Err(CoreError::Http(
-                    "the RuneLite asset has no id".to_string(),
-                ));
+                return Err(CoreError::Http("the RuneLite asset has no id".to_string()));
             }
         };
         let url = asset
@@ -291,7 +295,7 @@ fn to_hex(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::{TempDir, paths};
+    use crate::test_support::{paths, TempDir};
 
     const GETDOWN: &str = "\
 java.main = 17
@@ -384,7 +388,10 @@ launcher.url = https://cdn.hdos.dev/launcher/
             fs::read_to_string(paths.client_dir().join("runelite.jar")).unwrap(),
             "old"
         );
-        assert_eq!(installer.installed(ClientKind::RuneLite).unwrap().version, "1");
+        assert_eq!(
+            installer.installed(ClientKind::RuneLite).unwrap().version,
+            "1"
+        );
         assert!(!paths.client_dir().join("runelite.jar.part").exists());
     }
 
