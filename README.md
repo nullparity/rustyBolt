@@ -85,7 +85,7 @@ cargo run -p bolt-macos -- --self-check --self-check-login
 
 A tag that starts with `v` starts the release workflow. The workflow builds
 `rustybolt` on a native runner for each target and makes `rustyBolt.app` on
-macOS. It then uploads the archives, `checksums.txt` and a draft release.
+macOS. It then uploads the archives, `checksums.txt` and publishes the release.
 
 ```sh
 git tag v0.1.0

@@ -80,7 +80,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Draft release
+    name: Publish release
     needs: [cli, app]
     runs-on: ubuntu-latest
     steps:
@@ -91,15 +91,14 @@ jobs:
 
       - name: Checksums
         working-directory: assets
-        run: sha256sum * > checksums.txt
+        run: sha256sum rusty* > checksums.txt
 
-      - name: Create draft release
+      - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
-            --draft \
             --title "rustyBolt ${GITHUB_REF_NAME#v}" \
             --generate-notes \
             assets/*
