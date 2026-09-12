@@ -74,7 +74,16 @@ pub(crate) fn run_window(
 
     let builder = WebViewBuilder::new()
         .with_url(url)
-        .with_navigation_handler(|nav_url| bolt_security::is_allowed_navigation(&nav_url));
+        .with_navigation_handler(|nav_url| {
+            if bolt_security::is_allowed_navigation(&nav_url) {
+                true
+            } else {
+                if bolt_security::is_allowed_external_url(&nav_url) {
+                    crate::configure::open_browser(&nav_url);
+                }
+                false
+            }
+        });
 
     #[cfg(any(
         target_os = "windows",

@@ -261,6 +261,8 @@ Validates every network destination and generates Content Security Policy rules.
 
 ```rust
 pub const ALLOWED_JAGEX_HOST: &str;
+pub const ALLOWED_AUTH_HOST: &str;
+pub const ALLOWED_REDIRECT_HOST: &str;
 pub const CSP_VALUE: &str;
 pub const CSP_META_TAG: &str;
 
@@ -274,6 +276,7 @@ pub enum SecurityError {
 
 pub fn is_allowed_host(host: &str) -> bool;
 pub fn is_allowed_navigation(url: &str) -> bool;
+pub fn is_allowed_external_url(url: &str) -> bool;
 pub fn csp_header_value() -> &'static str;
 pub fn csp_meta_tag() -> &'static str;
 pub fn validate_url(raw_url: &str) -> Result<(), SecurityError>;

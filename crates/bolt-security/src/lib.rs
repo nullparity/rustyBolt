@@ -3,6 +3,8 @@
 use thiserror::Error;
 
 pub const ALLOWED_JAGEX_HOST: &str = "account.jagex.com";
+pub const ALLOWED_AUTH_HOST: &str = "auth.jagex.com";
+pub const ALLOWED_REDIRECT_HOST: &str = "secure.runescape.com";
 pub const CSP_VALUE: &str = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none';";
 pub const CSP_META_TAG: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none';\">";
 
@@ -24,9 +26,14 @@ pub enum SecurityError {
     MalformedUrl(String),
 }
 
+pub fn is_allowed_remote_host(host: &str) -> bool {
+    let lower = host.trim().to_ascii_lowercase();
+    lower == ALLOWED_JAGEX_HOST || lower == ALLOWED_AUTH_HOST || lower == ALLOWED_REDIRECT_HOST
+}
+
 pub fn is_allowed_host(host: &str) -> bool {
     let lower = host.trim().to_ascii_lowercase();
-    lower == ALLOWED_JAGEX_HOST
+    is_allowed_remote_host(&lower)
         || lower == "127.0.0.1"
         || lower == "localhost"
         || lower == "::1"
@@ -39,6 +46,16 @@ pub fn is_allowed_navigation(url: &str) -> bool {
         || trimmed.starts_with("https://127.0.0.1:")
         || trimmed.starts_with("http://localhost:")
         || trimmed.starts_with("http://[::1]:")
+}
+
+pub fn is_allowed_external_url(url: &str) -> bool {
+    if validate_url(url).is_err() {
+        return false;
+    }
+    let lower = url.trim().to_ascii_lowercase();
+    lower.starts_with("https://account.jagex.com/")
+        || lower.starts_with("https://auth.jagex.com/")
+        || lower.starts_with("https://secure.runescape.com/")
 }
 
 pub fn csp_header_value() -> &'static str {
@@ -108,7 +125,7 @@ pub fn validate_url(raw_url: &str) -> Result<(), SecurityError> {
         None => None,
     };
 
-    if host_lower == ALLOWED_JAGEX_HOST {
+    if is_allowed_remote_host(&host_lower) {
         if scheme_lower != "https" {
             return Err(SecurityError::InsecureScheme(scheme.to_string()));
         }
@@ -145,6 +162,10 @@ mod tests {
         assert!(validate_url("https://account.jagex.com/users/@me").is_ok());
         assert!(validate_url("https://account.jagex.com:443/oauth2/token").is_ok());
         assert!(validate_url("https://ACCOUNT.JAGEX.COM/users/@me").is_ok());
+        assert!(validate_url("https://auth.jagex.com/game-session/v1/accounts").is_ok());
+        assert!(validate_url("https://auth.jagex.com/game-session/v1/sessions").is_ok());
+        assert!(validate_url("https://auth.jagex.com:443/game-session/v1/accounts").is_ok());
+        assert!(validate_url("https://secure.runescape.com/m=weblogin/launcher-redirect").is_ok());
     }
 
     #[test]
@@ -229,5 +250,21 @@ mod tests {
         assert!(csp_header_value().contains("default-src 'none'"));
         assert!(csp_header_value().contains("connect-src http://127.0.0.1:*"));
         assert!(csp_meta_tag().contains("Content-Security-Policy"));
+    }
+
+    #[test]
+    fn test_external_url_filter() {
+        assert!(is_allowed_external_url(
+            "https://account.jagex.com/oauth2/auth?response_type=code"
+        ));
+        assert!(is_allowed_external_url(
+            "https://auth.jagex.com/game-session/v1/accounts"
+        ));
+        assert!(is_allowed_external_url(
+            "https://secure.runescape.com/m=weblogin/launcher-redirect"
+        ));
+        assert!(!is_allowed_external_url("http://127.0.0.1:8080/"));
+        assert!(!is_allowed_external_url("https://malicious.com/phish"));
+        assert!(!is_allowed_external_url("https://google.com/"));
     }
 }

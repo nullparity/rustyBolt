@@ -401,6 +401,7 @@ fn respond(
             if let Ok(mut lock) = flow_state.lock() {
                 *lock = Some(flow);
             }
+            open_browser(&url);
             let json = format!("{{\"ok\":true,\"url\":\"{url}\"}}");
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
@@ -755,7 +756,7 @@ fn compute_preview(paths: &Paths, config: &Config, kind: ClientKind) -> Option<S
     Some(parts.join(" "))
 }
 
-fn open_browser(url: &str) {
+pub(crate) fn open_browser(url: &str) {
     #[cfg(target_os = "macos")]
     let _ = std::process::Command::new("open").arg(url).spawn();
 

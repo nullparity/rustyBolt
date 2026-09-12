@@ -1146,6 +1146,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             Open Jagex Login
           </button>
+          <a id="auth-fallback-link" href="#" target="_blank" style="display: none; font-size: 0.8rem; color: var(--amber); margin-top: 6px; text-decoration: underline;">Browser didn't open? Click here</a>
         </div>
       </div>
 
@@ -1462,9 +1463,13 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       try {
         const res = await fetch('/api/auth/start', { method: 'POST' });
         const data = await res.json();
-        if (data.url) {
-          window.open(data.url, '_blank');
+        if (data.ok) {
           btn.textContent = 'Opened in Browser ✓';
+          const fallback = document.getElementById('auth-fallback-link');
+          if (fallback && data.url) {
+            fallback.href = data.url;
+            fallback.style.display = 'inline-block';
+          }
         }
       } catch (e) {
         alert('Failed to start login flow: ' + e.message);
