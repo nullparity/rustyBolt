@@ -1,0 +1,1 @@
+[{"name":"metadata.json","path":"dist/metadata.json","internal_type":36,"type":"Metadata"},{"name":"rustybolt","path":"dist/rustybolt_aarch64-apple-darwin/rustybolt","goos":"darwin","goarch":"arm64","target":"aarch64-apple-darwin","internal_type":4,"type":"Binary","extra":{"Abi":"","Binary":"rustybolt","Builder":"rust","Ext":"","ID":"rustybolt"}}]

@@ -16,8 +16,9 @@ builds:
     builder: rust
     binary: rustybolt
     # A release uses `cargo zigbuild`, which cross compiles the C parts of the
-    # TLS stack. A local check sets RUSTYBOLT_CARGO_CMD=build and one target.
-    command: '{{ envOrDefault "RUSTYBOLT_CARGO_CMD" "zigbuild" }}'
+    # TLS stack. The field takes no template, so a local check runs
+    # `make release-check`, which swaps this word for `build`.
+    command: zigbuild
     flags:
       - --release
       # The project is a Cargo workspace, so the package needs a name.
@@ -60,6 +61,10 @@ changelog:
       - "^chore:"
 
 release:
+  # The repository is named here, so a check needs no git remote.
+  github:
+    owner: andy-v-h
+    name: rustyBolt
   draft: true
   name_template: "rustyBolt {{ .Version }}"
   header: |
