@@ -1,5 +1,6 @@
 //! The launch of a game client.
 
+#[cfg(unix)]
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -532,7 +533,10 @@ mod tests {
             assert!(args.contains(&format!("--add-opens={package}=ALL-UNNAMED")));
         }
         assert!(args.contains(&"-Duser.home=/home/ada/.local/share/rustybolt".to_string()));
-        assert!(args.contains(&"-Dsun.java2d.metal=true".to_string()));
+        assert_eq!(
+            args.contains(&"-Dsun.java2d.metal=true".to_string()),
+            cfg!(target_os = "macos")
+        );
         assert!(args.contains(&"-Dapple.awt.application.name=RuneLite".to_string()));
         assert!(args.contains(&"-Drunelite.launcher.nojvm=true".to_string()));
         assert!(args.contains(&"-jar".to_string()));

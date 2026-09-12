@@ -715,17 +715,18 @@ mod tests {
     }
 
     #[test]
-    fn test_select_prefers_known_version() {
-        let mut runtimes = discover();
-        runtimes.sort_by_key(|r| r.version.as_ref().map(|v| v.feature).unwrap_or(0));
+    fn test_select_meets_the_minimum_feature() {
+        let runtimes = discover();
+        let Some(min) = runtimes
+            .iter()
+            .filter_map(|r| r.version.as_ref().map(|v| v.feature))
+            .min()
+        else {
+            return;
+        };
 
-        if !runtimes.is_empty() {
-            let first = runtimes[0].clone();
-            let selected = select(first.version.as_ref().map(|v| v.feature).unwrap_or(0));
-
-            if let Some(selected) = selected {
-                assert_eq!(selected.path, first.path);
-            }
-        }
+        let selected = select(min).expect("a runtime of the minimum feature exists");
+        assert!(runtimes.iter().any(|r| r.path == selected.path));
+        assert!(selected.version.as_ref().is_some_and(|v| v.feature >= min));
     }
 }
