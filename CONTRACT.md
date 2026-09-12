@@ -17,10 +17,9 @@ rustyBolt splits them:
 | `bolt-auth` | Jagex OAuth2 PKCE state machine | nothing, no I/O |
 | `bolt-jdk` | Java discovery and JVM argv | file system only |
 | `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, HTTP |
-| `bolt-cli` | headless driver | `bolt-core` |
-| `bolt-macos` | AppKit and WKWebView shell | `bolt-core` |
+| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk` |
 
-A new OS shell implements UI only. It never repeats protocol or launch logic.
+The launcher driver is portable across macOS, Linux, and Windows. It never repeats protocol or launch logic.
 
 ## bolt-auth
 

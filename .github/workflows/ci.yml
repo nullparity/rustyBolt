@@ -26,17 +26,8 @@ jobs:
       - name: Format
         run: cargo fmt --all --check
 
-      # bolt-macos holds AppKit code, so only a macOS runner compiles it.
       - name: Clippy
-        if: runner.os == 'macOS'
         run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Clippy
-        if: runner.os != 'macOS'
-        run: cargo clippy --workspace --exclude bolt-macos --all-targets -- -D warnings
 
       - name: Test
-        if: runner.os == 'macOS'
         run: cargo test --workspace
-      - name: Test
-        if: runner.os != 'macOS'
-        run: cargo test --workspace --exclude bolt-macos

@@ -57,31 +57,9 @@ jobs:
             rustybolt_*.zip
           if-no-files-found: error
 
-  app:
-    name: rustyBolt.app
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Build bundle
-        run: macos/build-app.sh "$PWD/bundle"
-
-      - name: Archive
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          ditto -c -k --keepParent bundle/rustyBolt.app "rustyBolt_${version}_darwin_arm64.app.zip"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: app-darwin-arm64
-          path: rustyBolt_*.app.zip
-          if-no-files-found: error
-
   release:
     name: Publish release
-    needs: [cli, app]
+    needs: [cli]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

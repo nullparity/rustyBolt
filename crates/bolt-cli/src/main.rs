@@ -7,6 +7,7 @@ mod auth;
 mod configure;
 mod launch;
 mod verify;
+mod web;
 
 use bolt_auth::Session;
 use bolt_core::{ClientKind, CoreError, SessionStore};

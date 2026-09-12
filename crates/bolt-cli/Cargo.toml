@@ -14,4 +14,5 @@ path = "src/main.rs"
 bolt-auth.workspace = true
 bolt-jdk.workspace = true
 bolt-core.workspace = true
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

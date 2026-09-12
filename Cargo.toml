@@ -5,7 +5,6 @@ members = [
     "crates/bolt-jdk",
     "crates/bolt-core",
     "crates/bolt-cli",
-    "crates/bolt-macos",
 ]
 
 [workspace.package]

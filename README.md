@@ -1,8 +1,8 @@
 # rustyBolt
 
-A free launcher for RuneLite and HDOS. It logs you in to your Jagex account, finds a Java runtime, and starts your client with a tuned set of JVM flags. macOS gets a native application. Every system gets a command line tool.
+A free, portable cross-platform launcher for RuneLite and HDOS. It logs you in to your Jagex account, finds a Java runtime, and starts your client with a tuned set of JVM flags across macOS, Linux, and Windows.
 
-rustyBolt is an alternative to the Bolt launcher. Bolt holds the login, the Java logic and the user interface in one Chromium process. rustyBolt puts the login and the Java logic in libraries with no user interface, so a shell for a new system is small. The technical half of this file explains that split.
+rustyBolt is an alternative to the Bolt launcher. Bolt holds the login, the Java logic and the user interface in one Chromium process. rustyBolt puts the login and the Java logic in clean libraries with no heavy window toolkit dependencies, so the entire launcher is lightweight and 100% portable.
 
 - [Install](#install)
 - [Use the launcher](#use-the-launcher)
@@ -22,35 +22,28 @@ Then download a rustyBolt archive from the [Releases](https://github.com/nullpar
 
 | system | file | steps |
 | --- | --- | --- |
-| macOS application | `rustyBolt_<version>_darwin_arm64.app.zip` | Unzip it. Move `rustyBolt.app` to Applications. |
-| macOS command line | `rustybolt_<version>_darwin_<arch>.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
-| Linux | `rustybolt_<version>_linux_<arch>.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
+| macOS (Apple Silicon) | `rustybolt_<version>_darwin_arm64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
+| macOS (Intel) | `rustybolt_<version>_darwin_amd64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
+| Linux (x86_64) | `rustybolt_<version>_linux_amd64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
+| Linux (ARM64) | `rustybolt_<version>_linux_arm64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
 | Windows | `rustybolt_<version>_windows_amd64.zip` | Extract it. Put `rustybolt.exe` on your `PATH`. |
-
-The macOS application has no Apple developer signature. If macOS refuses to open it, open System Settings, then Privacy & Security, then click Open Anyway. The command below does the same thing:
-
-```sh
-xattr -d com.apple.quarantine /Applications/rustyBolt.app
-```
 
 ## Use the launcher
 
-The macOS application shows a login page. After the login it lists your characters. Pick one and click Launch. The Advanced window holds every setting: the Java runtime, the client jar, the tuned flags and the exact command line.
-
-The command line tool has four commands:
+The launcher has four commands on all operating systems:
 
 ```sh
 rustybolt login              # log in to your Jagex account, once
 rustybolt launch runelite    # start the client
 rustybolt verify             # show what a launch does, and start nothing
-rustybolt configure          # open the settings window
+rustybolt configure          # open the configuration dashboard in your browser
 ```
 
 `rustybolt login` prints a URL. Open it in a browser and log in. The browser then lands on a redirect page. Copy the whole address bar of that page and paste it at the prompt. The launcher saves the session, so the next launch needs no login.
 
 `rustybolt verify` checks the client jar, the session and the Java runtime, then prints the command line that `launch` runs.
 
-`rustybolt configure` opens the settings window where you can manage Java runtimes, JVM tuning, and client configurations.
+`rustybolt configure` opens the configuration dashboard in your default web browser (on macOS, Linux, and Windows), where you can manage Java runtimes, JVM tuning, and client configurations.
 
 ## Troubleshooting
 
@@ -66,26 +59,19 @@ rustybolt configure          # open the settings window
 
 ## Build from source
 
-You need a Rust toolchain of version 1.82 or newer from [rustup](https://rustup.rs). The macOS application needs Xcode command line tools. To build the application bundle, run `icon/build.sh` once (it needs `brew install librsvg`), then `macos/build-app.sh`. The bundle lands in `target/rustyBolt.app`.
+You need a Rust toolchain of version 1.82 or newer from [rustup](https://rustup.rs).
 
 ```sh
 cargo test --workspace
 cargo run -p bolt-cli -- help
-cargo run -p bolt-macos
-```
-
-The macOS application has a self check that prints the window state. Use it on a
-machine with no screen access:
-
-```sh
-cargo run -p bolt-macos -- --self-check --self-check-login
+cargo run -p bolt-cli -- configure
 ```
 
 ### Make a release
 
 A tag that starts with `v` starts the release workflow. The workflow builds
-`rustybolt` on a native runner for each target and makes `rustyBolt.app` on
-macOS. It then uploads the archives, `checksums.txt` and publishes the release.
+`rustybolt` on a native runner for each target. It then uploads the archives,
+`checksums.txt` and publishes the release.
 
 ```sh
 git tag v0.1.0
@@ -104,9 +90,7 @@ Pull requests and pushes to `main` run `cargo fmt`, `cargo clippy` and
 graph TD
     A[bolt-auth: OAuth2 PKCE state machine, no input or output] --> C[bolt-core]
     B[bolt-jdk: Java discovery, JVM argv] --> C
-    C[bolt-core: paths, config, sessions, client lookup, launch] --> D[bolt-cli: command line]
-    C --> E[bolt-macos: AppKit and WKWebView]
-    C -.-> F[a Windows or Linux shell: user interface only]
+    C[bolt-core: paths, config, sessions, client lookup, launch] --> D[bolt-cli: CLI & configuration dashboard]
 ```
 
 | crate | owns | knows about |
@@ -114,8 +98,7 @@ graph TD
 | `bolt-auth` | the Jagex OAuth2 PKCE flow | nothing, no input or output |
 | `bolt-jdk` | Java discovery and JVM arguments | the file system only |
 | `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, HTTP |
-| `bolt-cli` | a headless driver | `bolt-core` |
-| `bolt-macos` | the native macOS application | `bolt-core` |
+| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk` |
 
 `CONTRACT.md` holds the public API of every crate.
 
@@ -190,18 +173,6 @@ that `bolt_core::launch` runs, so a dry run and a real launch never differ.
 | Linux | `$XDG_CONFIG_HOME/rustybolt`, `$XDG_DATA_HOME/rustybolt` | `$XDG_CACHE_HOME/rustybolt`, `$XDG_RUNTIME_DIR/rustybolt` |
 | macOS | `~/Library/Application Support/rustybolt` | `~/Library/Caches/rustybolt` |
 | Windows | `%APPDATA%\rustybolt` | `%LOCALAPPDATA%\rustybolt` |
-
-### Add a shell for another system
-
-1. Make a crate that depends on `bolt-core`.
-2. Show the sessions from `SessionStore`.
-3. Open a browser view at `LoginFlow::authorize_url()`.
-4. Give every URL to `LoginFlow::on_navigation`, and run the action through
-   `HttpAuth::advance`. Stop the navigation when the action is not `Action::Ignore`.
-5. Call `bolt_core::locate_client` and `bolt_core::launch` from a worker thread.
-
-Do not repeat protocol logic, Java rules or path rules in the shell.
-
 ## Contributing
 
 Run `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` before you push. Continuous integration runs the same three commands on macOS, Linux and Windows.
