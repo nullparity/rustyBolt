@@ -2,8 +2,9 @@
 Type=Application
 Name=rustyBolt
 Comment=Fast, portable launcher for RuneLite and HDOS
-Exec=rustybolt
+Exec=rustybolt %u
 Icon=rustybolt
 Terminal=false
 Categories=Game;
+MimeType=x-scheme-handler/jagex;
 Keywords=runelite;hdos;osrs;oldschool;runescape;

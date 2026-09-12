@@ -90,6 +90,12 @@ struct AuthAddressPayload {
     address: Option<String>,
 }
 
+#[derive(Deserialize, Default)]
+struct AuthStartPayload {
+    /// `browser`, `window`, or absent for automatic.
+    mode: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct RemoveSessionPayload {
     sub: String,
@@ -116,6 +122,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let port = listener.local_addr()?.port();
     let url = format!("http://127.0.0.1:{port}/#play");
+
+    // `rustybolt jagex:...` (the Linux scheme handler) finds this instance here.
+    let port_file = PortFile::write(&paths, port);
 
     let running = Arc::new(AtomicBool::new(true));
     let flow_state = Arc::new(Mutex::new(None));
@@ -169,9 +178,14 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     });
 
     if let Some(event_loop) = event_loop_opt {
-        if let Err(error) =
-            crate::gui::run_window(event_loop, &url, Arc::clone(&running), wifi_manager)
-        {
+        if let Err(error) = crate::gui::run_window(
+            event_loop,
+            &url,
+            Arc::clone(&running),
+            wifi_manager,
+            Arc::clone(&paths),
+            Arc::clone(&flow_state),
+        ) {
             eprintln!("rustybolt: native window failed: {error}. Falling back to browser.");
             open_browser(&url);
             let _ = server_thread.join();
@@ -183,8 +197,75 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
         let _ = server_thread.join();
     }
 
+    drop(port_file);
     println!("rustybolt: launcher server stopped.");
     Ok(())
+}
+
+/// The file that records the port of the running launcher. Removed on drop.
+struct PortFile(PathBuf);
+
+impl PortFile {
+    fn path(paths: &Paths) -> PathBuf {
+        paths.runtime_dir.join("launcher.port")
+    }
+
+    fn write(paths: &Paths, port: u16) -> Self {
+        let path = Self::path(paths);
+        let _ = std::fs::write(&path, port.to_string());
+        Self(path)
+    }
+
+    /// Reads the port of a running launcher, if any.
+    fn read(paths: &Paths) -> Option<u16> {
+        std::fs::read_to_string(Self::path(paths))
+            .ok()?
+            .trim()
+            .parse()
+            .ok()
+    }
+}
+
+impl Drop for PortFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+/// Forwards a `jagex:` redirect URL to the running launcher.
+///
+/// The desktop file (Linux) and the app bundle (macOS) register the scheme,
+/// so the browser starts `rustybolt jagex:code=...` for the login redirect.
+pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
+    if !bolt_security::is_login_redirect(url) {
+        return Err(CliError::Message(format!(
+            "`{url}` is not a login redirect"
+        )));
+    }
+    let paths = Paths::resolve()?;
+    let Some(port) = PortFile::read(&paths) else {
+        return Err(CliError::Message(
+            "no running launcher found. Start rustybolt, then click Add Jagex Account.".to_string(),
+        ));
+    };
+    let body = serde_json::json!({ "url": url }).to_string();
+    let mut stream = TcpStream::connect(("127.0.0.1", port))
+        .map_err(|e| CliError::Message(format!("cannot reach the running launcher: {e}")))?;
+    let request = format!(
+        "POST /api/auth/redirect HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    stream.write_all(request.as_bytes())?;
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response);
+    if response.starts_with("HTTP/1.1 200") {
+        Ok(())
+    } else {
+        Err(CliError::Message(format!(
+            "the launcher rejected the redirect: {}",
+            response.rsplit("\r\n").next().unwrap_or("")
+        )))
+    }
 }
 
 fn handle_connection(
@@ -245,6 +326,7 @@ fn handle_connection(
             body: &body,
             keep_alive,
             wifi,
+            proxy,
         };
         let should_exit = respond(&req, &mut stream, paths, flow_state);
         let _ = stream.flush();
@@ -280,6 +362,7 @@ struct HttpRequest<'a> {
     body: &'a [u8],
     keep_alive: bool,
     wifi: &'a WifiManager,
+    proxy: Option<&'a EventLoopProxy<AppEvent>>,
 }
 
 fn security_headers() -> String {
@@ -395,16 +478,106 @@ fn respond(
             false
         }
         ("POST", "/api/auth/start") => {
-            let config = AuthConfig::default();
-            let flow = LoginFlow::new(config);
-            let url = flow.authorize_url();
-            if let Ok(mut lock) = flow_state.lock() {
-                *lock = Some(flow);
+            let mode = serde_json::from_slice::<AuthStartPayload>(req.body)
+                .unwrap_or_default()
+                .mode
+                .unwrap_or_default();
+            let json = match req.proxy {
+                None => {
+                    let url = new_flow(flow_state);
+                    open_browser(&url);
+                    serde_json::json!({ "ok": true, "native": false, "url": url })
+                }
+                Some(proxy) => {
+                    let want_browser =
+                        mode != "window" && crate::platform::browser_login_available();
+                    let readiness = if want_browser {
+                        crate::platform::readiness()
+                    } else {
+                        crate::platform::Readiness::PortInUse
+                    };
+                    match (want_browser, readiness) {
+                        // Ask before opening anything: the setup is a
+                        // privileged, one-time step the user must agree to.
+                        (true, crate::platform::Readiness::NeedsSetup(reason)) => {
+                            serde_json::json!({ "ok": true, "native": true, "setup": true, "reason": reason })
+                        }
+                        (true, crate::platform::Readiness::Ready) => {
+                            let url = new_flow(flow_state);
+                            let _ = proxy.send_event(AppEvent::OpenLoginBrowser(url));
+                            serde_json::json!({ "ok": true, "native": true, "mode": "browser" })
+                        }
+                        (want, readiness) => {
+                            let url = new_flow(flow_state);
+                            let _ = proxy.send_event(AppEvent::OpenLoginWindow(url));
+                            let note = if want && readiness == crate::platform::Readiness::PortInUse
+                            {
+                                "Port 80 is in use by another program; logging in inside rustyBolt instead."
+                            } else {
+                                ""
+                            };
+                            serde_json::json!({ "ok": true, "native": true, "mode": "window", "note": note })
+                        }
+                    }
+                }
             }
-            open_browser(&url);
-            let json = format!("{{\"ok\":true,\"url\":\"{url}\"}}");
+            .to_string();
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("POST", "/api/auth/setup") => {
+            // Runs the native elevation prompt; blocks this connection only.
+            let (status, json) = match crate::platform::install_forward() {
+                Ok(()) => ("200 OK", serde_json::json!({ "ok": true })),
+                Err(message) => (
+                    "400 Bad Request",
+                    serde_json::json!({ "ok": false, "error": message }),
+                ),
+            };
+            let json = json.to_string();
+            let response = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("POST", "/api/auth/redirect") => {
+            // A redirect URL delivered out of band (the `jagex:` scheme handler).
+            let payload = serde_json::from_slice::<AuthAddressPayload>(req.body);
+            let address = payload
+                .ok()
+                .and_then(|p| p.address.or(p.url))
+                .unwrap_or_default();
+            let (status, json) = if !bolt_security::is_login_redirect(&address) {
+                (
+                    "400 Bad Request",
+                    serde_json::json!({ "ok": false, "error": "not a login redirect" }),
+                )
+            } else if let Some(proxy) = req.proxy {
+                // The window finishes the flow and updates the page itself.
+                let _ = proxy.send_event(AppEvent::LoginRedirect(address));
+                ("200 OK", serde_json::json!({ "ok": true }))
+            } else {
+                match complete_login(paths, flow_state, &address) {
+                    LoginOutcome::Done(_) => ("200 OK", serde_json::json!({ "ok": true })),
+                    LoginOutcome::Navigate(url) => {
+                        open_browser(&url);
+                        ("200 OK", serde_json::json!({ "ok": true, "next": true }))
+                    }
+                    LoginOutcome::Error(message) => (
+                        "400 Bad Request",
+                        serde_json::json!({ "ok": false, "error": message }),
+                    ),
+                }
+            };
+            let json = json.to_string();
+            let response = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
                 json.len()
             );
             let _ = stream.write_all(response.as_bytes());
@@ -416,57 +589,22 @@ fn respond(
                 .ok()
                 .and_then(|p| p.address.or(p.url))
                 .unwrap_or_default();
-            let mut flow_opt = flow_state.lock().ok().and_then(|mut g| g.take());
-            let (success, result_json) = if let Some(mut flow) = flow_opt.take() {
-                let auth_config = AuthConfig::default();
-                let http = HttpAuth::new(&auth_config);
-                let action_res = match flow.on_navigation(&address) {
-                    Ok(action) => http.advance(&mut flow, action).map_err(|e| e.to_string()),
-                    Err(err) => Err(err.to_string()),
-                };
-                match action_res {
-                    Ok(Action::Done(session)) => {
-                        let mut store = SessionStore::load(paths);
-                        store.upsert(session.clone());
-                        let _ = store.save();
-                        let config = Config::load(paths);
-                        let chars = fetch_characters(paths, &config, &session.session_id);
-                        let view = SessionView {
-                            sub: session.sub.clone(),
-                            display_name: session.display_name.clone(),
-                            suffix: session.suffix.clone(),
-                        };
-                        #[derive(Serialize)]
-                        struct LoginSuccess {
-                            ok: bool,
-                            session: SessionView,
-                            characters: Vec<CharacterView>,
-                        }
-                        let json = serde_json::to_string(&LoginSuccess {
-                            ok: true,
-                            session: view,
-                            characters: chars,
-                        })
-                        .unwrap_or_else(|_| "{\"ok\":true}".to_string());
-                        (true, json)
-                    }
-                    Ok(_) => {
-                        if let Ok(mut lock) = flow_state.lock() {
-                            *lock = Some(flow);
-                        }
-                        (
-                            false,
-                            "{\"ok\":false,\"error\":\"More verification steps needed. Please paste final redirect URL.\"}".to_string(),
-                        )
-                    }
-                    Err(err) => (false, format!("{{\"ok\":false,\"error\":\"{err}\"}}")),
+            let (success, result_json) = match complete_login(paths, flow_state, &address) {
+                LoginOutcome::Done(json) => (true, json),
+                LoginOutcome::Navigate(url) => {
+                    open_browser(&url);
+                    let json = serde_json::json!({
+                        "ok": false,
+                        "next": true,
+                        "url": url,
+                        "error": "One more step: approve the consent page that opened in your browser, then paste the address it redirects to (it starts with http://localhost/).",
+                    });
+                    (false, json.to_string())
                 }
-            } else {
-                (
+                LoginOutcome::Error(message) => (
                     false,
-                    "{\"ok\":false,\"error\":\"No login flow active. Click Start Login first.\"}"
-                        .to_string(),
-                )
+                    serde_json::json!({ "ok": false, "error": message }).to_string(),
+                ),
             };
 
             let status = if success { "200 OK" } else { "400 Bad Request" };
@@ -655,6 +793,91 @@ fn fetch_characters(paths: &Paths, config: &Config, session_id: &str) -> Vec<Cha
             }
         })
         .collect()
+}
+
+/// Starts a fresh login flow and returns its authorize URL.
+fn new_flow(flow_state: &Arc<Mutex<Option<LoginFlow>>>) -> String {
+    let flow = LoginFlow::new(AuthConfig::default());
+    let url = flow.authorize_url();
+    if let Ok(mut lock) = flow_state.lock() {
+        *lock = Some(flow);
+    }
+    url
+}
+
+/// Result of feeding one redirect address to the active login flow.
+#[derive(Debug)]
+pub(crate) enum LoginOutcome {
+    /// The login finished. Holds the JSON the page expects (`session`, `characters`).
+    Done(String),
+    /// The provider needs the consent page at this URL.
+    Navigate(String),
+    /// The flow failed or is gone. Holds a message for the user.
+    Error(String),
+}
+
+/// Advances the active login flow with a redirect address.
+///
+/// On `Done` the session is saved to the store. On `Navigate` the flow stays
+/// active for the next address. On an error the flow is dropped.
+pub(crate) fn complete_login(
+    paths: &Paths,
+    flow_state: &Arc<Mutex<Option<LoginFlow>>>,
+    address: &str,
+) -> LoginOutcome {
+    let Some(mut flow) = flow_state.lock().ok().and_then(|mut g| g.take()) else {
+        return LoginOutcome::Error(
+            "No login flow active. Click Add Jagex Account first.".to_string(),
+        );
+    };
+    let auth_config = AuthConfig::default();
+    let http = HttpAuth::new(&auth_config);
+    let action_res = match flow.on_navigation(address) {
+        Ok(action) => http.advance(&mut flow, action).map_err(|e| e.to_string()),
+        Err(err) => Err(err.to_string()),
+    };
+    match action_res {
+        Ok(Action::Done(session)) => {
+            let mut store = SessionStore::load(paths);
+            store.upsert(session.clone());
+            let _ = store.save();
+            let config = Config::load(paths);
+            let chars = fetch_characters(paths, &config, &session.session_id);
+            let view = SessionView {
+                sub: session.sub.clone(),
+                display_name: session.display_name.clone(),
+                suffix: session.suffix.clone(),
+            };
+            #[derive(Serialize)]
+            struct LoginSuccess {
+                ok: bool,
+                session: SessionView,
+                characters: Vec<CharacterView>,
+            }
+            let json = serde_json::to_string(&LoginSuccess {
+                ok: true,
+                session: view,
+                characters: chars,
+            })
+            .unwrap_or_else(|_| "{\"ok\":true}".to_string());
+            LoginOutcome::Done(json)
+        }
+        Ok(Action::Navigate { url }) => {
+            if let Ok(mut lock) = flow_state.lock() {
+                *lock = Some(flow);
+            }
+            LoginOutcome::Navigate(url)
+        }
+        Ok(_) => {
+            if let Ok(mut lock) = flow_state.lock() {
+                *lock = Some(flow);
+            }
+            LoginOutcome::Error(
+                "That address is not part of the login flow. Paste the full URL from the browser address bar.".to_string(),
+            )
+        }
+        Err(err) => LoginOutcome::Error(err),
+    }
 }
 
 fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {

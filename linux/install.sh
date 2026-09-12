@@ -25,6 +25,11 @@ if [ -f "$SCRIPT_DIR/rustybolt.desktop" ]; then
     echo "Installed desktop entry to $APP_DIR/rustybolt.desktop"
 fi
 
+if command -v xdg-mime >/dev/null 2>&1; then
+    # The browser hands the `jagex:` login redirect back to the launcher.
+    xdg-mime default rustybolt.desktop x-scheme-handler/jagex 2>/dev/null || true
+fi
+
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$APP_DIR" 2>/dev/null || true
 fi

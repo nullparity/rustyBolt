@@ -58,6 +58,62 @@ pub fn is_allowed_external_url(url: &str) -> bool {
         || lower.starts_with("https://secure.runescape.com/")
 }
 
+/// Extracts the lowercase host of `url`, without port or userinfo checks.
+fn url_host(url: &str) -> Option<String> {
+    let remainder = url.trim().split_once("://")?.1;
+    let authority = remainder.split(['/', '?', '#']).next().unwrap_or(remainder);
+    let host = if authority.starts_with('[') {
+        &authority[..authority.find(']')? + 1]
+    } else {
+        authority.split(':').next().unwrap_or(authority)
+    };
+    Some(host.to_ascii_lowercase())
+}
+
+/// Reports whether `url` is one of the two OAuth redirect targets that the
+/// login window must intercept instead of load.
+pub fn is_login_redirect(url: &str) -> bool {
+    let lower = url.trim().to_ascii_lowercase();
+    lower.starts_with("jagex:")
+        || lower.starts_with("https://secure.runescape.com/m=weblogin/launcher-redirect")
+        || lower.starts_with("http://localhost/")
+        || lower.starts_with("http://localhost#")
+        || lower == "http://localhost"
+}
+
+/// Reports whether the dedicated login window may load `url`.
+///
+/// Only HTTPS pages on Jagex-owned domains are allowed. The two redirect
+/// targets are excluded here because [`is_login_redirect`] handles them.
+pub fn is_allowed_login_navigation(url: &str) -> bool {
+    let trimmed = url.trim();
+    // Turnstile and similar widgets build their UI in about:blank/about:srcdoc
+    // iframes; these carry no remote content of their own.
+    if trimmed == "about:blank" || trimmed == "about:srcdoc" {
+        return true;
+    }
+    if !trimmed
+        .get(..8)
+        .is_some_and(|s| s.eq_ignore_ascii_case("https://"))
+    {
+        return false;
+    }
+    let Some(host) = url_host(trimmed) else {
+        return false;
+    };
+    if host.contains('@') {
+        return false;
+    }
+    // Jagex fronts its login with Cloudflare Turnstile; the challenge widget
+    // is an iframe on challenges.cloudflare.com.
+    const DOMAINS: [&str; 2] = ["jagex.com", "runescape.com"];
+    const HOSTS: [&str; 1] = ["challenges.cloudflare.com"];
+    HOSTS.contains(&host.as_str())
+        || DOMAINS
+            .iter()
+            .any(|d| host == *d || host.ends_with(&format!(".{d}")))
+}
+
 pub fn csp_header_value() -> &'static str {
     CSP_VALUE
 }
@@ -250,6 +306,41 @@ mod tests {
         assert!(csp_header_value().contains("default-src 'none'"));
         assert!(csp_header_value().contains("connect-src http://127.0.0.1:*"));
         assert!(csp_meta_tag().contains("Content-Security-Policy"));
+    }
+
+    #[test]
+    fn test_login_window_policy() {
+        assert!(is_allowed_login_navigation(
+            "https://account.jagex.com/oauth2/auth?x=1"
+        ));
+        assert!(is_allowed_login_navigation("https://auth.jagex.com/"));
+        assert!(is_allowed_login_navigation("https://www.runescape.com/"));
+        assert!(is_allowed_login_navigation("HTTPS://Account.Jagex.com/"));
+        assert!(is_allowed_login_navigation(
+            "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/"
+        ));
+        assert!(!is_allowed_login_navigation("https://cloudflare.com/"));
+        assert!(is_allowed_login_navigation("about:blank"));
+        assert!(is_allowed_login_navigation("about:srcdoc"));
+        assert!(!is_allowed_login_navigation("about:config"));
+        assert!(!is_allowed_login_navigation("http://account.jagex.com/"));
+        assert!(!is_allowed_login_navigation("https://jagex.com.evil.com/"));
+        assert!(!is_allowed_login_navigation("https://evil.com/?jagex.com"));
+        assert!(!is_allowed_login_navigation(
+            "https://evil.com#account.jagex.com"
+        ));
+        assert!(!is_allowed_login_navigation("http://127.0.0.1:8080/"));
+
+        assert!(is_login_redirect(
+            "https://secure.runescape.com/m=weblogin/launcher-redirect?code=abc&state=x"
+        ));
+        assert!(is_login_redirect(
+            "http://localhost/#code=a&id_token=b&state=c"
+        ));
+        assert!(is_login_redirect("http://localhost#code=a"));
+        assert!(is_login_redirect("jagex:code=a,state=b,intent=social_auth"));
+        assert!(!is_login_redirect("https://account.jagex.com/"));
+        assert!(!is_login_redirect("http://localhost.evil.com/"));
     }
 
     #[test]

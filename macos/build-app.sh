@@ -21,6 +21,8 @@ cp "$BINARY" "$APP/Contents/MacOS/rustybolt"
 chmod +x "$APP/Contents/MacOS/rustybolt"
 
 cp "$ROOT_DIR/icon/rustybolt.icns" "$APP/Contents/Resources/rustybolt.icns"
+cp "$ROOT_DIR/macos/install-login-redirect.sh" "$APP/Contents/Resources/install-login-redirect.sh"
+chmod +x "$APP/Contents/Resources/install-login-redirect.sh"
 
 sed "s/VERSION_PLACEHOLDER/$VERSION/g" "$ROOT_DIR/macos/Info.plist" > "$APP/Contents/Info.plist"
 

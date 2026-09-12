@@ -257,6 +257,17 @@ impl LoginFlow {
     ///
     /// The function returns `Action::Ignore` for a URL that is not part of the flow.
     pub fn on_navigation(&mut self, url: &str) -> Result<Action, AuthError> {
+        // The launcher-redirect page bounces to `jagex:code=..,state=..,intent=..`
+        // when the login ran in an external browser.
+        if let Some(intent) = url.trim().strip_prefix("jagex:") {
+            let parsed = Url {
+                host: String::new(),
+                path: String::new(),
+                query: parse_pairs(&intent.replace(',', "&")),
+                fragment: HashMap::new(),
+            };
+            return self.on_code_redirect(&parsed);
+        }
         let parsed = match Url::parse(url) {
             Some(parsed) => parsed,
             None => return Ok(Action::Ignore),
@@ -705,6 +716,28 @@ mod tests {
             other => panic!("unexpected action: {other:?}"),
         }
         assert_eq!(flow.stage(), Stage::Token);
+    }
+
+    #[test]
+    fn jagex_intent_makes_the_token_request() {
+        let mut flow = flow();
+        let action = flow
+            .on_navigation("jagex:code=abc%2Fdef,state=STATEONE0001,intent=social_auth")
+            .unwrap();
+        match action {
+            Action::PostForm { url, body } => {
+                assert_eq!(url, "https://account.jagex.com/oauth2/token");
+                assert!(body.contains("code=abc%2Fdef"));
+            }
+            other => panic!("unexpected action: {other:?}"),
+        }
+        assert_eq!(flow.stage(), Stage::Token);
+
+        let mut flow = self::flow();
+        let error = flow
+            .on_navigation("jagex:code=abc,state=OTHER,intent=social_auth")
+            .unwrap_err();
+        assert_eq!(error, AuthError::StateMismatch);
     }
 
     #[test]

@@ -5,8 +5,10 @@
 
 mod auth;
 mod configure;
+mod consent;
 mod gui;
 mod launch;
+mod platform;
 mod verify;
 mod web;
 pub(crate) mod wifi;
@@ -112,6 +114,9 @@ fn dispatch(args: &[String]) -> Result<(), CliError> {
     };
     if command == "--browser" {
         return configure::run(args);
+    }
+    if command.starts_with("jagex:") {
+        return configure::forward_redirect(command);
     }
     let rest = &args[1..];
 

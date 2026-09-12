@@ -922,7 +922,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         <div class="dropdown-section-title">Jagex Accounts</div>
         <div id="accounts-list"></div>
         <div class="dropdown-divider"></div>
-        <button class="dropdown-action-btn" onclick="openLoginModal()">
+        <button class="dropdown-action-btn" onclick="addAccount()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Add Jagex Account
         </button>
@@ -1131,6 +1131,27 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
   </main>
 
   
+  <div class="modal-overlay" id="login-setup-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">One-time login setup</div>
+        <button class="modal-close" onclick="closeLoginSetup()">&times;</button>
+      </div>
+      <div class="modal-step">
+        <div class="step-content">
+          <div class="step-desc">Logging in through your browser lets you use your password manager. To receive the last step of the Jagex login, rustyBolt needs one privileged change:</div>
+          <div class="step-desc" id="login-setup-reason" style="margin-top: 8px;"></div>
+          <div class="step-desc" style="margin-top: 8px;">Your system will ask for your password once. Nothing runs with elevated rights afterwards.</div>
+          <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+            <button class="btn-primary" id="login-setup-btn" onclick="runLoginSetup()">Set up and log in</button>
+            <button class="btn-secondary" onclick="addAccount('window')">Log in inside rustyBolt instead</button>
+          </div>
+          <div id="login-setup-error" style="color: var(--red); font-size: 0.78rem; display: none; margin-top: 8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="login-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -1444,6 +1465,103 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     }
 
     
+    // Native window: the login runs in a second webview and calls back into
+    // onNativeLogin / onNativeLoginError. Browser mode: fall back to the modal.
+    let nativeLoginPending = false;
+
+    async function addAccount(mode) {
+      closeAccountDropdown();
+      closeLoginSetup();
+      if (nativeLoginPending) return;
+      nativeLoginPending = true;
+      try {
+        const res = await fetch('/api/auth/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: mode || null })
+        });
+        const data = await res.json();
+        if (data.ok && data.native && data.setup) {
+          nativeLoginPending = false;
+          openLoginSetup(data.reason);
+          return;
+        }
+        if (data.ok && data.native) {
+          if (data.note) showToast(data.note);
+          showToast(data.mode === 'browser'
+            ? 'Sign in to Jagex in your browser'
+            : 'Sign in to Jagex in the window that opened');
+          return;
+        }
+        nativeLoginPending = false;
+        openLoginModal();
+        const btn = document.getElementById('open-auth-btn');
+        if (btn) btn.textContent = 'Opened in Browser ✓';
+        const fallback = document.getElementById('auth-fallback-link');
+        if (fallback && data.url) {
+          fallback.href = data.url;
+          fallback.style.display = 'inline-block';
+        }
+      } catch (e) {
+        nativeLoginPending = false;
+        showToast('Failed to start login: ' + e.message);
+      }
+    }
+
+    function openLoginSetup(reason) {
+      const modal = document.getElementById('login-setup-modal');
+      const text = document.getElementById('login-setup-reason');
+      const err = document.getElementById('login-setup-error');
+      if (text) text.textContent = reason || '';
+      if (err) err.style.display = 'none';
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeLoginSetup() {
+      const modal = document.getElementById('login-setup-modal');
+      if (modal) modal.classList.remove('show');
+    }
+
+    async function runLoginSetup() {
+      const btn = document.getElementById('login-setup-btn');
+      const err = document.getElementById('login-setup-error');
+      if (btn) { btn.disabled = true; btn.textContent = 'Waiting for your password...'; }
+      if (err) err.style.display = 'none';
+      try {
+        const res = await fetch('/api/auth/setup', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          closeLoginSetup();
+          addAccount('browser');
+        } else if (err) {
+          err.textContent = data.error || 'Setup failed';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        if (err) { err.textContent = e.message; err.style.display = 'block'; }
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Set up and log in'; }
+      }
+    }
+
+    function onNativeLogin(data) {
+      nativeLoginPending = false;
+      if (!data || !data.session) return;
+      showToast(`Logged in as ${data.session.display_name}!`);
+      state.sessions = state.sessions || [];
+      state.sessions = state.sessions.filter(s => s.sub !== data.session.sub);
+      state.sessions.push(data.session);
+      activeSub = data.session.sub;
+      state.characters = data.characters || [];
+      renderAccountMenu();
+      renderCharacters();
+    }
+
+    function onNativeLoginError(message) {
+      nativeLoginPending = false;
+      if (message) showToast('Login failed: ' + message);
+    }
+
     function openLoginModal() {
       closeAccountDropdown();
       const modal = document.getElementById('login-modal');
@@ -1505,8 +1623,19 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           state.characters = data.characters || [];
           renderAccountMenu();
           renderCharacters();
+        } else if (data.next) {
+          if (input) {
+            input.value = '';
+            input.placeholder = 'http://localhost/#code=...&id_token=...';
+          }
+          const fallback = document.getElementById('auth-fallback-link');
+          if (fallback && data.url) {
+            fallback.href = data.url;
+            fallback.style.display = 'inline-block';
+          }
+          if (err) { err.textContent = data.error; err.style.color = 'var(--amber)'; err.style.display = 'block'; }
         } else {
-          if (err) { err.textContent = data.error || 'Login failed'; err.style.display = 'block'; }
+          if (err) { err.textContent = data.error || 'Login failed'; err.style.color = 'var(--red)'; err.style.display = 'block'; }
         }
       } catch (e) {
         if (err) { err.textContent = e.message; err.style.display = 'block'; }

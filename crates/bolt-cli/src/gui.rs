@@ -1,17 +1,22 @@
 //! Native desktop window driver using wry and tao.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use tao::dpi::LogicalSize;
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
-use tao::window::WindowBuilder;
+use tao::window::{Window, WindowBuilder};
 use tray_icon::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, TrayIconBuilder, TrayIconEvent};
-use wry::WebViewBuilder;
+use wry::{NewWindowResponse, WebView, WebViewBuilder};
 
+use bolt_core::{LoginFlow, Paths};
+
+use crate::platform::claim_jagex_scheme;
+
+use crate::configure::{complete_login, LoginOutcome};
 use crate::wifi::WifiManager;
 
 #[derive(Debug)]
@@ -20,6 +25,99 @@ pub(crate) enum AppEvent {
     HideWindow,
     #[allow(dead_code)]
     ShowWindow,
+    /// Authorize URL for a login in the system browser.
+    OpenLoginBrowser(String),
+    /// Authorize URL for a login in the in-app window.
+    OpenLoginWindow(String),
+    /// Show the consent page in the login window.
+    ShowConsent(String),
+    /// The login window hit one of the OAuth redirect targets.
+    LoginRedirect(String),
+    /// A worker thread finished advancing the login flow.
+    LoginOutcome(LoginOutcome),
+}
+
+/// The dedicated Jagex login window and its webview.
+struct LoginWindow {
+    window: Window,
+    webview: WebView,
+}
+
+/// Builds a webview inside `window` with the given attributes.
+fn attach_webview(
+    builder: WebViewBuilder<'_>,
+    window: &Window,
+) -> Result<WebView, Box<dyn std::error::Error>> {
+    #[cfg(any(
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "android"
+    ))]
+    return Ok(builder.build(window)?);
+
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "android"
+    )))]
+    {
+        use tao::platform::unix::WindowExtUnix;
+        use wry::WebViewBuilderExtUnix;
+        let vbox = window
+            .default_vbox()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "no GTK vbox"))?;
+        Ok(builder.build_gtk(vbox)?)
+    }
+}
+
+#[cfg(target_os = "macos")]
+const LOGIN_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15";
+#[cfg(target_os = "windows")]
+const LOGIN_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+const LOGIN_USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15";
+
+/// Opens the login window on the authorize URL.
+///
+/// Navigation is limited to HTTPS pages on Jagex domains. The two OAuth
+/// redirect targets are intercepted and sent back as `LoginRedirect`.
+fn open_login_window(
+    event_loop: &tao::event_loop::EventLoopWindowTarget<AppEvent>,
+    proxy: EventLoopProxy<AppEvent>,
+    url: &str,
+) -> Result<LoginWindow, Box<dyn std::error::Error>> {
+    let window = WindowBuilder::new()
+        .with_title("Sign in to Jagex")
+        .with_inner_size(LogicalSize::new(520.0, 760.0))
+        .with_min_inner_size(LogicalSize::new(420.0, 560.0))
+        .build(event_loop)?;
+
+    let builder = WebViewBuilder::new()
+        .with_url(url)
+        // Cloudflare Turnstile stalls on the bare embedded-webview UA.
+        .with_user_agent(LOGIN_USER_AGENT)
+        .with_navigation_handler(move |nav_url| {
+            if bolt_security::is_login_redirect(&nav_url) {
+                let _ = proxy.send_event(AppEvent::LoginRedirect(nav_url));
+                return false;
+            }
+            let allowed = bolt_security::is_allowed_login_navigation(&nav_url);
+            if !allowed {
+                eprintln!("rustybolt: login window blocked navigation to {nav_url}");
+            }
+            allowed
+        })
+        .with_new_window_req_handler(|_url, _features| NewWindowResponse::Deny);
+
+    let webview = attach_webview(builder, &window)?;
+    Ok(LoginWindow { window, webview })
+}
+
+/// Escapes a JSON document so it can sit inside a JS double-quoted string.
+fn js_string(json: &str) -> String {
+    serde_json::to_string(json).unwrap_or_else(|_| "\"\"".to_string())
 }
 
 pub(crate) fn has_display() -> bool {
@@ -65,7 +163,10 @@ pub(crate) fn run_window(
     url: &str,
     running: Arc<AtomicBool>,
     wifi_manager: WifiManager,
+    paths: Arc<Paths>,
+    flow_state: Arc<Mutex<Option<LoginFlow>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
         .with_title("rustyBolt")
         .with_inner_size(LogicalSize::new(960.0, 740.0))
@@ -83,30 +184,17 @@ pub(crate) fn run_window(
                 }
                 false
             }
+        })
+        .with_new_window_req_handler(|nav_url, _features| {
+            // `target="_blank"` links and window.open never get a webview;
+            // allowed Jagex URLs go to the system browser instead.
+            if bolt_security::is_allowed_external_url(&nav_url) {
+                crate::configure::open_browser(&nav_url);
+            }
+            NewWindowResponse::Deny
         });
 
-    #[cfg(any(
-        target_os = "windows",
-        target_os = "macos",
-        target_os = "ios",
-        target_os = "android"
-    ))]
-    let _webview = builder.build(&window)?;
-
-    #[cfg(not(any(
-        target_os = "windows",
-        target_os = "macos",
-        target_os = "ios",
-        target_os = "android"
-    )))]
-    let _webview = {
-        use tao::platform::unix::WindowExtUnix;
-        use wry::WebViewBuilderExtUnix;
-        let vbox = window
-            .default_vbox()
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "no GTK vbox"))?;
-        builder.build_gtk(vbox)?
-    };
+    let webview = attach_webview(builder, &window)?;
 
     let tray_menu = Menu::new();
     let open_item = MenuItem::new("Open rustyBolt", true, None);
@@ -124,7 +212,12 @@ pub(crate) fn run_window(
     }
     let _tray = tray_builder.build().ok();
 
-    event_loop.run(move |event, _, control_flow| {
+    let mut login: Option<LoginWindow> = None;
+    let mut consent: Option<crate::consent::ConsentListener> = None;
+    // Whether the current login started in the system browser.
+    let mut browser_flow = false;
+
+    event_loop.run(move |event, target, control_flow| {
         *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(100));
 
         if !running.load(Ordering::SeqCst) {
@@ -167,11 +260,105 @@ pub(crate) fn run_window(
                 window.set_visible(true);
                 window.set_focus();
             }
+            Event::UserEvent(AppEvent::OpenLoginBrowser(url)) => {
+                login = None;
+                consent.take();
+                browser_flow = true;
+                claim_jagex_scheme();
+                crate::configure::open_browser(&url);
+            }
+            Event::UserEvent(AppEvent::ShowConsent(url)) if login.is_some() => {
+                if let Some(win) = &login {
+                    let _ = win.webview.load_url(&url);
+                    win.window.set_focus();
+                }
+            }
+            Event::UserEvent(AppEvent::OpenLoginWindow(url) | AppEvent::ShowConsent(url)) => {
+                login = None;
+                consent.take();
+                browser_flow = false;
+                match open_login_window(target, proxy.clone(), &url) {
+                    Ok(win) => {
+                        win.window.set_focus();
+                        login = Some(win);
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "rustybolt: login window failed: {error}. Falling back to browser."
+                        );
+                        crate::configure::open_browser(&url);
+                    }
+                }
+            }
+            Event::UserEvent(AppEvent::LoginRedirect(url)) => {
+                // Token and session exchanges block on HTTP; keep them off the UI thread.
+                let paths = Arc::clone(&paths);
+                let flow_state = Arc::clone(&flow_state);
+                let proxy = proxy.clone();
+                std::thread::spawn(move || {
+                    let outcome = complete_login(&paths, &flow_state, &url);
+                    let _ = proxy.send_event(AppEvent::LoginOutcome(outcome));
+                });
+            }
+            Event::UserEvent(AppEvent::LoginOutcome(outcome)) => match outcome {
+                LoginOutcome::Navigate(url) => {
+                    // Consent needs the session cookie of wherever the login
+                    // ran, so it stays in the browser or in the window.
+                    if !browser_flow {
+                        let _ = proxy.send_event(AppEvent::ShowConsent(url));
+                    } else if let Some(listener) = crate::consent::start(proxy.clone()) {
+                        consent = Some(listener);
+                        crate::configure::open_browser(&url);
+                    } else {
+                        // Port 80 was free at the readiness check but is gone now.
+                        if let Ok(mut lock) = flow_state.lock() {
+                            *lock = None;
+                        }
+                        let _ = webview.evaluate_script(
+                            "onNativeLoginError('Port 80 became unavailable. Try again, or log in inside rustyBolt.')",
+                        );
+                    }
+                }
+                LoginOutcome::Done(json) => {
+                    login = None;
+                    consent.take();
+                    window.set_visible(true);
+                    window.set_focus();
+                    let _ = webview.evaluate_script(&format!("onNativeLogin({json})"));
+                }
+                LoginOutcome::Error(message) => {
+                    login = None;
+                    consent.take();
+                    window.set_visible(true);
+                    window.set_focus();
+                    let _ = webview
+                        .evaluate_script(&format!("onNativeLoginError({})", js_string(&message)));
+                }
+            },
+            // macOS hands `jagex:` URLs to the running app through Launch Services.
+            Event::Opened { urls } => {
+                for opened in urls {
+                    let opened = opened.to_string();
+                    if bolt_security::is_login_redirect(&opened) {
+                        let _ = proxy.send_event(AppEvent::LoginRedirect(opened));
+                    }
+                }
+            }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
+                window_id,
                 ..
             } => {
-                window.set_visible(false);
+                if login.as_ref().is_some_and(|w| w.window.id() == window_id) {
+                    // The user gave up; drop the pending flow with the window.
+                    login = None;
+                    if let Ok(mut lock) = flow_state.lock() {
+                        *lock = None;
+                    }
+                    let _ = webview.evaluate_script("onNativeLoginError(null)");
+                } else {
+                    window.set_visible(false);
+                }
             }
             _ => {}
         }

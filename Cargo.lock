@@ -123,6 +123,7 @@ dependencies = [
  "bolt-core",
  "bolt-jdk",
  "bolt-security",
+ "core-foundation 0.10.1",
  "default-net",
  "serde",
  "serde_json",
