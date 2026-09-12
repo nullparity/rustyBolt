@@ -4,12 +4,14 @@
 //! jar, the session, the Java runtime and the command line, so a user can see
 //! what a launch does before it starts a client.
 
+use std::path::PathBuf;
+
 use bolt_core::{ClientKind, Config, LaunchRequest, Paths};
 
 use crate::launch::{resolve_credentials, resolve_jar, Options};
 use crate::{client_kind, flag_value, CliError};
 
-/// Runs `rustybolt verify [runelite|hdos] [--sub <sub>]`.
+/// Runs `rustybolt verify [runelite|hdos] [flags]`.
 pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let options = parse(args)?;
     let paths = Paths::resolve()?;
@@ -69,6 +71,14 @@ fn parse(args: &[String]) -> Result<Options, CliError> {
         match args[index].as_str() {
             "--sub" => {
                 options.sub = Some(flag_value(args, index)?);
+                index += 2;
+            }
+            "--character" => {
+                options.character = Some(flag_value(args, index)?);
+                index += 2;
+            }
+            "--jar" => {
+                options.jar = Some(PathBuf::from(flag_value(args, index)?));
                 index += 2;
             }
             name if index == 0 && !name.starts_with("--") => {

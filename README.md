@@ -1,6 +1,6 @@
 # rustyBolt
 
-A free launcher for RuneLite and HDOS. It logs you in to your Jagex account, picks a Java runtime, downloads the client and starts it with a tuned set of JVM flags. macOS gets a native application. Every system gets a command line tool.
+A free launcher for RuneLite and HDOS. It logs you in to your Jagex account, finds a Java runtime, and starts your client with a tuned set of JVM flags. macOS gets a native application. Every system gets a command line tool.
 
 rustyBolt is an alternative to the Bolt launcher. Bolt holds the login, the Java logic and the user interface in one Chromium process. rustyBolt puts the login and the Java logic in libraries with no user interface, so a shell for a new system is small. The technical half of this file explains that split.
 
@@ -48,21 +48,21 @@ rustybolt configure          # open the settings window
 
 `rustybolt login` prints a URL. Open it in a browser and log in. The browser then lands on a redirect page. Copy the whole address bar of that page and paste it at the prompt. The launcher saves the session, so the next launch needs no login.
 
-`rustybolt verify` checks the client jar, the session and the Java runtime, then prints the command line that `launch` runs. `rustybolt help` lists every command, including the ones for Java runtimes, tuning and the RuneLite home.
+`rustybolt verify` checks the client jar, the session and the Java runtime, then prints the command line that `launch` runs.
 
-The launcher gives RuneLite its own home directory, so it never writes into `~/.runelite`. `rustybolt import` copies your existing RuneLite settings into that home. `rustybolt home use system` makes the launcher use `~/.runelite` instead.
+`rustybolt configure` opens the settings window where you can manage Java runtimes, JVM tuning, and client configurations.
 
 ## Troubleshooting
 
 **RuneLite is not installed.** Install it from the [wiki page](https://oldschool.runescape.wiki/w/RuneLite) and start it once. The error lists every place that the launcher looked. A jar in another place: `rustybolt configure`, or `rustybolt launch runelite --jar <path>`.
 
-**No Java runtime of version 11 or newer exists.** Install a runtime, or point the launcher at one: `rustybolt java use /path/to/bin/java`. `rustybolt java list` shows every runtime that the launcher can see.
+**HDOS is not installed.** Install it from the [wiki page](https://oldschool.runescape.wiki/w/HDOS) and start it once.
 
-**The client starts with the wrong flags.** Run `rustybolt tuning flags`. It names each option that the Java feature gate removed. A runtime older than 24 drops the compact object headers, the string deduplication, the native access flag and the AOT cache.
+**No Java runtime of version 11 or newer exists.** Install a runtime or configure a custom Java path in `rustybolt configure`.
 
-**The session expired.** Run `rustybolt login` again. The launcher keeps one session per Jagex account. `rustybolt sessions` lists them and `--sub` picks one at launch.
+**The client starts with the wrong flags.** Check the command line with `rustybolt verify` or adjust JVM settings in `rustybolt configure`. A runtime older than 24 drops the compact object headers, the string deduplication, the native access flag and the AOT cache.
 
-**Where are my files?** `rustybolt paths` prints the four directories. The [Storage](#storage) table gives the defaults.
+**The session expired.** Run `rustybolt login` again. The launcher keeps one session per Jagex account.
 
 ## Build from source
 
@@ -95,18 +95,6 @@ git push origin v0.1.0
 The targets are macOS (arm64, amd64), Linux (arm64, amd64) and Windows (amd64).
 Pull requests and pushes to `main` run `cargo fmt`, `cargo clippy` and
 `cargo test` on the three systems.
-
-### Every command
-
-```sh
-rustybolt java list                 # every Java runtime of this machine
-rustybolt java select --min 21      # the runtime that the launcher would use
-rustybolt paths                     # the four platform directories
-rustybolt sessions                  # the saved sessions
-rustybolt accounts                  # the characters of a session
-rustybolt tuning flags              # the tuned flags, and the ones the Java version drops
-rustybolt launch runelite --dry-run # the command line, one argument per line
-```
 
 ## How it is made
 
@@ -164,8 +152,8 @@ divides.
 
 ### The tuned launch profile
 
-The default RuneLite profile comes from `rl-launcher`. `rustybolt tuning` prints it and
-`rustybolt launch runelite --dry-run` shows the exact command line that a launch runs.
+The default RuneLite profile comes from `rl-launcher`. `rustybolt verify`
+shows the exact command line that a launch runs.
 
 | setting | value | note |
 | --- | --- | --- |
@@ -226,6 +214,6 @@ Do not add an attribution line for an AI tool to a commit or a pull request. `AI
 
 rustyBolt is an unofficial project. It is not affiliated with Jagex, RuneLite or HDOS. Those parties are not responsible for any problem with rustyBolt or any damage that rustyBolt causes.
 
-rustyBolt is not a game client. It downloads and runs the unmodified clients. It cannot modify or automate gameplay. The launcher uses only the public login endpoints, and it never reads or alters game data.
+rustyBolt is not a game client. It runs the unmodified clients that the user installed. It cannot modify or automate gameplay. The launcher uses only the public login endpoints, and it never reads or alters game data.
 
 RuneScape, Old School RuneScape and Jagex are trademarks of Jagex Limited.

@@ -254,9 +254,7 @@ Launch rules taken from Bolt, with the errors fixed:
 - The child detaches. On unix it calls `setsid`.
 - RuneLite argv: `-Duser.home=<data>` `-jar <jar>` `-J-Duser.home=<data>` `[--configure]`.
 - HDOS argv: `-Duser.home=<data>` `-Dapp.user.home=<data>` `-jar <jar>`.
-- A download writes to a temporary file, checks the digest when the release gives one,
-  then renames. Bolt truncates the live file instead.
 
 ## Verification
 
-`cargo test --workspace` and `cargo run -p bolt-cli -- java list`.
+`cargo test --workspace` and `cargo run -p bolt-cli -- verify`.

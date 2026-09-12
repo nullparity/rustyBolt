@@ -1,16 +1,11 @@
 //! Headless command line driver for the rustyBolt core.
 //!
-//! The program shows every core function with no window toolkit.
-//! It holds the command line only. The core holds the logic.
+//! The program exposes four commands for end users: login, launch,
+//! verify, and configure.
 
 mod auth;
 mod configure;
-mod home;
-mod import;
-mod info;
-mod java;
 mod launch;
-mod tuning;
 mod verify;
 
 use bolt_auth::Session;
@@ -23,53 +18,15 @@ rustybolt is the command line of rustyBolt.
 Usage:
   rustybolt login
   rustybolt launch <runelite|hdos> [--sub <sub>] [--character <id>]
-                  [--configure] [--jar <path>] [--dry-run] [--show-env]
-  rustybolt verify [runelite|hdos] [--sub <sub>]
+                  [--configure] [--jar <path>]
+  rustybolt verify [runelite|hdos] [--sub <sub>] [--character <id>] [--jar <path>]
   rustybolt configure
-
-  rustybolt java list
-  rustybolt java select [--min <n>]
-  rustybolt java use <path|auto>
-  rustybolt paths
-  rustybolt config
-  rustybolt sessions
-  rustybolt accounts [--sub <sub>]
-  rustybolt usage
-  rustybolt tuning [on|off]
-  rustybolt tuning set <key> <value>
-  rustybolt tuning reset
-  rustybolt tuning flags [--feature <n>]
-  rustybolt profile apply [--dry-run]
-  rustybolt home
-  rustybolt home use <isolated|system|<path>>
-  rustybolt import [--overwrite] [--secrets] [--dry-run]
   rustybolt help
 
-The default minimum Java feature is 11.
 A login writes a session into the session file.
 A launch uses the first saved session, unless --sub selects another one.
-A launch dry run shows the environment names only. `--show-env` shows the
-first 8 characters of every value.
-
-The launcher gives the client its own RuneLite home, so a launch never writes
-into `~/.runelite`. `home` shows that directory and `home use` changes it.
-`import` copies the real `~/.runelite` into the launcher home. It only reads
-the real home. It leaves the login files alone, unless `--secrets` asks for
-them, and it keeps a file that the target already holds, unless `--overwrite`
-asks to replace it.
-
-`java use auto` clears the chosen Java binary.
-`tuning set` takes these keys:
-  heap_min, heap_max, stack_size, garbage_collector,
-  compact_object_headers, string_deduplication, native_access, aot_cache,
-  gc_log, java2d_metal, launcher_nojvm, application_name, process_name,
-  extra_jvm_args, extra_app_args
-A setting key takes `on`, `off`, `true` or `false`.
-`garbage_collector` takes `default`, `z`, `g1` or `parallel`.
-An optional text key takes `none` to clear it.
-`tuning flags` uses the feature number of the chosen Java runtime, unless
-`--feature` gives another one. It names every option that the feature gate
-removes. The four tuned options need feature 24 or newer.
+`rustybolt verify` tests the configuration and displays the command line.
+`rustybolt configure` opens the settings window.
 ";
 
 /// The result of one command.
@@ -80,14 +37,12 @@ pub(crate) enum CliError {
     Message(String),
     /// The program does not know this command.
     Unknown(String),
-    /// The command line is not valid, and the message holds the valid values.
-    Usage(String),
 }
 
 impl CliError {
     fn exit_code(&self) -> u8 {
         match self {
-            CliError::Unknown(_) | CliError::Usage(_) => 2,
+            CliError::Unknown(_) => 2,
             CliError::Core(_) | CliError::Message(_) => 1,
         }
     }
@@ -105,7 +60,7 @@ impl std::fmt::Display for CliError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CliError::Core(error) => write!(formatter, "{error}"),
-            CliError::Message(text) | CliError::Usage(text) => write!(formatter, "{text}"),
+            CliError::Message(text) => write!(formatter, "{text}"),
             CliError::Unknown(name) => write!(formatter, "unknown command `{name}`"),
         }
     }
@@ -156,20 +111,10 @@ fn dispatch(args: &[String]) -> Result<(), CliError> {
             print!("{USAGE}");
             Ok(())
         }
-        "java" => java::run(rest),
-        "paths" => info::paths(rest),
-        "config" => info::config(rest),
-        "sessions" => info::sessions(rest),
-        "accounts" => auth::accounts(rest),
         "login" => auth::login(rest),
+        "launch" => launch::run(rest),
         "verify" => verify::run(rest),
         "configure" => configure::run(rest),
-        "launch" => launch::run(rest),
-        "usage" => info::usage(rest),
-        "tuning" => tuning::run(rest),
-        "profile" => tuning::profile(rest),
-        "home" => home::run(rest),
-        "import" => import::run(rest),
         other => Err(CliError::Unknown(other.to_string())),
     }
 }

@@ -1,7 +1,7 @@
 //! The `launch` command.
 //!
 //! The command resolves the jar and the login values, and then starts the
-//! client. With `--dry-run` it prints the command line only.
+//! client.
 
 use std::path::PathBuf;
 

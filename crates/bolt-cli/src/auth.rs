@@ -1,61 +1,13 @@
-//! The `accounts` and `login` commands.
+//! The `login` command.
 //!
 //! The login needs a browser. The user opens the authorization URL and
 //! pastes the address bar of every redirect back into this program.
 
 use std::io::Write;
 
-use bolt_core::{Action, AuthConfig, Config, HttpAuth, LoginFlow, Paths, SessionStore, UsageStore};
+use bolt_core::{Action, AuthConfig, HttpAuth, LoginFlow, Paths, SessionStore};
 
-use crate::{flag_value, no_arguments, pick_session, CliError};
-
-/// Lists the characters of one saved session.
-pub(crate) fn accounts(args: &[String]) -> Result<(), CliError> {
-    let mut sub: Option<String> = None;
-    let mut index = 0;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--sub" => {
-                sub = Some(flag_value(args, index)?);
-                index += 2;
-            }
-            other => {
-                return Err(CliError::Message(format!(
-                    "`{other}` is not an argument of `accounts`"
-                )))
-            }
-        }
-    }
-
-    let paths = Paths::resolve()?;
-    let store = SessionStore::load(&paths);
-    let session = pick_session(&store, sub.as_deref())?;
-
-    let auth = AuthConfig::default();
-    let http = HttpAuth::new(&auth);
-    let characters = http
-        .characters(&session.session_id)
-        .map_err(|error| match error {
-            bolt_core::CoreError::SessionExpired => CliError::Message(
-                "the saved session expired. Run `rustybolt login` again.".to_string(),
-            ),
-            other => CliError::Core(other),
-        })?;
-
-    if characters.is_empty() {
-        println!("This account has no character.");
-        return Ok(());
-    }
-    // A character that the user opened inside the recent window comes first.
-    let usage = UsageStore::load(&paths);
-    let window = Config::load(&paths).usage_recent_window_secs;
-    for character in usage.order(&characters, window, |character| {
-        character.account_id.as_str()
-    }) {
-        println!("{} ({})", character.display_name, character.account_id);
-    }
-    Ok(())
-}
+use crate::{no_arguments, CliError};
 
 /// Drives the login flow with the user.
 pub(crate) fn login(args: &[String]) -> Result<(), CliError> {
