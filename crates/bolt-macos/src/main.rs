@@ -163,7 +163,6 @@ unsafe fn answer(handler: *mut c_void, policy: WKNavigationActionPolicy) {
     unsafe { invoke(handler as *mut BlockLiteral, policy.0) };
 }
 
-/// The text of the URL of a navigation action.
 fn action_url(action: &WKNavigationAction) -> String {
     // SAFETY: The action belongs to the delegate call.
     let request = unsafe { action.request() };
@@ -216,7 +215,6 @@ impl MainCall {
     }
 }
 
-/// Shows text in the status field of the main window.
 pub(crate) fn post_status(app: MainRef<AppDelegate>, text: String) {
     MainCall::post(move || {
         // SAFETY: The posted call runs on the main thread.
@@ -930,7 +928,6 @@ impl AppDelegate {
         *self.ivars().login.lock().unwrap() = Some(login);
     }
 
-    /// Shows text in the status field.
     pub(crate) fn set_status(&self, text: &str) {
         let guard = self.ivars().state.lock().unwrap();
         if let Some(state) = guard.as_ref() {
@@ -1012,7 +1009,6 @@ impl AppDelegate {
         });
     }
 
-    /// Fills the character list with the loaded characters.
     fn characters_loaded(&self, result: Result<Vec<Character>, bolt_core::CoreError>) {
         let mut guard = self.ivars().state.lock().unwrap();
         let Some(state) = guard.as_mut() else {

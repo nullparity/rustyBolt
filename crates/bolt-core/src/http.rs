@@ -35,7 +35,6 @@ impl<'a> HttpAuth<'a> {
         }
     }
 
-    /// Lists the characters of one session.
     pub fn characters(&self, session_id: &str) -> Result<Vec<Character>, CoreError> {
         let (url, (name, value)) = bolt_auth::accounts_request(self.config, session_id);
         let mut response = match ureq::get(&url).header(&name, &value).call() {

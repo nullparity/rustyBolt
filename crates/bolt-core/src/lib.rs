@@ -54,7 +54,6 @@ pub enum CoreError {
     /// The OAuth2 flow rejected a step.
     #[error("authentication error: {0}")]
     Auth(#[from] bolt_auth::AuthError),
-    /// No Java runtime of the wanted version exists.
     #[error("no Java runtime of version 11 or newer exists")]
     NoJava,
     /// The downloaded file does not have the digest that the release gives.
@@ -66,7 +65,6 @@ pub enum CoreError {
     /// The server rejected the session. The user must log in again.
     #[error("the session expired")]
     SessionExpired,
-    /// The client is not installed.
     #[error("the client is not installed")]
     NotInstalled,
     /// The user launch template is not valid.

@@ -91,8 +91,6 @@ fn property(text: &str, name: &str) -> Option<String> {
     None
 }
 
-/// Reads the version from the output of `java -version`.
-///
 /// The function accepts `openjdk version "21.0.10"` and `openjdk 17.0.9 2023-10-17`.
 fn parse_version(full: &str) -> Option<JavaVersion> {
     for line in full.lines() {
@@ -327,7 +325,6 @@ fn find_java_in_candidates(candidates: &[PathBuf], exec_name: &str) -> Vec<PathB
     found
 }
 
-/// Finds the runtime that `JAVA_HOME` names.
 fn discover_from_java_home() -> Vec<JavaRuntime> {
     let java_home = match std::env::var("JAVA_HOME") {
         Ok(value) if !value.is_empty() => value,
@@ -456,8 +453,6 @@ impl JvmOptions {
     }
 }
 
-/// Puts a user template around the default invocation.
-///
 /// The token `%command%` becomes the program and every argument of the default
 /// invocation, at the position of the token. A template without that token runs
 /// alone, and the default invocation is not used.

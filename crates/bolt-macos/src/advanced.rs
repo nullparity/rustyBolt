@@ -72,7 +72,7 @@ fn runtime_title(runtime: &JavaRuntime) -> String {
 
 /// Reads the state of a check box.
 fn is_on(button: &NSButton) -> bool {
-    // SAFETY: `state` gives an integer of every button.
+    // SAFETY: `NSButton` responds to `state` and returns `NSInteger`.
     let state: NSInteger = unsafe { msg_send![button, state] };
     state == STATE_ON
 }
@@ -270,7 +270,7 @@ struct Rows {
 }
 
 impl Rows {
-    /// Takes the next row. `height` is the height of the row.
+    /// Leaves an 8-point gap after each row.
     fn next(&mut self, height: f64) -> f64 {
         self.bottom -= height;
         let y = self.bottom;
@@ -341,14 +341,12 @@ fn make_text_view(frame: NSRect) -> Retained<NSView> {
     unsafe { Retained::from_raw(view) }.expect("the text view is made")
 }
 
-/// Reads the text of the preview text view.
 fn text_of(view: &NSView) -> String {
     // SAFETY: The object is an `NSTextView`, which has `string`.
     let text: Option<Retained<NSString>> = unsafe { msg_send![view, string] };
     text.map(|text| text.to_string()).unwrap_or_default()
 }
 
-/// Shows text in the preview text view.
 fn set_text(view: &NSView, text: &str) {
     let value = NSString::from_str(text);
     // SAFETY: The object is an `NSTextView`, which has `setString:`.
@@ -417,12 +415,11 @@ fn selected_java(state: &AdvancedState) -> Option<PathBuf> {
         .map(|runtime| runtime.path.clone())
 }
 
-/// Reports if a home kind is the system home.
 fn is_system_home(kind: &RuneLiteHome) -> bool {
     matches!(kind, RuneLiteHome::System)
 }
 
-/// Maps a home kind to its index in the home pop up button.
+/// The order matches the items of the home pop up button.
 fn home_index(kind: &RuneLiteHome) -> NSInteger {
     match kind {
         RuneLiteHome::Isolated => 0,
@@ -461,7 +458,6 @@ fn fill_home_popup(state: &mut AdvancedState) {
         .selectItemAtIndex(home_index(&state.home_kind));
 }
 
-/// Shows an entry count as text.
 fn entry_count(count: usize) -> String {
     if count == 1 {
         "1 entry".to_string()
@@ -497,8 +493,6 @@ fn show_alert(mtm: MainThreadMarker, title: &str, body: &str, buttons: &[&str]) 
     alert.runModal()
 }
 
-/// Finds the runtime that a choice names.
-///
 /// A named path wins. The automatic choice takes the newest runtime of the
 /// system.
 fn runtime_for<'a>(runtimes: &'a [JavaRuntime], choice: Option<&Path>) -> Option<&'a JavaRuntime> {
@@ -1232,7 +1226,6 @@ impl AdvancedDelegate {
         set_text(&state.preview, &text);
     }
 
-    /// Shows text in the status line of the advanced window.
     fn set_window_status(&self, text: &str) {
         let guard = self.ivars().state.lock().unwrap();
         if let Some(state) = guard.as_ref() {

@@ -28,7 +28,7 @@ pub struct GameCredentials {
     pub session_id: String,
     /// The value of `JX_CHARACTER_ID`.
     pub character_id: String,
-    /// The value of `JX_DISPLAY_NAME`.
+    /// The launcher exports this value as `JX_DISPLAY_NAME`.
     pub display_name: String,
 }
 
@@ -101,8 +101,6 @@ pub struct LaunchPlan {
     pub env: Vec<(String, String)>,
 }
 
-/// Builds the plan of one launch.
-///
 /// [`launch`] runs this plan. A caller that shows the command line to the user
 /// must use this function, so the shown command and the started command agree.
 pub fn plan(paths: &Paths, request: &LaunchRequest) -> Result<LaunchPlan, CoreError> {
@@ -481,7 +479,6 @@ mod tests {
         assert_eq!(java_feature(&temp.path().join("absent")), 11);
     }
 
-    /// Builds the arguments of a tuned client.
     fn tuned_arguments(
         kind: ClientKind,
         config: &Config,

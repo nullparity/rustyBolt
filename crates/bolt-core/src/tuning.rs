@@ -67,7 +67,6 @@ pub struct TuningConfig {
     pub heap_max: Option<String>,
     /// The stack size of each thread, for example `2m`.
     pub stack_size: Option<String>,
-    /// The garbage collector.
     pub garbage_collector: GcChoice,
     /// Add `-XX:+UseCompactObjectHeaders`. The flag needs JDK 24 or newer.
     pub compact_object_headers: bool,
@@ -85,7 +84,7 @@ pub struct TuningConfig {
     pub java2d_metal: bool,
     /// The application name of the process. `None` leaves the name unset.
     pub application_name: Option<String>,
-    /// The icon file of the Dock. `None` leaves the Dock icon unset.
+    /// `None` leaves the Dock icon unset.
     pub dock_icon: Option<PathBuf>,
     /// Add `-Drunelite.launcher.nojvm=true`.
     pub launcher_nojvm: bool,
@@ -202,8 +201,6 @@ impl TuningConfig {
         args
     }
 
-    /// The icon file of the Dock.
-    ///
     /// The config wins. Without a value the function looks for the icon of the
     /// installed client. A Java process with no icon shows the Java icon, which
     /// tells the user nothing about the game.

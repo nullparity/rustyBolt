@@ -143,8 +143,6 @@ impl Tuning {
     }
 }
 
-/// Finds the newest `<prefix>*.jar` of a directory.
-///
 /// The function sorts by modified time, newest first. A file that does not match
 /// the prefix or the `.jar` suffix is ignored. It returns `None` when the
 /// directory holds no match.
@@ -174,8 +172,6 @@ pub fn newest_jar(dir: &Path, prefix: &str) -> Option<PathBuf> {
     newest.map(|(_, path)| path)
 }
 
-/// Builds the cache entry for a client jar.
-///
 /// The file name is the jar stem plus `.aot`. The mode is `Load` when the file
 /// exists, and `Record` when it does not.
 pub fn aot_cache_for(cache_dir: &Path, client_jar: &Path) -> AotCache {
@@ -288,7 +284,6 @@ mod tests {
         }
     }
 
-    /// A tuning that copies the source launcher.
     fn source_tuning() -> Tuning {
         Tuning {
             heap_min: Some("2g".to_string()),

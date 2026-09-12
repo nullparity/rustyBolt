@@ -265,7 +265,7 @@ fn client_repository() -> Option<PathBuf> {
     std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".runelite").join("repository2"))
 }
 
-/// Reads an optional text value. The word `none` clears the value.
+/// The word `none` maps to `None`.
 fn optional_text(value: &str) -> Option<String> {
     if value == CLEAR {
         None
@@ -274,7 +274,6 @@ fn optional_text(value: &str) -> Option<String> {
     }
 }
 
-/// Reads a boolean value.
 fn boolean(value: &str) -> Result<bool, CliError> {
     match value {
         "on" | "true" => Ok(true),
@@ -313,7 +312,6 @@ fn words(value: &str) -> Vec<String> {
     value.split_ascii_whitespace().map(str::to_string).collect()
 }
 
-/// The text of an optional value.
 fn shown_optional(value: Option<&str>) -> String {
     match value {
         Some(text) => text.to_string(),

@@ -16,7 +16,6 @@ use std::collections::HashMap;
 pub const ACCOUNT_ORIGIN: &str = "https://account.jagex.com";
 /// Default origin of the game session service.
 pub const AUTH_ORIGIN: &str = "https://auth.jagex.com";
-/// Client identifier of the desktop launcher.
 pub const CLIENT_ID: &str = "com_jagex_auth_desktop_launcher";
 /// Client identifier of the consent step.
 pub const CONSENT_CLIENT_ID: &str = "1fddee4e-b100-4f4e-b2b0-097f9088f9d2";
@@ -48,7 +47,6 @@ pub struct AuthConfig {
     pub auth_origin: String,
     /// Client identifier of the first step.
     pub client_id: String,
-    /// Client identifier of the consent step.
     pub consent_client_id: String,
     /// Redirect target of the first step.
     pub redirect_url: String,
@@ -145,7 +143,7 @@ pub struct Session {
 pub struct Character {
     /// Identifier that the launch step passes as `JX_CHARACTER_ID`.
     pub account_id: String,
-    /// Name that the launch step passes as `JX_DISPLAY_NAME`.
+    /// The launch step exports this value as `JX_DISPLAY_NAME`.
     pub display_name: String,
 }
 
@@ -489,8 +487,6 @@ fn decode_jwt_payload(token: &str) -> Result<serde_json::Value, AuthError> {
     serde_json::from_str(&text).map_err(|_| AuthError::BadJwt)
 }
 
-/// Makes a random string from the given alphabet.
-///
 /// The function reads bytes from the operating system generator and rejects a byte
 /// that would make the result uneven.
 fn random_string(len: usize, alphabet: &[u8]) -> String {

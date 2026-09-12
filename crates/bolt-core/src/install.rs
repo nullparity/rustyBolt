@@ -11,7 +11,6 @@ use crate::{CoreError, Paths};
 
 /// The URL of the RuneLite release list.
 const RUNELITE_RELEASES_URL: &str = "https://api.github.com/repos/runelite/launcher/releases";
-/// The URL of the HDOS getdown config.
 const HDOS_GETDOWN_URL: &str = "https://cdn.hdos.dev/client/getdown.txt";
 /// The file name of the RuneLite asset.
 const RUNELITE_JAR: &str = "runelite.jar";
@@ -67,7 +66,6 @@ pub struct Installer<'a> {
 }
 
 impl<'a> Installer<'a> {
-    /// Builds an installer for these paths.
     pub fn new(paths: &'a Paths) -> Installer<'a> {
         Installer { paths }
     }
@@ -86,7 +84,6 @@ impl<'a> Installer<'a> {
         })
     }
 
-    /// Finds the newest release of the client.
     pub fn latest(&self, kind: ClientKind) -> Result<Release, CoreError> {
         match kind {
             ClientKind::RuneLite => self.latest_runelite(),
@@ -278,7 +275,6 @@ fn hdos_version(text: &str) -> Option<String> {
     })
 }
 
-/// Builds the jar URL for one HDOS launcher version.
 fn hdos_jar_url(version: &str) -> String {
     format!("https://cdn.hdos.dev/launcher/v{version}/hdos-launcher.jar")
 }

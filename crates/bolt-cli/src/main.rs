@@ -82,7 +82,6 @@ pub(crate) enum CliError {
 }
 
 impl CliError {
-    /// The process exit code of this error.
     fn exit_code(&self) -> u8 {
         match self {
             CliError::Unknown(_) | CliError::Usage(_) => 2,
@@ -181,9 +180,6 @@ pub(crate) fn no_arguments(args: &[String]) -> Result<(), CliError> {
     }
 }
 
-/// Reads the value of a flag that needs one.
-///
-/// The flag sits at `index`, so its value sits at `index + 1`.
 pub(crate) fn flag_value(args: &[String], index: usize) -> Result<String, CliError> {
     let Some(flag) = args.get(index) else {
         return Err(CliError::Message("a flag is absent".to_string()));

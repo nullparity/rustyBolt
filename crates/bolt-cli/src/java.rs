@@ -204,7 +204,6 @@ fn is_executable(path: &Path) -> bool {
     path.is_file()
 }
 
-/// The short name of a discovery source.
 fn source_name(source: &Source) -> &'static str {
     match source {
         Source::Explicit => "explicit",
@@ -214,7 +213,6 @@ fn source_name(source: &Source) -> &'static str {
     }
 }
 
-/// The version text of a runtime, or `unknown`.
 fn version_name(runtime: &JavaRuntime) -> String {
     match &runtime.version {
         Some(version) => version.raw.clone(),

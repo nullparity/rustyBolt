@@ -18,13 +18,13 @@ pub const DEFAULT_RECENT_WINDOW: u64 = 3600;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    /// Use [`Config::runelite_custom_jar`] instead of the installed jar.
+    /// If true, the launcher runs [`Config::runelite_custom_jar`] instead of the installed jar.
     pub runelite_use_custom_jar: bool,
     /// The jar file of the user, when `runelite_use_custom_jar` is true.
     pub runelite_custom_jar: Option<PathBuf>,
-    /// The command that starts the RuneLite client, with `%command%` as the token.
+    /// A template for RuneLite. `%command%` expands to the default invocation.
     pub runelite_launch_command: Option<String>,
-    /// The command that starts the HDOS client, with `%command%` as the token.
+    /// A template for HDOS. `%command%` expands to the default invocation.
     pub hdos_launch_command: Option<String>,
     /// The Java binary that the launcher must use.
     pub java_path: Option<PathBuf>,
@@ -35,10 +35,7 @@ pub struct Config {
     pub java_candidates: Vec<PathBuf>,
     /// Close the launcher after it starts a game client.
     pub close_after_launch: bool,
-    /// The JVM tuning of the RuneLite client.
     pub runelite_tuning: TuningConfig,
-    /// The process name of the RuneLite client.
-    ///
     /// The launcher makes a hard link to the Java binary with this name. The Dock
     /// and the process list then show the name instead of `java`. `None` turns the
     /// rule off.

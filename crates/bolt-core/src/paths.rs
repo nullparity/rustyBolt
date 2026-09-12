@@ -39,7 +39,6 @@ impl Paths {
         })
     }
 
-    /// The path of the launcher config file.
     pub fn config_file(&self) -> PathBuf {
         self.config_dir.join(CONFIG_FILE)
     }
