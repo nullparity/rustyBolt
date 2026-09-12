@@ -1,0 +1,20 @@
+[package]
+name = "bolt-macos"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Native AppKit shell for rustyBolt"
+
+[[bin]]
+name = "rustybolt-macos"
+path = "src/main.rs"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+bolt-auth.workspace = true
+bolt-jdk.workspace = true
+bolt-core.workspace = true
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSURL", "NSURLRequest", "NSArray", "NSDictionary", "NSNotification", "NSObjCRuntime", "NSGeometry", "NSThread", "NSRunLoop", "NSError"] }
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSWindow", "NSView", "NSButton", "NSTextField", "NSControl", "NSResponder", "NSStackView", "NSScrollView", "NSTableView", "NSMenu", "NSMenuItem", "NSAlert", "NSWorkspace", "NSOpenPanel", "NSSavePanel", "NSPanel", "NSColor", "NSFont", "NSPopUpButton"] }
+objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKWebViewConfiguration", "WKNavigationDelegate", "WKNavigation", "WKNavigationAction", "WKWebsiteDataStore", "WKFrameInfo"] }

@@ -1,0 +1,17 @@
+[package]
+name = "bolt-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Headless driver for the rustyBolt core"
+
+[[bin]]
+name = "rustybolt"
+path = "src/main.rs"
+
+[dependencies]
+bolt-auth.workspace = true
+bolt-jdk.workspace = true
+bolt-core.workspace = true
+serde_json.workspace = true

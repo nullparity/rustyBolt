@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/bolt-auth",
+    "crates/bolt-jdk",
+    "crates/bolt-core",
+    "crates/bolt-cli",
+    "crates/bolt-macos",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "AGPL-3.0-or-later"
+
+[workspace.dependencies]
+bolt-auth = { path = "crates/bolt-auth" }
+bolt-jdk = { path = "crates/bolt-jdk" }
+bolt-core = { path = "crates/bolt-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.9"
+ureq = { version = "3", features = ["json"] }
+
+[profile.release]
+lto = "thin"
+strip = true

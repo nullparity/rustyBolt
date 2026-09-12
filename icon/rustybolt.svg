@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>rustyBolt</title>
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#353533"/>
+      <stop offset="1" stop-color="#191918"/>
+    </linearGradient>
+
+    <radialGradient id="vignette" cx="0.5" cy="0.40" r="0.70">
+      <stop offset="0" stop-color="#c07440" stop-opacity="0.16"/>
+      <stop offset="0.48" stop-color="#000000" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </radialGradient>
+
+    <linearGradient id="frame" x1="0.05" y1="0" x2="0.95" y2="1">
+      <stop offset="0" stop-color="#e39a63"/>
+      <stop offset="0.22" stop-color="#a85a30"/>
+      <stop offset="0.46" stop-color="#63290f"/>
+      <stop offset="0.68" stop-color="#b46032"/>
+      <stop offset="0.86" stop-color="#7a3616"/>
+      <stop offset="1" stop-color="#c47a4a"/>
+    </linearGradient>
+
+    <linearGradient id="capTop" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#f3b98c"/>
+      <stop offset="0.38" stop-color="#d98f5c"/>
+      <stop offset="1" stop-color="#9c5028"/>
+    </linearGradient>
+
+    <linearGradient id="faceLeft" x1="0" y1="0" x2="1" y2="0.1">
+      <stop offset="0" stop-color="#5e2a12"/>
+      <stop offset="0.7" stop-color="#8e4520"/>
+      <stop offset="1" stop-color="#a75729"/>
+    </linearGradient>
+
+    <linearGradient id="faceMid" x1="0" y1="0" x2="1" y2="0.15">
+      <stop offset="0" stop-color="#b25a2a"/>
+      <stop offset="0.26" stop-color="#e08b52"/>
+      <stop offset="0.55" stop-color="#c06c38"/>
+      <stop offset="1" stop-color="#7d3a17"/>
+    </linearGradient>
+
+    <linearGradient id="faceRight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6d3316"/>
+      <stop offset="1" stop-color="#401c0a"/>
+    </linearGradient>
+
+    <linearGradient id="shank" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2c1408"/>
+      <stop offset="0.14" stop-color="#8a4520"/>
+      <stop offset="0.36" stop-color="#e8a670"/>
+      <stop offset="0.50" stop-color="#f7c390"/>
+      <stop offset="0.68" stop-color="#a85729"/>
+      <stop offset="0.88" stop-color="#4d2410"/>
+      <stop offset="1" stop-color="#200e05"/>
+    </linearGradient>
+
+    <linearGradient id="ridge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#331808"/>
+      <stop offset="0.16" stop-color="#9a4f26"/>
+      <stop offset="0.40" stop-color="#f2b382"/>
+      <stop offset="0.54" stop-color="#ffd7b0"/>
+      <stop offset="0.74" stop-color="#b05d2e"/>
+      <stop offset="0.92" stop-color="#4a2210"/>
+      <stop offset="1" stop-color="#1d0c04"/>
+    </linearGradient>
+
+    <linearGradient id="patina" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#4fd9b6"/>
+      <stop offset="0.5" stop-color="#22a184"/>
+      <stop offset="1" stop-color="#0d6552"/>
+    </linearGradient>
+
+    <clipPath id="plateClip">
+      <rect x="64" y="64" width="896" height="896" rx="200" ry="200"/>
+    </clipPath>
+
+    <clipPath id="shankClip">
+      <path d="M 408 466 L 616 466 L 616 806 A 104 32 0 0 1 408 806 Z"/>
+    </clipPath>
+
+    <clipPath id="headClip">
+      <path d="M 300 288 L 406 350 L 618 350 L 724 288 L 724 440 L 618 498 L 406 498 L 300 440 Z"/>
+    </clipPath>
+
+    <!-- Mottled corrosion. The noise drives the alpha, so the colour breaks up
+         into irregular spots instead of a flat blob. -->
+    <filter id="corrosion" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.011" numOctaves="5" seed="17" result="noise"/>
+      <feColorMatrix in="noise" type="matrix"
+        values="0 0 0 0 0.16
+                0 0 0 0 0.66
+                0 0 0 0 0.54
+                2.2 0 0 0 -1.05"/>
+    </filter>
+
+    <filter id="corrosionFine" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="4" seed="5" result="noise"/>
+      <feColorMatrix in="noise" type="matrix"
+        values="0 0 0 0 0.18
+                0 0 0 0 0.70
+                0 0 0 0 0.56
+                2.6 0 0 0 -1.30"/>
+    </filter>
+
+    <!-- The band of the frame only: between the outer and the inner edge of the stroke. -->
+    <clipPath id="frameClip">
+      <path d="M 274 88 h 476 a 186 186 0 0 1 186 186 v 476 a 186 186 0 0 1 -186 186
+               h -476 a 186 186 0 0 1 -186 -186 v -476 a 186 186 0 0 1 186 -186 z
+               M 274 124 a 150 150 0 0 0 -150 150 v 476 a 150 150 0 0 0 150 150
+               h 476 a 150 150 0 0 0 150 -150 v -476 a 150 150 0 0 0 -150 -150 z"
+            clip-rule="evenodd"/>
+    </clipPath>
+  </defs>
+
+  <!-- plate -->
+  <rect x="64" y="64" width="896" height="896" rx="200" ry="200" fill="url(#plate)"/>
+  <rect x="64" y="64" width="896" height="896" rx="200" ry="200" fill="url(#vignette)"/>
+
+  <!-- copper frame -->
+  <rect x="106" y="106" width="812" height="812" rx="168" ry="168"
+        fill="none" stroke="url(#frame)" stroke-width="36"/>
+  <rect x="106" y="106" width="812" height="812" rx="168" ry="168"
+        fill="none" stroke="#1a0d05" stroke-opacity="0.55" stroke-width="3"
+        transform="translate(0,0)"/>
+  <rect x="90" y="90" width="844" height="844" rx="184" ry="184"
+        fill="none" stroke="#000000" stroke-opacity="0.40" stroke-width="6"/>
+
+  <!-- corrosion on the frame, held inside the plate and inside the frame band -->
+  <g clip-path="url(#plateClip)">
+    <g clip-path="url(#frameClip)">
+      <rect x="64" y="64" width="896" height="896" filter="url(#corrosion)" opacity="0.50"/>
+      <rect x="64" y="64" width="896" height="896" filter="url(#corrosionFine)" opacity="0.30"/>
+    </g>
+  </g>
+
+  <g clip-path="url(#plateClip)">
+    <!-- cast shadow -->
+    <ellipse cx="528" cy="836" rx="196" ry="34" fill="#000000" opacity="0.45"/>
+
+    <!-- shank body -->
+    <path d="M 408 466 L 616 466 L 616 806 A 104 32 0 0 1 408 806 Z" fill="url(#shank)"/>
+
+    <g clip-path="url(#shankClip)">
+      <!-- dark valleys, then bright ridges above them: the pair reads as a helix -->
+      <g fill="#1d0d05" opacity="0.85">
+        <path d="M 396 492 Q 512 534 628 486 L 628 520 Q 512 568 396 526 Z"/>
+        <path d="M 396 536 Q 512 578 628 530 L 628 564 Q 512 612 396 570 Z"/>
+        <path d="M 396 580 Q 512 622 628 574 L 628 608 Q 512 656 396 614 Z"/>
+        <path d="M 396 624 Q 512 666 628 618 L 628 652 Q 512 700 396 658 Z"/>
+        <path d="M 396 668 Q 512 710 628 662 L 628 696 Q 512 744 396 702 Z"/>
+        <path d="M 396 712 Q 512 754 628 706 L 628 740 Q 512 788 396 746 Z"/>
+        <path d="M 396 756 Q 512 798 628 750 L 628 784 Q 512 832 396 790 Z"/>
+        <path d="M 396 800 Q 512 842 628 794 L 628 828 Q 512 876 396 834 Z"/>
+      </g>
+      <g fill="url(#ridge)">
+        <path d="M 396 504 Q 512 546 628 498 L 628 520 Q 512 568 396 526 Z"/>
+        <path d="M 396 548 Q 512 590 628 542 L 628 564 Q 512 612 396 570 Z"/>
+        <path d="M 396 592 Q 512 634 628 586 L 628 608 Q 512 656 396 614 Z"/>
+        <path d="M 396 636 Q 512 678 628 630 L 628 652 Q 512 700 396 658 Z"/>
+        <path d="M 396 680 Q 512 722 628 674 L 628 696 Q 512 744 396 702 Z"/>
+        <path d="M 396 724 Q 512 766 628 718 L 628 740 Q 512 788 396 746 Z"/>
+        <path d="M 396 768 Q 512 810 628 762 L 628 784 Q 512 832 396 790 Z"/>
+        <path d="M 396 812 Q 512 854 628 806 L 628 828 Q 512 876 396 834 Z"/>
+      </g>
+
+      <!-- patina in the valleys -->
+      <path d="M 566 470 q 52 118 16 254 q -48 -140 -16 -254 z" fill="url(#patina)" opacity="0.42"/>
+      <path d="M 424 584 q 26 92 8 186 q -38 -92 -8 -186 z" fill="url(#patina)" opacity="0.26"/>
+
+      <!-- deep shade under the head -->
+      <rect x="396" y="462" width="240" height="46" fill="#150802" opacity="0.75"/>
+    </g>
+
+    <!-- hex head, three visible side faces -->
+    <path d="M 300 288 L 406 350 L 406 498 L 300 440 Z" fill="url(#faceLeft)"/>
+    <path d="M 406 350 L 618 350 L 618 498 L 406 498 Z" fill="url(#faceMid)"/>
+    <path d="M 618 350 L 724 288 L 724 440 L 618 498 Z" fill="url(#faceRight)"/>
+
+    <!-- patina on the head, held inside the three side faces -->
+    <g clip-path="url(#headClip)">
+      <rect x="280" y="210" width="470" height="310" filter="url(#corrosion)" opacity="0.42"/>
+      <rect x="280" y="210" width="470" height="310" filter="url(#corrosionFine)" opacity="0.30"/>
+      <!-- a heavier band where dirt gathers under the head -->
+      <path d="M 400 446 q 60 20 118 18 q 60 -2 106 -20 l 0 34 q -52 22 -112 24 q -62 2 -112 -18 z"
+            fill="url(#patina)" opacity="0.22"/>
+    </g>
+
+    <!-- top face -->
+    <path d="M 724 288 L 618 226 L 406 226 L 300 288 L 406 350 L 618 350 Z" fill="url(#capTop)"/>
+    <path d="M 700 288 L 610 236 L 414 236 L 324 288 L 414 340 L 610 340 Z"
+          fill="none" stroke="#f7cfa8" stroke-opacity="0.30" stroke-width="5"/>
+
+    <!-- edge definition -->
+    <path d="M 300 288 L 406 226 L 618 226" fill="none" stroke="#ffe0c0" stroke-opacity="0.55" stroke-width="4"/>
+    <path d="M 618 226 L 724 288" fill="none" stroke="#401c0a" stroke-opacity="0.50" stroke-width="4"/>
+    <path d="M 406 350 L 406 498" fill="none" stroke="#ffcfa4" stroke-opacity="0.30" stroke-width="3"/>
+    <path d="M 618 350 L 618 498" fill="none" stroke="#2a1206" stroke-opacity="0.60" stroke-width="4"/>
+    <path d="M 300 288 L 300 440" fill="none" stroke="#e8a978" stroke-opacity="0.22" stroke-width="3"/>
+  </g>
+</svg>
