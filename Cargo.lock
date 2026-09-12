@@ -122,6 +122,7 @@ dependencies = [
  "bolt-auth",
  "bolt-core",
  "bolt-jdk",
+ "bolt-security",
  "default-net",
  "serde",
  "serde_json",
@@ -136,6 +137,7 @@ version = "0.1.0"
 dependencies = [
  "bolt-auth",
  "bolt-jdk",
+ "bolt-security",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
@@ -147,6 +149,13 @@ name = "bolt-jdk"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "bolt-security"
+version = "0.1.0"
+dependencies = [
  "thiserror 2.0.20",
 ]
 

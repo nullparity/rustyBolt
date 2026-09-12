@@ -66,6 +66,9 @@ pub enum CoreError {
     /// The user launch template is not valid.
     #[error("launch template error: {0}")]
     Template(#[from] bolt_jdk::TemplateError),
+    /// A security policy rejected an operation or destination.
+    #[error("security policy error: {0}")]
+    Security(#[from] bolt_security::SecurityError),
 }
 
 impl From<ureq::Error> for CoreError {

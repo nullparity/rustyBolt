@@ -16,8 +16,9 @@ rustyBolt splits them:
 | --- | --- | --- |
 | `bolt-auth` | Jagex OAuth2 PKCE state machine | nothing, no I/O |
 | `bolt-jdk` | Java discovery and JVM argv | file system only |
-| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, HTTP |
-| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk` |
+| `bolt-security` | egress allowlist and Content Security Policy | nothing, no I/O |
+| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, `bolt-security`, HTTP |
+| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk`, `bolt-security` |
 
 The launcher driver is portable across macOS, Linux, and Windows. It never repeats protocol or launch logic.
 
@@ -253,6 +254,30 @@ Launch rules taken from Bolt, with the errors fixed:
 - The child detaches. On unix it calls `setsid`.
 - RuneLite argv: `-Duser.home=<data>` `-jar <jar>` `-J-Duser.home=<data>` `[--configure]`.
 - HDOS argv: `-Duser.home=<data>` `-Dapp.user.home=<data>` `-jar <jar>`.
+
+## bolt-security
+
+Validates every network destination and generates Content Security Policy rules.
+
+```rust
+pub const ALLOWED_JAGEX_HOST: &str;
+pub const CSP_VALUE: &str;
+pub const CSP_META_TAG: &str;
+
+pub enum SecurityError {
+    DisallowedHost(String),
+    InsecureScheme(String),
+    DisallowedPort(u16),
+    InvalidUserInfo,
+    MalformedUrl(String),
+}
+
+pub fn is_allowed_host(host: &str) -> bool;
+pub fn is_allowed_navigation(url: &str) -> bool;
+pub fn csp_header_value() -> &'static str;
+pub fn csp_meta_tag() -> &'static str;
+pub fn validate_url(raw_url: &str) -> Result<(), SecurityError>;
+```
 
 ## Verification
 

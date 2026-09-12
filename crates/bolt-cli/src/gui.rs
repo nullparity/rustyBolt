@@ -72,7 +72,9 @@ pub(crate) fn run_window(
         .with_min_inner_size(LogicalSize::new(640.0, 520.0))
         .build(&event_loop)?;
 
-    let builder = WebViewBuilder::new().with_url(url);
+    let builder = WebViewBuilder::new()
+        .with_url(url)
+        .with_navigation_handler(|nav_url| bolt_security::is_allowed_navigation(&nav_url));
 
     #[cfg(any(
         target_os = "windows",

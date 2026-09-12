@@ -1,0 +1,10 @@
+[package]
+name = "bolt-security"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Network egress guard, Content Security Policy, and runtime isolation for rustyBolt"
+
+[dependencies]
+thiserror.workspace = true

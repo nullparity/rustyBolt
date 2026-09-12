@@ -37,6 +37,7 @@ impl<'a> HttpAuth<'a> {
 
     pub fn characters(&self, session_id: &str) -> Result<Vec<Character>, CoreError> {
         let (url, (name, value)) = bolt_auth::accounts_request(self.config, session_id);
+        bolt_security::validate_url(&url)?;
         let mut response = match ureq::get(&url).header(&name, &value).call() {
             Ok(response) => response,
             Err(ureq::Error::StatusCode(401)) => return Err(CoreError::SessionExpired),
@@ -48,9 +49,25 @@ impl<'a> HttpAuth<'a> {
 }
 
 fn post(url: &str, content_type: &str, body: &str) -> Result<String, CoreError> {
+    bolt_security::validate_url(url)?;
     let mut response = ureq::post(url)
         .header("Accept", "application/json")
         .content_type(content_type)
         .send(body)?;
     Ok(response.body_mut().read_to_string()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_disallowed_post_url_rejected() {
+        let result = post(
+            "https://malicious-telemetry.com/collect",
+            "application/json",
+            "{}",
+        );
+        assert!(matches!(result, Err(CoreError::Security(_))));
+    }
 }

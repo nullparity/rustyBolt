@@ -108,15 +108,18 @@ Pull requests and pushes to `main` run `cargo fmt`, `cargo clippy` and
 graph TD
     A[bolt-auth: OAuth2 PKCE state machine, no input or output] --> C[bolt-core]
     B[bolt-jdk: Java discovery, JVM argv] --> C
+    E[bolt-security: egress allowlist, CSP policy] --> C
     C[bolt-core: paths, config, sessions, client lookup, launch] --> D[bolt-cli: CLI & configuration dashboard]
+    E --> D
 ```
 
 | crate | owns | knows about |
 | --- | --- | --- |
 | `bolt-auth` | the Jagex OAuth2 PKCE flow | nothing, no input or output |
 | `bolt-jdk` | Java discovery and JVM arguments | the file system only |
-| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, HTTP |
-| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk` |
+| `bolt-security` | egress allowlist and Content Security Policy | nothing, no input or output |
+| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, `bolt-security`, HTTP |
+| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk`, `bolt-security` |
 
 `CONTRACT.md` holds the public API of every crate.
 
@@ -139,6 +142,7 @@ comes back. The protocol, the Java rules and the file layout do not change.
 - Start RuneLite with a tuned set of JVM flags. The launcher drops each flag that your Java version does not accept.
 - Wi-Fi mode sends a 100ms ICMP keepalive to the default gateway to stop Wi-Fi sleep lag.
 - Closing the application window hides it to the system tray so the background keepalive stays active.
+- Lock down network egress to only official Jagex endpoints and localhost, preventing tracking or unauthorized connections.
 - Start faster from the second run on, through a startup cache that the launcher rebuilds when the client updates.
 - Show the client under its own name in the Dock and the process list, not as `java`.
 - Keep RuneLite settings in a home of its own, so the launcher never touches `~/.runelite`. One command copies your existing settings in.

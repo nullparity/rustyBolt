@@ -9,6 +9,7 @@ description = "Platform paths, config, session store, client lookup and launch"
 [dependencies]
 bolt-auth.workspace = true
 bolt-jdk.workspace = true
+bolt-security.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

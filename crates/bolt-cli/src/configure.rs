@@ -282,6 +282,13 @@ struct HttpRequest<'a> {
     wifi: &'a WifiManager,
 }
 
+fn security_headers() -> String {
+    format!(
+        "X-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: {}\r\n",
+        bolt_security::csp_header_value()
+    )
+}
+
 fn respond(
     req: &HttpRequest<'_>,
     stream: &mut TcpStream,
@@ -293,6 +300,7 @@ fn respond(
     } else {
         "close"
     };
+    let sec_hdrs = security_headers();
     match (req.method, req.path) {
         ("GET", "/" | "/index.html") => {
             let config = Config::load(paths);
@@ -303,7 +311,7 @@ fn respond(
                 &format!("window.INITIAL_STATE = {state_json};"),
             );
             let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{html}",
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n{sec_hdrs}\r\n{html}",
                 html.len()
             );
             let _ = stream.write_all(response.as_bytes());
