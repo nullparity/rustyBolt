@@ -1,5 +1,3 @@
-# AI usage
-
 This file states where this project uses AI. It names no vendor. The maintainer is responsible for every line of code and text in the repository.
 
 A coding assistant helped write and edit the source code, the tests, the comments, the build scripts, the README, `CONTRACT.md` and this file. The application itself uses no AI. It makes no call to an inference API. It sends user data only to the game vendor, the client download hosts and the Java runtime that the user picks.
