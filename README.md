@@ -109,6 +109,21 @@ machine with no screen access:
 cargo run -p bolt-macos -- --self-check --self-check-login
 ```
 
+### Release
+
+A tag that starts with `v` starts the release workflow. The workflow builds
+`rustybolt` on a native runner for each target and makes `rustyBolt.app` on
+macOS. It then uploads the archives, `checksums.txt` and a draft release.
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The targets are macOS (arm64, amd64), Linux (arm64, amd64) and Windows (amd64).
+Pull requests and pushes to `main` run `cargo fmt`, `cargo clippy` and
+`cargo test` on the three systems.
+
 ### Command line
 
 ```sh
