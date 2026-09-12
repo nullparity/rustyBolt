@@ -59,11 +59,12 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       align-items: center;
       gap: 10px;
     }
-    .logo-img {
+    .brand svg {
       width: 28px;
       height: 28px;
       border-radius: 6px;
       display: block;
+      flex-shrink: 0;
     }
     h1 {
       font-size: 0.95rem;
@@ -435,7 +436,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 <body>
   <header>
     <div class="brand">
-      <img class="logo-img" src="/icon.svg" alt="rustyBolt icon" width="28" height="28">
+      <!--LOGO_SVG-->
       <h1>rustyBolt</h1>
       <span class="pill"><span class="pill-dot"></span><span>127.0.0.1</span></span>
     </div>
@@ -683,8 +684,10 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
   </div>
 
   <script>
-    let state = null;
+    /*INITIAL_STATE*/
+    let state = window.INITIAL_STATE || null;
     let selectedGc = 'z';
+    let saveDebounceTimer = null;
 
     async function loadState() {
       try {
@@ -734,24 +737,24 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       const rlPath = document.getElementById('runelite-path');
       if (state.clients.runelite_detected) {
         rlStatus.className = 'tag tag-ok';
-        rlStatus.textContent = 'Installed';
+        rlStatus.textContent = 'Detected';
         rlPath.textContent = state.clients.runelite_detected;
       } else {
         rlStatus.className = 'tag tag-err';
         rlStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/RuneLite" target="_blank">Wiki</a>';
-        rlPath.textContent = 'No RuneLite.jar detected';
+        rlPath.textContent = 'No RuneLite.jar detected in standard locations';
       }
 
       const hdosStatus = document.getElementById('hdos-status');
       const hdosPath = document.getElementById('hdos-path');
       if (state.clients.hdos_detected) {
         hdosStatus.className = 'tag tag-ok';
-        hdosStatus.textContent = 'Installed';
+        hdosStatus.textContent = 'Detected';
         hdosPath.textContent = state.clients.hdos_detected;
       } else {
         hdosStatus.className = 'tag tag-warn';
         hdosStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/HDOS" target="_blank">Wiki</a>';
-        hdosPath.textContent = 'No hdos-launcher.jar detected';
+        hdosPath.textContent = 'No HDOS jar detected in standard locations';
       }
 
       document.getElementById('rl-custom-jar').value = config.runelite_custom_jar || '';
@@ -805,9 +808,13 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
     }
 
     function markDirty() {
+      clearTimeout(saveDebounceTimer);
+      saveDebounceTimer = setTimeout(() => {
+        saveSettings(true);
+      }, 350);
     }
 
-    async function saveSettings() {
+    async function saveSettings(silent = false) {
       if (!state) return;
       const config = state.config;
 
@@ -856,8 +863,8 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       config.runelite_home_kind = document.getElementById('home-kind').value;
 
       try {
-        const res = await fetch('/api/save', {
-          method: 'POST',
+        const res = await fetch('/api/config', {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(config)
         });
@@ -866,12 +873,16 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           if (data.plan) {
             document.getElementById('preview-text').textContent = data.plan;
           }
-          const toast = document.getElementById('toast');
-          toast.classList.add('show');
-          setTimeout(() => toast.classList.remove('show'), 2000);
+          if (!silent) {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+          }
         }
       } catch (err) {
-        alert('Failed to save settings: ' + err);
+        if (!silent) {
+          alert('Failed to save settings: ' + err);
+        }
       }
     }
 
@@ -896,7 +907,16 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       setTimeout(() => { label.textContent = 'Copy'; }, 1500);
     }
 
-    window.addEventListener('DOMContentLoaded', loadState);
+    if (state) {
+      render();
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!state) {
+        loadState();
+      } else {
+        render();
+      }
+    });
   </script>
 </body>
 </html>

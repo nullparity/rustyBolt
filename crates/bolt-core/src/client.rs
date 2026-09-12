@@ -69,15 +69,22 @@ pub fn candidates(kind: ClientKind) -> Vec<PathBuf> {
                 paths.push(PathBuf::from(
                     "/Applications/RuneLite.app/Contents/Resources/RuneLite.jar",
                 ));
+                paths.push(PathBuf::from(
+                    "/Applications/RuneLite.app/Contents/Java/RuneLite.jar",
+                ));
                 if let Some(home) = &home {
                     paths.push(
                         home.join("Applications/RuneLite.app/Contents/Resources/RuneLite.jar"),
                     );
+                    paths.push(home.join("Applications/RuneLite.app/Contents/Java/RuneLite.jar"));
                 }
             }
             if cfg!(windows) {
                 if let Some(local) = std::env::var_os("LOCALAPPDATA") {
                     paths.push(PathBuf::from(local).join("RuneLite").join("RuneLite.jar"));
+                }
+                if let Some(pf) = std::env::var_os("ProgramFiles") {
+                    paths.push(PathBuf::from(pf).join("RuneLite").join("RuneLite.jar"));
                 }
             }
             if let Some(home) = &home {
@@ -91,10 +98,14 @@ pub fn candidates(kind: ClientKind) -> Vec<PathBuf> {
                 paths.push(PathBuf::from(
                     "/Applications/HDOS.app/Contents/Resources/hdos-launcher.jar",
                 ));
+                paths.push(PathBuf::from(
+                    "/Applications/HDOS.app/Contents/Java/hdos-launcher.jar",
+                ));
                 if let Some(home) = &home {
                     paths.push(
                         home.join("Applications/HDOS.app/Contents/Resources/hdos-launcher.jar"),
                     );
+                    paths.push(home.join("Applications/HDOS.app/Contents/Java/hdos-launcher.jar"));
                 }
             }
             if cfg!(windows) {
@@ -116,10 +127,13 @@ pub fn candidates(kind: ClientKind) -> Vec<PathBuf> {
                 paths.push(home.join(".local/share/HDOS/hdos-launcher.jar"));
                 paths.push(home.join(".local/share/hdos/hdos-launcher.jar"));
                 paths.push(home.join("hdos/hdos-launcher.jar"));
+                paths.push(home.join(".hdos/hdos-launcher.jar"));
                 paths.push(home.join("hdos-launcher.jar"));
                 paths.push(home.join("Downloads/hdos-launcher.jar"));
+                paths.push(home.join("hdos/code/client-main.jar"));
             }
             paths.push(PathBuf::from("/opt/HDOS/hdos-launcher.jar"));
+            paths.push(PathBuf::from("/opt/hdos/hdos-launcher.jar"));
         }
     }
     paths

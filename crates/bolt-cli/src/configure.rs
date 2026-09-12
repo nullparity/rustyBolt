@@ -6,6 +6,9 @@
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use bolt_core::{ClientKind, Config, LaunchRequest, Paths};
@@ -49,7 +52,7 @@ struct SaveResponse {
 pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     no_arguments(args)?;
 
-    let paths = Paths::resolve()?;
+    let paths = Arc::new(Paths::resolve()?);
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let port = listener.local_addr()?.port();
     let url = format!("http://127.0.0.1:{port}/");
@@ -59,117 +62,170 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
 
     open_browser(&url);
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
-                let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    let running = Arc::new(AtomicBool::new(true));
 
-                if let Some(should_exit) = handle_client(&mut stream, &paths) {
-                    if should_exit {
-                        println!("rustybolt: configuration server stopped.");
-                        break;
-                    }
-                }
+    for stream in listener.incoming() {
+        if !running.load(Ordering::SeqCst) {
+            break;
+        }
+        match stream {
+            Ok(stream) => {
+                let paths = Arc::clone(&paths);
+                let running = Arc::clone(&running);
+                thread::spawn(move || {
+                    handle_connection(stream, &paths, &running, port);
+                });
             }
             Err(e) => {
+                if !running.load(Ordering::SeqCst) {
+                    break;
+                }
                 eprintln!("rustybolt: connection error: {e}");
             }
         }
     }
 
+    println!("rustybolt: configuration server stopped.");
     Ok(())
 }
 
-fn handle_client(stream: &mut TcpStream, paths: &Paths) -> Option<bool> {
-    let mut reader = BufReader::new(stream.try_clone().ok()?);
-    let mut request_line = String::new();
-    if reader.read_line(&mut request_line).ok()? == 0 {
-        return None;
-    }
+fn handle_connection(mut stream: TcpStream, paths: &Paths, running: &AtomicBool, port: u16) {
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
 
-    let mut parts = request_line.split_whitespace();
-    let method = parts.next()?;
-    let path = parts.next()?;
+    let mut reader = match stream.try_clone() {
+        Ok(s) => BufReader::new(s),
+        Err(_) => return,
+    };
 
-    let mut content_length = 0usize;
-    let mut line = String::new();
     loop {
-        line.clear();
-        if reader.read_line(&mut line).ok()? == 0 || line == "\r\n" || line == "\n" {
+        let mut request_line = String::new();
+        if reader.read_line(&mut request_line).unwrap_or(0) == 0 {
             break;
         }
-        let lower = line.to_ascii_lowercase();
-        if let Some(stripped) = lower.strip_prefix("content-length:") {
-            content_length = stripped.trim().parse().unwrap_or(0);
+
+        let mut parts = request_line.split_whitespace();
+        let Some(method) = parts.next() else { break };
+        let Some(raw_path) = parts.next() else { break };
+        let path = raw_path.split('?').next().unwrap_or(raw_path);
+
+        let mut content_length = 0usize;
+        let mut keep_alive = false;
+        let mut line = String::new();
+        loop {
+            line.clear();
+            if reader.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" || line == "\n" {
+                break;
+            }
+            let lower = line.to_ascii_lowercase();
+            if let Some(stripped) = lower.strip_prefix("content-length:") {
+                content_length = stripped.trim().parse().unwrap_or(0);
+            } else if lower.starts_with("connection:") && lower.contains("keep-alive") {
+                keep_alive = true;
+            }
+        }
+
+        let mut body = vec![0u8; content_length];
+        if content_length > 0 && reader.read_exact(&mut body).is_err() {
+            break;
+        }
+
+        let should_exit = respond(method, path, &body, &mut stream, paths, keep_alive);
+        let _ = stream.flush();
+
+        if should_exit {
+            running.store(false, Ordering::SeqCst);
+            let _ = TcpStream::connect(("127.0.0.1", port));
+            break;
+        }
+
+        if !keep_alive {
+            break;
         }
     }
+    let _ = stream.shutdown(std::net::Shutdown::Both);
+}
 
-    let mut body = vec![0u8; content_length];
-    if content_length > 0 {
-        let _ = reader.read_exact(&mut body);
-    }
-
+fn respond(
+    method: &str,
+    path: &str,
+    body: &[u8],
+    stream: &mut TcpStream,
+    paths: &Paths,
+    keep_alive: bool,
+) -> bool {
+    let conn_header = if keep_alive { "keep-alive" } else { "close" };
     match (method, path) {
         ("GET", "/" | "/index.html") => {
+            let config = Config::load(paths);
+            let state = build_state(paths, config);
+            let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
+            let html = HTML_PAGE.replace("<!--LOGO_SVG-->", ICON_SVG).replace(
+                "/*INITIAL_STATE*/",
+                &format!("window.INITIAL_STATE = {state_json};"),
+            );
             let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                HTML_PAGE.len(),
-                HTML_PAGE
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{html}",
+                html.len()
             );
             let _ = stream.write_all(response.as_bytes());
-            Some(false)
+            false
         }
         ("GET", "/icon.svg" | "/favicon.ico") => {
             let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: image/svg+xml; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                ICON_SVG.len(),
-                ICON_SVG
+                "HTTP/1.1 200 OK\r\nContent-Type: image/svg+xml; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{ICON_SVG}",
+                ICON_SVG.len()
             );
             let _ = stream.write_all(response.as_bytes());
-            Some(false)
+            false
         }
-        ("GET", "/api/state") => {
+        ("GET", "/api/state" | "/api/config") => {
             let config = Config::load(paths);
             let state = build_state(paths, config);
             let json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
             let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                json.len(),
-                json
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
             );
             let _ = stream.write_all(response.as_bytes());
-            Some(false)
+            false
         }
-        ("POST", "/api/save") => {
-            if let Ok(config) = serde_json::from_slice::<Config>(&body) {
+        ("POST" | "PUT", "/api/save" | "/api/config") => {
+            if let Ok(config) = serde_json::from_slice::<Config>(body) {
                 let _ = config.save(paths);
                 let plan = compute_preview(paths, &config, ClientKind::RuneLite);
                 let res = SaveResponse { ok: true, plan };
                 let json =
                     serde_json::to_string(&res).unwrap_or_else(|_| "{\"ok\":true}".to_string());
                 let response = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                    json.len(),
-                    json
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                    json.len()
                 );
                 let _ = stream.write_all(response.as_bytes());
             } else {
                 let _ = stream.write_all(
-                    b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                    format!(
+                        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: {conn_header}\r\n\r\n"
+                    )
+                    .as_bytes(),
                 );
             }
-            Some(false)
+            false
         }
         ("POST", "/api/shutdown") => {
-            let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\nConnection: close\r\n\r\n{\"ok\":true}");
-            Some(true)
+            let _ = stream.write_all(
+                b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\nConnection: close\r\n\r\n{\"ok\":true}",
+            );
+            true
         }
         _ => {
             let _ = stream.write_all(
-                b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                format!(
+                    "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: {conn_header}\r\n\r\n"
+                )
+                .as_bytes(),
             );
-            Some(false)
+            false
         }
     }
 }
