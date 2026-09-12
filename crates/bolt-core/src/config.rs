@@ -82,12 +82,15 @@ impl Config {
     /// Reads the config file. The function never fails.
     ///
     /// An absent file gives the default value. A malformed file gives the
-    /// default value also.
+    /// default value also. The load moves a stored launch argument into the
+    /// typed field.
     pub fn load(paths: &Paths) -> Config {
-        fs::read_to_string(paths.config_file())
+        let mut config: Config = fs::read_to_string(paths.config_file())
             .ok()
             .and_then(|text| serde_json::from_str(&text).ok())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        config.runelite_tuning.migrate_stored_app_args();
+        config
     }
 
     /// Writes the config file as pretty JSON.
@@ -170,6 +173,24 @@ mod tests {
         fs::create_dir_all(&paths.config_dir).expect("cannot make the directory");
         fs::write(paths.config_file(), "{ not json").expect("cannot write the file");
         assert_eq!(Config::load(&paths), Config::default());
+    }
+
+    #[test]
+    fn load_moves_a_stored_app_argument_into_the_typed_field() {
+        let dir = TempDir::new("config-legacy-args");
+        let paths = paths(dir.path());
+        fs::create_dir_all(&paths.config_dir).expect("cannot make the directory");
+        fs::write(
+            paths.config_file(),
+            r#"{"runelite_tuning":{"extra_app_args":["--hw-accel","OFF","--launch-mode","LAUNCHER"]}}"#,
+        )
+        .expect("cannot write the file");
+
+        let tuning = Config::load(&paths).runelite_tuning;
+
+        assert_eq!(tuning.hw_accel, crate::tuning::HwAccel::Off);
+        assert_eq!(tuning.launch_mode, crate::tuning::LaunchMode::Launcher);
+        assert!(tuning.extra_app_args.is_empty());
     }
 
     #[test]

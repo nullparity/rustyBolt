@@ -33,7 +33,7 @@ pub use launch::{
 pub use paths::Paths;
 pub use profile::{apply_to_profiles, PropertyOverrides};
 pub use session::SessionStore;
-pub use tuning::{GcChoice, TuningConfig};
+pub use tuning::{GcChoice, HwAccel, LaunchMode, TuningConfig};
 pub use usage::UsageStore;
 
 use thiserror::Error;

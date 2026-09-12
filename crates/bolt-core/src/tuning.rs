@@ -23,6 +23,63 @@ pub enum GcChoice {
     Parallel,
 }
 
+/// The launch mode of the RuneLite bootstrap.
+///
+/// The value goes to the client as `--launch-mode`. The `Auto` value adds no
+/// argument, and the bootstrap chooses the mode.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LaunchMode {
+    /// Let the bootstrap choose the mode.
+    Auto,
+    /// Run the client in the launcher JVM. The launcher then sees the client.
+    #[default]
+    Reflect,
+    /// Run the client in a second JVM. The second JVM loses the app argument.
+    Launcher,
+}
+
+impl LaunchMode {
+    /// The command value. `Auto` gives `None`, so the launcher adds no argument.
+    pub fn as_arg(self) -> Option<&'static str> {
+        match self {
+            LaunchMode::Auto => None,
+            LaunchMode::Reflect => Some("REFLECT"),
+            LaunchMode::Launcher => Some("LAUNCHER"),
+        }
+    }
+}
+
+/// The hardware acceleration mode of the client.
+///
+/// The value goes to the client as `--hw-accel`. The `Auto` value adds no
+/// argument, and the client chooses the mode.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HwAccel {
+    /// Let the client choose the mode.
+    Auto,
+    /// Use the software renderer.
+    Off,
+    /// Use the OpenGL renderer.
+    Opengl,
+    /// Use the Metal renderer. This is the default on macOS.
+    #[default]
+    Metal,
+}
+
+impl HwAccel {
+    /// The command value. `Auto` gives `None`, so the launcher adds no argument.
+    pub fn as_arg(self) -> Option<&'static str> {
+        match self {
+            HwAccel::Auto => None,
+            HwAccel::Off => Some("OFF"),
+            HwAccel::Opengl => Some("OPENGL"),
+            HwAccel::Metal => Some("METAL"),
+        }
+    }
+}
+
 /// Where the icon of the installed client normally sits on macOS.
 ///
 /// The launcher uses the first file that exists, so the Dock shows the game and
@@ -62,6 +119,18 @@ pub struct TuningConfig {
     pub heap_max: Option<String>,
     /// The stack size of each thread, for example `2m`.
     pub stack_size: Option<String>,
+    /// The value of `-XX:MaxDirectMemorySize`, for example `512m`. `None` drops
+    /// the flag.
+    pub direct_memory_max: Option<String>,
+    /// The value of `-XX:MaxMetaspaceSize`, for example `1g`. `None` drops the
+    /// flag.
+    pub metaspace_max: Option<String>,
+    /// The value of `-XX:ReservedCodeCacheSize`, for example `240m`. `None`
+    /// drops the flag.
+    pub code_cache_size: Option<String>,
+    /// The value of `-XX:NativeMemoryTracking`, for example `summary`. `None`
+    /// drops the flag.
+    pub native_memory_tracking: Option<String>,
     pub garbage_collector: GcChoice,
     /// Add `-XX:+UseCompactObjectHeaders`. The flag needs JDK 24 or newer.
     pub compact_object_headers: bool,
@@ -85,6 +154,8 @@ pub struct TuningConfig {
     pub launcher_nojvm: bool,
     /// The JVM arguments that the launcher adds at the end.
     pub extra_jvm_args: Vec<String>,
+    pub launch_mode: LaunchMode,
+    pub hw_accel: HwAccel,
     /// The application arguments of the client. They come after the jar.
     pub extra_app_args: Vec<String>,
 }
@@ -96,6 +167,10 @@ impl Default for TuningConfig {
             heap_min: Some("2g".to_string()),
             heap_max: Some("2g".to_string()),
             stack_size: Some("2m".to_string()),
+            direct_memory_max: Some("512m".to_string()),
+            metaspace_max: Some("1g".to_string()),
+            code_cache_size: Some("240m".to_string()),
+            native_memory_tracking: Some("summary".to_string()),
             garbage_collector: GcChoice::Z,
             compact_object_headers: true,
             string_deduplication: true,
@@ -111,12 +186,9 @@ impl Default for TuningConfig {
             dock_icon: None,
             launcher_nojvm: true,
             extra_jvm_args: Vec::new(),
-            extra_app_args: vec![
-                "--hw-accel".to_string(),
-                "METAL".to_string(),
-                "--launch-mode".to_string(),
-                "REFLECT".to_string(),
-            ],
+            launch_mode: LaunchMode::Reflect,
+            hw_accel: HwAccel::Metal,
+            extra_app_args: Vec::new(),
         }
     }
 }
@@ -126,6 +198,19 @@ impl TuningConfig {
     /// `client_repository` is the RuneLite jar cache, normally `~/.runelite/repository2`.
     pub fn to_tuning(&self, log_dir: &Path, client_repository: Option<&Path>) -> bolt_jdk::Tuning {
         let aot_cache = self.take_aot_cache(log_dir, client_repository);
+        let mut extra = self.extra_jvm_args.clone();
+        if let Some(direct) = &self.direct_memory_max {
+            extra.push(format!("-XX:MaxDirectMemorySize={direct}"));
+        }
+        if let Some(metaspace) = &self.metaspace_max {
+            extra.push(format!("-XX:MaxMetaspaceSize={metaspace}"));
+        }
+        if let Some(code_cache) = &self.code_cache_size {
+            extra.push(format!("-XX:ReservedCodeCacheSize={code_cache}"));
+        }
+        if let Some(nmt) = &self.native_memory_tracking {
+            extra.push(format!("-XX:NativeMemoryTracking={nmt}"));
+        }
         bolt_jdk::Tuning {
             heap_min: self.heap_min.clone(),
             heap_max: self.heap_max.clone(),
@@ -141,7 +226,7 @@ impl TuningConfig {
             } else {
                 None
             },
-            extra: self.extra_jvm_args.clone(),
+            extra,
         }
     }
 
@@ -212,6 +297,54 @@ impl TuningConfig {
             .find(|path| path.is_file())
     }
 
+    /// The application arguments that come after the jar.
+    ///
+    /// The hardware acceleration argument comes first. The launch mode argument
+    /// comes second. An `Auto` value adds nothing. The stored extra arguments
+    /// come last.
+    pub fn app_args(&self) -> Vec<String> {
+        let mut args = Vec::new();
+        if let Some(value) = self.hw_accel.as_arg() {
+            args.push("--hw-accel".to_string());
+            args.push(value.to_string());
+        }
+        if let Some(value) = self.launch_mode.as_arg() {
+            args.push("--launch-mode".to_string());
+            args.push(value.to_string());
+        }
+        args.extend(self.extra_app_args.iter().cloned());
+        args
+    }
+
+    /// Moves a stored launch argument from `extra_app_args` into the typed field.
+    ///
+    /// An older config stored `--hw-accel` and `--launch-mode` in the free text
+    /// field. A text box wrote that field back, so an empty box removed the
+    /// pair. The typed fields now own the pair. The move stops a duplicate
+    /// argument. A value that the enums do not know keeps the default.
+    pub fn migrate_stored_app_args(&mut self) {
+        let mut kept = Vec::with_capacity(self.extra_app_args.len());
+        let mut index = 0;
+        while index < self.extra_app_args.len() {
+            let key = self.extra_app_args[index].as_str();
+            match (key, self.extra_app_args.get(index + 1)) {
+                ("--launch-mode", Some(value)) => {
+                    self.launch_mode = parse_launch_mode(value);
+                    index += 2;
+                }
+                ("--hw-accel", Some(value)) => {
+                    self.hw_accel = parse_hw_accel(value);
+                    index += 2;
+                }
+                _ => {
+                    kept.push(self.extra_app_args[index].clone());
+                    index += 1;
+                }
+            }
+        }
+        self.extra_app_args = kept;
+    }
+
     /// Maps the stored collector to the collector of the JVM builder.
     fn collector(&self) -> bolt_jdk::Gc {
         match self.garbage_collector {
@@ -220,6 +353,34 @@ impl TuningConfig {
             GcChoice::G1 => bolt_jdk::Gc::G1,
             GcChoice::Parallel => bolt_jdk::Gc::Parallel,
         }
+    }
+}
+
+/// Reads a stored launch mode. An unknown value gives the default mode.
+fn parse_launch_mode(value: &str) -> LaunchMode {
+    if value.eq_ignore_ascii_case("auto") {
+        LaunchMode::Auto
+    } else if value.eq_ignore_ascii_case("reflect") {
+        LaunchMode::Reflect
+    } else if value.eq_ignore_ascii_case("launcher") {
+        LaunchMode::Launcher
+    } else {
+        LaunchMode::default()
+    }
+}
+
+/// Reads a stored hardware acceleration mode. An unknown value gives the default.
+fn parse_hw_accel(value: &str) -> HwAccel {
+    if value.eq_ignore_ascii_case("auto") {
+        HwAccel::Auto
+    } else if value.eq_ignore_ascii_case("off") {
+        HwAccel::Off
+    } else if value.eq_ignore_ascii_case("opengl") {
+        HwAccel::Opengl
+    } else if value.eq_ignore_ascii_case("metal") {
+        HwAccel::Metal
+    } else {
+        HwAccel::default()
     }
 }
 
@@ -258,10 +419,75 @@ mod tests {
         assert_eq!(config.dock_icon, None);
         assert!(config.launcher_nojvm);
         assert!(config.extra_jvm_args.is_empty());
+        assert!(config.extra_app_args.is_empty());
+    }
+
+    #[test]
+    fn the_migration_moves_a_stored_argument_into_the_typed_field() {
+        let mut config = TuningConfig {
+            extra_app_args: vec![
+                "--hw-accel".to_string(),
+                "OPENGL".to_string(),
+                "--launch-mode".to_string(),
+                "LAUNCHER".to_string(),
+                "--some-other".to_string(),
+            ],
+            ..Default::default()
+        };
+
+        config.migrate_stored_app_args();
+
+        assert_eq!(config.hw_accel, HwAccel::Opengl);
+        assert_eq!(config.launch_mode, LaunchMode::Launcher);
+        assert_eq!(config.extra_app_args, vec!["--some-other".to_string()]);
+
+        // A value that the enums do not know keeps the default of the field.
+        let mut stale = TuningConfig {
+            extra_app_args: vec![
+                "--launch-mode".to_string(),
+                "PARALLEL".to_string(),
+                "--hw-accel".to_string(),
+                "VOODOO".to_string(),
+            ],
+            ..Default::default()
+        };
+
+        stale.migrate_stored_app_args();
+
+        assert_eq!(stale.launch_mode, LaunchMode::Reflect);
+        assert_eq!(stale.hw_accel, HwAccel::Metal);
+        assert!(stale.extra_app_args.is_empty());
+    }
+
+    #[test]
+    fn app_args_put_the_mode_arguments_first() {
+        let config = TuningConfig {
+            hw_accel: HwAccel::Off,
+            launch_mode: LaunchMode::Launcher,
+            extra_app_args: vec!["--configure".to_string()],
+            ..Default::default()
+        };
         assert_eq!(
-            config.extra_app_args,
-            vec!["--hw-accel", "METAL", "--launch-mode", "REFLECT"]
+            config.app_args(),
+            vec![
+                "--hw-accel",
+                "OFF",
+                "--launch-mode",
+                "LAUNCHER",
+                "--configure"
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<String>>()
         );
+
+        // An `Auto` value adds no argument of its own.
+        let auto = TuningConfig {
+            hw_accel: HwAccel::Auto,
+            launch_mode: LaunchMode::Auto,
+            ..Default::default()
+        };
+        assert!(auto.app_args().is_empty());
     }
 
     #[test]
@@ -359,6 +585,10 @@ mod tests {
             heap_max: Some("4g".to_string()),
             gc_log: true,
             extra_jvm_args: vec!["-XX:+AlwaysPreTouch".to_string()],
+            direct_memory_max: None,
+            metaspace_max: None,
+            code_cache_size: None,
+            native_memory_tracking: None,
             ..Default::default()
         };
 

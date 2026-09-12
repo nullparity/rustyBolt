@@ -336,9 +336,7 @@ pub fn tuned_client_options(
         .extend(tuning_config.system_properties());
     options.jvm_args.extend(tuning.flags(feature));
     options.jvm_args.extend(tuning_config.dock_args());
-    options
-        .app_args
-        .extend(tuning_config.extra_app_args.iter().cloned());
+    options.app_args.extend(tuning_config.app_args());
     options
 }
 
@@ -519,6 +517,10 @@ mod tests {
             "-Xms2g",
             "-Xmx2g",
             "-Xss2m",
+            "-XX:MaxDirectMemorySize=512m",
+            "-XX:MaxMetaspaceSize=1g",
+            "-XX:ReservedCodeCacheSize=240m",
+            "-XX:NativeMemoryTracking=summary",
             "-XX:+UseZGC",
             "-XX:+UseCompactObjectHeaders",
             "--enable-native-access=ALL-UNNAMED",

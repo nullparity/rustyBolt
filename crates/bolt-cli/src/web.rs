@@ -3,48 +3,52 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>rustyBolt</title>
+  <title>rustyBolt — Settings</title>
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #131211;
-      --surface: #1a1917;
-      --surface-card: #201e1b;
-      --surface-input: #151413;
-      --border: #38332c;
-      --border-focus: #c07440;
-      --text: #f4ede6;
-      --text-muted: #a89f93;
-      --text-dim: #736b61;
-      --accent: #d98f5c;
-      --accent-glow: rgba(217, 143, 92, 0.25);
-      --accent-hover: #e39a63;
+      --bg: #09090b;
+      --card: #111114;
+      --card-border: #232328;
+      --card-highlight: rgba(255, 255, 255, 0.03);
+      --input: #09090b;
+      --input-border: #27272a;
+      --input-focus: #52525b;
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --copper: #d98f5c;
+      --copper-dim: rgba(217, 143, 92, 0.15);
       --patina: #22a184;
-      --patina-light: #4fd9b6;
-      --patina-glow: rgba(34, 161, 132, 0.25);
-      --red: #d9534f;
-      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --patina-dim: rgba(34, 161, 132, 0.15);
+      --red: #f43f5e;
+      --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: radial-gradient(circle at 50% 0%, #291e17 0%, var(--bg) 60%);
+      background-color: var(--bg);
       color: var(--text);
       font-family: var(--font-sans);
       min-height: 100vh;
       line-height: 1.5;
-      padding-bottom: 80px;
+      padding-bottom: 96px;
+      -webkit-font-smoothing: antialiased;
     }
 
     header {
-      border-bottom: 1px solid var(--border);
-      background: rgba(19, 18, 17, 0.92);
-      backdrop-filter: blur(16px);
       position: sticky;
       top: 0;
       z-index: 50;
-      padding: 14px 24px;
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -53,89 +57,99 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .logo-img {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
       display: block;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     }
     h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       color: var(--text);
     }
-    .badge {
-      background: rgba(217, 143, 92, 0.15);
-      color: var(--accent);
-      border: 1px solid rgba(217, 143, 92, 0.35);
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       padding: 2px 8px;
       border-radius: 9999px;
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: 500;
+      border: 1px solid var(--input-border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+    }
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--patina);
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
-
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      background: var(--patina-light);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--patina-glow);
-      margin-right: 6px;
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--input-border);
       color: var(--text-muted);
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 6px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.15s ease;
+      font-family: inherit;
     }
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.06);
       color: var(--text);
+      border-color: var(--text-subtle);
     }
 
     main {
-      max-width: 960px;
+      max-width: 820px;
       margin: 32px auto;
       padding: 0 20px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 20px;
     }
 
     .card {
-      background: var(--surface-card);
-      border: 1px solid var(--border);
+      background: var(--card);
+      border: 1px solid var(--card-border);
       border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      padding: 20px 24px;
+      box-shadow: inset 0 1px 0 0 var(--card-highlight), 0 4px 20px -4px rgba(0, 0, 0, 0.4);
     }
 
-    .card-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 4px;
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 18px;
     }
-    .card-subtitle {
-      font-size: 0.85rem;
+    .card-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .card-desc {
+      font-size: 0.8rem;
       color: var(--text-muted);
-      margin-bottom: 20px;
     }
 
     .grid-2 {
@@ -148,36 +162,36 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       gap: 6px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .form-group:last-child { margin-bottom: 0; }
 
     label {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 500;
       color: var(--text-muted);
     }
 
     input[type="text"], select {
-      background: var(--surface-input);
-      border: 1px solid var(--border);
+      background: var(--input);
+      border: 1px solid var(--input-border);
       color: var(--text);
-      padding: 9px 12px;
+      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-family: inherit;
       outline: none;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
       width: 100%;
     }
     input[type="text"]:focus, select:focus {
-      border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 1px var(--input-focus);
     }
 
-    .select-runtime {
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
+    .font-mono {
+      font-family: var(--font-mono) !important;
+      font-size: 0.8rem !important;
     }
 
     .toggle-row {
@@ -188,26 +202,26 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
     .toggle-row:last-child { border-bottom: none; }
-    .toggle-info {
+    .toggle-text {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
     .toggle-label {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 500;
       color: var(--text);
     }
-    .toggle-desc {
+    .toggle-sub {
       font-size: 0.75rem;
-      color: var(--text-dim);
+      color: var(--text-subtle);
     }
 
     .switch {
       position: relative;
       display: inline-block;
-      width: 44px;
-      height: 24px;
+      width: 36px;
+      height: 20px;
       flex-shrink: 0;
     }
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -215,90 +229,109 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(255, 255, 255, 0.08);
+      background-color: #27272a;
       transition: .2s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 24px;
-      border: 1px solid var(--border);
+      border-radius: 9999px;
     }
     .slider:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
+      height: 16px;
+      width: 16px;
       left: 2px;
       bottom: 2px;
-      background-color: #fff;
+      background-color: #a1a1aa;
       transition: .2s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 50%;
     }
     input:checked + .slider {
-      background-color: var(--accent);
-      border-color: var(--accent);
+      background-color: var(--copper);
     }
     input:checked + .slider:before {
-      transform: translateX(20px);
+      transform: translateX(16px);
+      background-color: #ffffff;
     }
 
-    .gc-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 8px;
-      margin-top: 4px;
+    .segmented {
+      display: flex;
+      background: #18181b;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 3px;
     }
-    .gc-btn {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
+    .seg-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
       color: var(--text-muted);
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 500;
       cursor: pointer;
-      text-align: center;
       transition: all 0.15s ease;
+      font-family: inherit;
+      text-align: center;
     }
-    .gc-btn.active {
-      background: rgba(217, 143, 92, 0.15);
-      border-color: var(--accent);
-      color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
+    .seg-btn:hover {
+      color: var(--text);
+    }
+    .seg-btn.active {
+      background: #27272a;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 
-    .preview-box {
-      background: #0e0d0c;
-      border: 1px solid var(--border);
+    .terminal-box {
+      background: #000000;
+      border: 1px solid var(--input-border);
       border-radius: 8px;
-      padding: 14px;
+      padding: 14px 16px;
       font-family: var(--font-mono);
-      font-size: 0.82rem;
-      color: #e39a63;
+      font-size: 0.8rem;
+      color: #e4e4e7;
       overflow-x: auto;
       white-space: pre-wrap;
       word-break: break-all;
       position: relative;
+      line-height: 1.6;
     }
     .copy-btn {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border);
+      top: 10px;
+      right: 10px;
+      background: #18181b;
+      border: 1px solid var(--input-border);
       color: var(--text-muted);
       padding: 4px 8px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 0.75rem;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+      transition: all 0.15s ease;
     }
-    .copy-btn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+    .copy-btn:hover {
+      background: #27272a;
+      color: #fff;
+    }
+    .copy-btn svg {
+      width: 12px;
+      height: 12px;
+    }
 
-    .save-bar {
+    .dock {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(19, 18, 17, 0.95);
-      backdrop-filter: blur(16px);
-      border-top: 1px solid var(--border);
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--card-border);
       padding: 14px 24px;
       display: flex;
       align-items: center;
@@ -307,83 +340,116 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       z-index: 40;
     }
 
-    .save-btn {
-      background: linear-gradient(135deg, var(--accent), var(--border-focus));
+    .btn-primary {
+      background: #ffffff;
+      color: #09090b;
       border: none;
-      color: #1a0f07;
-      font-weight: 700;
-      font-size: 0.95rem;
-      padding: 10px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 2px 14px var(--accent-glow);
-      transition: all 0.15s ease;
-    }
-    .save-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 20px var(--accent-glow);
-    }
-    .toast {
-      color: var(--patina-light);
-      font-size: 0.85rem;
       font-weight: 600;
+      font-size: 0.85rem;
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .btn-primary:hover {
+      background: #e4e4e7;
+    }
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .toast {
+      color: var(--patina);
+      font-size: 0.8rem;
+      font-weight: 500;
       opacity: 0;
       transition: opacity 0.2s ease;
     }
     .toast.show { opacity: 1; }
 
-    .tag-green { color: var(--patina-light); font-weight: 600; font-size: 0.75rem; }
-    .tag-yellow { color: var(--accent); font-weight: 600; font-size: 0.75rem; }
-    .tag-red { color: var(--red); font-weight: 600; font-size: 0.75rem; }
-    a.wiki-link { color: var(--accent); text-decoration: none; font-weight: 500; }
-    a.wiki-link:hover { text-decoration: underline; }
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .tag-ok {
+      background: var(--patina-dim);
+      color: var(--patina);
+    }
+    .tag-warn {
+      background: var(--copper-dim);
+      color: var(--copper);
+    }
+    .tag-err {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--red);
+    }
+    a.link {
+      color: var(--copper);
+      text-decoration: none;
+    }
+    a.link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
-      <img class="logo-img" src="/icon.svg" alt="rustyBolt icon" width="36" height="36">
+      <img class="logo-img" src="/icon.svg" alt="rustyBolt icon" width="28" height="28">
       <h1>rustyBolt</h1>
-      <span class="badge">Configuration</span>
+      <span class="pill"><span class="pill-dot"></span><span>127.0.0.1</span></span>
     </div>
     <div class="header-actions">
-      <span><span class="status-dot"></span><span style="font-size:0.8rem; color:var(--text-muted)">Local Server</span></span>
-      <button class="btn-secondary" onclick="shutdownServer()">Close</button>
+      <button class="btn-ghost" onclick="shutdownServer()">Close</button>
     </div>
   </header>
 
   <main>
     <div class="card">
-      <div class="card-title">Java Runtime Selection</div>
-      <div class="card-subtitle">Select which Java JDK is used to run game clients. Feature 24 or newer unlocks modern JVM tuning.</div>
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-title">Java Runtime</div>
+          <div class="card-desc">Runtime discovered on this machine. Feature 24 or newer unlocks modern JVM options.</div>
+        </div>
+      </div>
       
       <div class="form-group">
-        <label for="java-select">Detected Runtimes</label>
-        <select id="java-select" class="select-runtime" onchange="onJavaSelectChange()">
-          <option value="auto">Automatic Discovery (Recommended)</option>
+        <label for="java-select">Runtime Candidate</label>
+        <select id="java-select" class="font-mono" onchange="onJavaSelectChange()">
+          <option value="auto">Automatic (First Available)</option>
           <option value="custom">Custom Path...</option>
         </select>
       </div>
 
       <div class="form-group" id="java-custom-group" style="display:none;">
-        <label for="java-custom-path">Custom Java Binary Path</label>
-        <input type="text" id="java-custom-path" placeholder="/path/to/bin/java or C:\Path\To\java.exe" oninput="markDirty()">
+        <label for="java-custom-path">Binary Location</label>
+        <input type="text" id="java-custom-path" class="font-mono" placeholder="/usr/bin/java or C:\Program Files\Java\bin\java.exe" oninput="markDirty()">
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">Game Clients</div>
-      <div class="card-subtitle">Client detection and executable jar overrides for RuneLite and HDOS.</div>
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-title">Client Detection</div>
+          <div class="card-desc">Jar lookup and override paths for installed game clients.</div>
+        </div>
+      </div>
       
       <div class="grid-2">
-        <div style="border-right: 1px solid var(--border); padding-right: 16px;">
-          <h3 style="font-size:0.95rem; margin-bottom: 8px;">RuneLite</h3>
-          <div id="runelite-status" style="font-size:0.8rem; margin-bottom:12px;">Detecting...</div>
+        <div style="border-right: 1px solid var(--card-border); padding-right: 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.85rem; font-weight:600;">RuneLite</span>
+            <span id="runelite-status" class="tag tag-warn">Checking...</span>
+          </div>
 
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <span class="toggle-label">Use Custom Jar</span>
-              <span class="toggle-desc">Override detected RuneLite.jar</span>
+          <div class="toggle-row" style="padding-top:4px;">
+            <div class="toggle-text">
+              <span class="toggle-label">Custom Jar</span>
+              <span class="toggle-sub">Override detected RuneLite.jar</span>
             </div>
             <label class="switch">
               <input type="checkbox" id="rl-use-custom" onchange="onToggleCustomJar()">
@@ -392,41 +458,40 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           </div>
 
           <div class="form-group" id="rl-custom-group" style="display:none; margin-top:8px;">
-            <label for="rl-custom-jar">Custom Jar Path</label>
-            <input type="text" id="rl-custom-jar" placeholder="/path/to/RuneLite.jar" oninput="markDirty()">
+            <label for="rl-custom-jar">Jar Path</label>
+            <input type="text" id="rl-custom-jar" class="font-mono" placeholder="/path/to/RuneLite.jar" oninput="markDirty()">
           </div>
 
-          <div class="form-group" style="margin-top:12px;">
-            <label for="rl-template">Launch Command Template (optional)</label>
-            <input type="text" id="rl-template" placeholder="%command% (blank for default)" oninput="markDirty()">
+          <div class="form-group" style="margin-top:10px;">
+            <label for="rl-template">Launch Template</label>
+            <input type="text" id="rl-template" class="font-mono" placeholder="%command% (default)" oninput="markDirty()">
           </div>
         </div>
 
         <div style="padding-left: 8px;">
-          <h3 style="font-size:0.95rem; margin-bottom: 8px;">HDOS</h3>
-          <div id="hdos-status" style="font-size:0.8rem; margin-bottom:12px;">Detecting...</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.85rem; font-weight:600;">HDOS</span>
+            <span id="hdos-status" class="tag tag-warn">Checking...</span>
+          </div>
 
-          <div class="form-group">
-            <label for="hdos-jar">Custom Launcher Jar Path (optional)</label>
-            <input type="text" id="hdos-jar" placeholder="/path/to/hdos-launcher.jar" oninput="markDirty()">
+          <div class="form-group" style="margin-top:10px;">
+            <label for="hdos-jar">Launcher Jar Path</label>
+            <input type="text" id="hdos-jar" class="font-mono" placeholder="/path/to/hdos-launcher.jar" oninput="markDirty()">
           </div>
 
           <div class="form-group">
-            <label for="hdos-template">Launch Command Template (optional)</label>
-            <input type="text" id="hdos-template" placeholder="%command% (blank for default)" oninput="markDirty()">
+            <label for="hdos-template">Launch Template</label>
+            <input type="text" id="hdos-template" class="font-mono" placeholder="%command% (default)" oninput="markDirty()">
           </div>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">JVM Tuning (RuneLite)</div>
-      <div class="card-subtitle">Performance flags for frame pacing, reduced garbage collection pauses, and fast startup.</div>
-
-      <div class="toggle-row" style="margin-bottom: 16px;">
-        <div class="toggle-info">
-          <span class="toggle-label">Enable JVM Performance Tuning</span>
-          <span class="toggle-desc">Apply optimized memory limits and generational garbage collection</span>
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-title">JVM Tuning</div>
+          <div class="card-desc">Low-latency garbage collection and memory sizing for RuneLite.</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="tuning-enabled" onchange="markDirty()">
@@ -436,31 +501,30 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 
       <div class="form-group">
         <label>Garbage Collector</label>
-        <div class="gc-options">
-          <div class="gc-btn" data-gc="z" onclick="setGc('z')">ZGC Generational<br><span style="font-size:0.7rem; color:var(--patina-light)">Recommended</span></div>
-          <div class="gc-btn" data-gc="g1" onclick="setGc('g1')">G1<br><span style="font-size:0.7rem; color:var(--text-dim)">Standard</span></div>
-          <div class="gc-btn" data-gc="parallel" onclick="setGc('parallel')">Parallel<br><span style="font-size:0.7rem; color:var(--text-dim)">Throughput</span></div>
-          <div class="gc-btn" data-gc="default" onclick="setGc('default')">JVM Default<br><span style="font-size:0.7rem; color:var(--text-dim)">Unchanged</span></div>
+        <div class="segmented">
+          <button type="button" class="seg-btn" data-gc="z" onclick="setGc('z')">ZGC (Generational)</button>
+          <button type="button" class="seg-btn" data-gc="g1" onclick="setGc('g1')">G1</button>
+          <button type="button" class="seg-btn" data-gc="parallel" onclick="setGc('parallel')">Parallel</button>
+          <button type="button" class="seg-btn" data-gc="default" onclick="setGc('default')">Default</button>
         </div>
       </div>
 
-      <div class="grid-2" style="margin-top: 16px;">
+      <div class="grid-2" style="margin-top: 14px;">
         <div class="form-group">
           <label for="heap-min">Initial Heap (-Xms)</label>
-          <input type="text" id="heap-min" placeholder="2g" oninput="markDirty()">
+          <input type="text" id="heap-min" class="font-mono" placeholder="2g" oninput="markDirty()">
         </div>
         <div class="form-group">
           <label for="heap-max">Maximum Heap (-Xmx)</label>
-          <input type="text" id="heap-max" placeholder="2g" oninput="markDirty()">
+          <input type="text" id="heap-max" class="font-mono" placeholder="2g" oninput="markDirty()">
         </div>
       </div>
 
-      <div class="form-group" style="margin-top: 12px;">
-        <label style="margin-bottom: 8px;">Modern Java 24+ Optimizations</label>
+      <div style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 4px;">
         <div class="toggle-row">
-          <div class="toggle-info">
+          <div class="toggle-text">
             <span class="toggle-label">Compact Object Headers</span>
-            <span class="toggle-desc">Shrinks Java object headers to 64-bit (-XX:+UseCompactObjectHeaders)</span>
+            <span class="toggle-sub">-XX:+UseCompactObjectHeaders (JDK 24+)</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="compact-headers" onchange="markDirty()">
@@ -468,9 +532,9 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           </label>
         </div>
         <div class="toggle-row">
-          <div class="toggle-info">
+          <div class="toggle-text">
             <span class="toggle-label">String Deduplication</span>
-            <span class="toggle-desc">Removes duplicate string objects in memory (-XX:+UseStringDeduplication)</span>
+            <span class="toggle-sub">-XX:+UseStringDeduplication</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="string-dedup" onchange="markDirty()">
@@ -478,9 +542,9 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           </label>
         </div>
         <div class="toggle-row">
-          <div class="toggle-info">
+          <div class="toggle-text">
             <span class="toggle-label">Native Memory Access</span>
-            <span class="toggle-desc">Permits direct memory access without warnings (--enable-native-access)</span>
+            <span class="toggle-sub">--enable-native-access</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="native-access" onchange="markDirty()">
@@ -488,9 +552,9 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           </label>
         </div>
         <div class="toggle-row">
-          <div class="toggle-info">
-            <span class="toggle-label">Ahead-Of-Time (AOT) Cache</span>
-            <span class="toggle-desc">Pre-compiles classes on initial run for instantaneous subsequent launches</span>
+          <div class="toggle-text">
+            <span class="toggle-label">Ahead-Of-Time Cache</span>
+            <span class="toggle-sub">Pre-loads classes on subsequent launches</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="aot-cache" onchange="markDirty()">
@@ -498,9 +562,9 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           </label>
         </div>
         <div class="toggle-row">
-          <div class="toggle-info">
-            <span class="toggle-label">GC Logging</span>
-            <span class="toggle-desc">Write garbage collection log for diagnostics (-Xlog:gc*)</span>
+          <div class="toggle-text">
+            <span class="toggle-label">GC Diagnostic Logging</span>
+            <span class="toggle-sub">-Xlog:gc* into cache directory</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="gc-log" onchange="markDirty()">
@@ -511,32 +575,46 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
     </div>
 
     <div class="card">
-      <div class="card-title">RuneLite Home Isolation</div>
-      <div class="card-subtitle">Keep launcher profiles separate from other clients to avoid corrupting settings.</div>
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-title">Home Directory Isolation</div>
+          <div class="card-desc">Isolated mode keeps launcher settings distinct from ~/.runelite.</div>
+        </div>
+      </div>
 
       <div class="form-group">
-        <label for="home-kind">Home Directory Mode</label>
+        <label for="home-kind">Mode</label>
         <select id="home-kind" onchange="markDirty()">
-          <option value="isolated">Isolated (Default — protects ~/.runelite)</option>
-          <option value="system">System (~/.runelite)</option>
+          <option value="isolated">Isolated (Recommended)</option>
+          <option value="system">System Default (~/.runelite)</option>
         </select>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">Launch Command Preview</div>
-      <div class="card-subtitle">The exact command line that rustybolt launch runelite will execute.</div>
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-title">Launch Command Preview</div>
+          <div class="card-desc">Live command generated for RuneLite based on active settings.</div>
+        </div>
+      </div>
       
-      <div class="preview-box">
-        <button class="copy-btn" onclick="copyPreview()">Copy</button>
-        <code id="preview-text">Loading command line...</code>
+      <div class="terminal-box">
+        <button class="copy-btn" onclick="copyPreview()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+          </svg>
+          <span id="copy-label">Copy</span>
+        </button>
+        <span id="preview-text">Loading command preview...</span>
       </div>
     </div>
   </main>
 
-  <div class="save-bar">
-    <span class="toast" id="toast">Settings saved successfully!</span>
-    <button class="save-btn" onclick="saveSettings()">Save Changes</button>
+  <div class="dock">
+    <span class="toast" id="toast">Saved</span>
+    <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
   </div>
 
   <script>
@@ -549,7 +627,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
         state = await res.json();
         render();
       } catch (err) {
-        console.error('Failed to load state', err);
+        console.error(err);
       }
     }
 
@@ -559,13 +637,13 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 
       const javaSelect = document.getElementById('java-select');
       javaSelect.innerHTML = `
-        <option value="auto">Automatic Discovery (Recommended)</option>
+        <option value="auto">Automatic (First Available)</option>
         <option value="custom">Custom Path...</option>
       `;
       state.runtimes.forEach((rt) => {
         const opt = document.createElement('option');
         opt.value = rt.path;
-        opt.textContent = `${rt.path} (${rt.version || 'feature unknown'}, ${rt.source})`;
+        opt.textContent = `${rt.path} (${rt.version || 'unknown'}, ${rt.source})`;
         javaSelect.appendChild(opt);
       });
 
@@ -589,16 +667,20 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 
       const rlStatus = document.getElementById('runelite-status');
       if (state.clients.runelite_detected) {
-        rlStatus.innerHTML = `<span class="tag-green">Installed:</span> ${state.clients.runelite_detected}`;
+        rlStatus.className = 'tag tag-ok';
+        rlStatus.textContent = 'Detected';
       } else {
-        rlStatus.innerHTML = `<span class="tag-red">Not Installed.</span> Install from <a class="wiki-link" href="https://oldschool.runescape.wiki/w/RuneLite" target="_blank">RuneLite Wiki</a>.`;
+        rlStatus.className = 'tag tag-err';
+        rlStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/RuneLite" target="_blank">Wiki</a>';
       }
 
       const hdosStatus = document.getElementById('hdos-status');
       if (state.clients.hdos_detected) {
-        hdosStatus.innerHTML = `<span class="tag-green">Installed:</span> ${state.clients.hdos_detected}`;
+        hdosStatus.className = 'tag tag-ok';
+        hdosStatus.textContent = 'Detected';
       } else {
-        hdosStatus.innerHTML = `<span class="tag-yellow">Not detected.</span> Install from <a class="wiki-link" href="https://oldschool.runescape.wiki/w/HDOS" target="_blank">HDOS Wiki</a>.`;
+        hdosStatus.className = 'tag tag-warn';
+        hdosStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/HDOS" target="_blank">Wiki</a>';
       }
 
       document.getElementById('rl-use-custom').checked = !!config.runelite_use_custom_jar;
@@ -622,11 +704,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       setGc(tuning.garbage_collector || 'z');
 
       const homeKind = document.getElementById('home-kind');
-      if (config.runelite_home_kind === 'system') {
-        homeKind.value = 'system';
-      } else {
-        homeKind.value = 'isolated';
-      }
+      homeKind.value = (config.runelite_home_kind === 'system') ? 'system' : 'isolated';
 
       document.getElementById('preview-text').textContent = state.runelite_plan || 'Ready to launch';
     }
@@ -645,7 +723,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 
     function setGc(gc) {
       selectedGc = gc;
-      document.querySelectorAll('.gc-btn').forEach(btn => {
+      document.querySelectorAll('.seg-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.gc === gc);
       });
       markDirty();
@@ -713,7 +791,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           }
           const toast = document.getElementById('toast');
           toast.classList.add('show');
-          setTimeout(() => toast.classList.remove('show'), 2500);
+          setTimeout(() => toast.classList.remove('show'), 2000);
         }
       } catch (err) {
         alert('Failed to save settings: ' + err);
@@ -727,8 +805,8 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       window.close();
       document.body.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;height:80vh;flex-direction:column;gap:12px;">
-          <h2>Configuration server stopped.</h2>
-          <p style="color:var(--text-muted)">You can close this tab and return to the terminal.</p>
+          <h2 style="font-size:1.1rem;font-weight:600;">Configuration server stopped</h2>
+          <p style="color:var(--text-muted);font-size:0.85rem;">You may close this browser window.</p>
         </div>
       `;
     }
@@ -736,9 +814,9 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
     function copyPreview() {
       const text = document.getElementById('preview-text').textContent;
       navigator.clipboard.writeText(text);
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      const label = document.getElementById('copy-label');
+      label.textContent = 'Copied';
+      setTimeout(() => { label.textContent = 'Copy'; }, 1500);
     }
 
     window.addEventListener('DOMContentLoaded', loadState);
