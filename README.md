@@ -26,7 +26,8 @@ Then download a rustyBolt archive from the [Releases](https://github.com/nullpar
 | macOS (Intel) | `rustybolt_<version>_darwin_amd64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
 | Linux (x86_64) | `rustybolt_<version>_linux_amd64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
 | Linux (ARM64) | `rustybolt_<version>_linux_arm64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
-| Windows | `rustybolt_<version>_windows_amd64.zip` | Extract it. Put `rustybolt.exe` on your `PATH`. |
+| Windows (x86_64) | `rustybolt_<version>_windows_amd64.zip` | Extract it. Put `rustybolt.exe` on your `PATH`. |
+| Windows (ARM64) | `rustybolt_<version>_windows_arm64.zip` | Extract it. Put `rustybolt.exe` on your `PATH`. |
 
 ## Use the launcher
 
