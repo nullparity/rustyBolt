@@ -40,6 +40,15 @@ struct ServerState {
     runtimes: Vec<JavaInfo>,
     clients: ClientInfo,
     runelite_plan: Option<String>,
+    has_session: bool,
+}
+
+#[derive(Serialize)]
+struct LaunchResponse {
+    ok: bool,
+    pid: Option<u32>,
+    close: bool,
+    error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -218,6 +227,49 @@ fn respond(
             );
             true
         }
+        ("POST", "/api/launch/runelite" | "/api/launch/hdos") => {
+            let kind = if path.ends_with("hdos") {
+                ClientKind::Hdos
+            } else {
+                ClientKind::RuneLite
+            };
+            let config = Config::load(paths);
+            match crate::launch::launch_client(paths, &config, kind) {
+                Ok(pid) => {
+                    let should_close = config.close_after_launch;
+                    let res = LaunchResponse {
+                        ok: true,
+                        pid: Some(pid),
+                        close: should_close,
+                        error: None,
+                    };
+                    let json =
+                        serde_json::to_string(&res).unwrap_or_else(|_| "{\"ok\":true}".to_string());
+                    let response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                        json.len()
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                    should_close
+                }
+                Err(error) => {
+                    let res = LaunchResponse {
+                        ok: false,
+                        pid: None,
+                        close: false,
+                        error: Some(error.to_string()),
+                    };
+                    let json = serde_json::to_string(&res)
+                        .unwrap_or_else(|_| "{\"ok\":false}".to_string());
+                    let response = format!(
+                        "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                        json.len()
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                    false
+                }
+            }
+        }
         _ => {
             let _ = stream.write_all(
                 format!(
@@ -265,12 +317,14 @@ fn build_state(paths: &Paths, config: Config) -> ServerState {
     };
 
     let runelite_plan = compute_preview(paths, &config, ClientKind::RuneLite);
+    let has_session = !bolt_core::SessionStore::load(paths).sessions().is_empty();
 
     ServerState {
         config,
         runtimes,
         clients,
         runelite_plan,
+        has_session,
     }
 }
 

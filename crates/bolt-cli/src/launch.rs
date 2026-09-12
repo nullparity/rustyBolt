@@ -71,6 +71,44 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     Ok(())
 }
 
+/// Starts a client for the given kind and configuration.
+pub(crate) fn launch_client(
+    paths: &Paths,
+    config: &Config,
+    kind: ClientKind,
+) -> Result<u32, CliError> {
+    let options = Options {
+        kind,
+        sub: None,
+        character: None,
+        configure: false,
+        jar: None,
+        dry_run: false,
+        show_env: false,
+    };
+    let jar = resolve_jar(config, &options)?;
+    let credentials = resolve_credentials(paths, config, &options)?;
+    let template = match kind {
+        ClientKind::RuneLite => config.runelite_launch_command.as_deref(),
+        ClientKind::Hdos => config.hdos_launch_command.as_deref(),
+    };
+
+    let request = LaunchRequest {
+        jar: &jar,
+        kind,
+        credentials: credentials.as_ref(),
+        java: config.java_path.as_deref(),
+        template,
+        configure: false,
+    };
+
+    let pid = bolt_core::launch(paths, &request)?;
+    if let Some(credentials) = &credentials {
+        record_use(paths, &credentials.character_id);
+    }
+    Ok(pid)
+}
+
 /// Records the use of one character for the order rule.
 ///
 /// A failure to save the record gives a warning. It never stops the launch.

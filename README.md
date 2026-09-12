@@ -31,20 +31,34 @@ Then download a rustyBolt archive from the [Releases](https://github.com/nullpar
 
 ## Use the launcher
 
-The launcher has four commands on all operating systems:
+The default and recommended way to use rustyBolt is through the interactive launcher dashboard:
+
+```sh
+rustybolt
+```
+
+Running `rustybolt` with no arguments automatically opens the dashboard in your default web browser. From the dashboard, you can:
+- View detected installations of RuneLite and HDOS.
+- Launch RuneLite or HDOS directly with a single click.
+- Select discovered Java runtimes or set a custom path.
+- Tune low-latency garbage collection (Generational ZGC, G1), memory sizing, and modern JVM flags.
+- Toggle isolated home directory mode and automatic launcher shutdown upon game start.
+
+### Headless CLI Commands
+
+For scripts, CI, and terminal power users, headless subcommands are also available:
 
 ```sh
 rustybolt login              # log in to your Jagex account, once
-rustybolt launch runelite    # start the client
-rustybolt verify             # show what a launch does, and start nothing
-rustybolt configure          # open the configuration dashboard in your browser
+rustybolt launch runelite    # start the client from the terminal
+rustybolt verify             # show what a launch does without starting anything
+rustybolt configure          # open the launcher dashboard explicitly
+rustybolt help               # display command-line usage
 ```
 
-`rustybolt login` prints a URL. Open it in a browser and log in. The browser then lands on a redirect page. Copy the whole address bar of that page and paste it at the prompt. The launcher saves the session, so the next launch needs no login.
+`rustybolt login` prints a URL. Open it in a browser and log in. The browser then lands on a redirect page. Copy the whole address bar of that page and paste it at the prompt. The launcher saves the session, so subsequent launches need no login.
 
 `rustybolt verify` checks the client jar, the session and the Java runtime, then prints the command line that `launch` runs.
-
-`rustybolt configure` opens the configuration dashboard in your default web browser (on macOS, Linux, and Windows), where you can manage Java runtimes, JVM tuning, and client configurations.
 
 ## Troubleshooting
 

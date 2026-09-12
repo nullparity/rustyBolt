@@ -14,20 +14,23 @@ use bolt_core::{ClientKind, CoreError, SessionStore};
 
 /// The usage text of the program.
 const USAGE: &str = "\
-rustybolt is the command line of rustyBolt.
+rustybolt is the fast, portable launcher for RuneLite and HDOS.
+
+Running `rustybolt` with no arguments opens the interactive launcher dashboard.
 
 Usage:
-  rustybolt login
+  rustybolt [configure]
   rustybolt launch <runelite|hdos> [--sub <sub>] [--character <id>]
                   [--configure] [--jar <path>]
+  rustybolt login
   rustybolt verify [runelite|hdos] [--sub <sub>] [--character <id>] [--jar <path>]
-  rustybolt configure
   rustybolt help
 
+A default launch opens the browser interface with client detection and tuning.
 A login writes a session into the session file.
 A launch uses the first saved session, unless --sub selects another one.
 `rustybolt verify` tests the configuration and displays the command line.
-`rustybolt configure` opens the settings window.
+`rustybolt configure` opens the launcher dashboard explicitly.
 ";
 
 /// The result of one command.
@@ -102,8 +105,7 @@ fn main() {
 /// Runs the command of the command line.
 fn dispatch(args: &[String]) -> Result<(), CliError> {
     let Some(command) = args.first().map(String::as_str) else {
-        print!("{USAGE}");
-        return Ok(());
+        return configure::run(&[]);
     };
     let rest = &args[1..];
 

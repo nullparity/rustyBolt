@@ -3,7 +3,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>rustyBolt — Settings</title>
+  <title>rustyBolt — Launcher</title>
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -395,6 +395,31 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       transform: scale(0.98);
     }
 
+    .btn-launch {
+      background: var(--patina);
+      color: #09090b;
+      border: none;
+      font-weight: 600;
+      font-size: 0.8rem;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+    .btn-launch:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 0 12px rgba(34, 161, 132, 0.35);
+    }
+    .btn-launch:active {
+      transform: scale(0.97);
+    }
+    .btn-launch:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
     .toast {
       color: var(--patina);
       font-size: 0.8rem;
@@ -403,6 +428,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       transition: opacity 0.2s ease;
     }
     .toast.show { opacity: 1; }
+    .toast.toast-err { color: var(--red); }
 
     .tag {
       display: inline-block;
@@ -439,6 +465,7 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       <!--LOGO_SVG-->
       <h1>rustyBolt</h1>
       <span class="pill"><span class="pill-dot"></span><span>127.0.0.1</span></span>
+      <span id="session-pill" class="pill" style="display:none;"><span class="pill-dot" style="background:var(--copper);"></span><span>Jagex Account</span></span>
     </div>
     <div class="header-actions">
       <button class="btn-ghost" onclick="shutdownServer()">Close</button>
@@ -446,6 +473,53 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
   </header>
 
   <main>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-title">Game Clients</div>
+          <div class="card-desc">Installed game clients detected on this system. Launch directly or configure overrides below.</div>
+        </div>
+      </div>
+      
+      <div class="client-list">
+        <div class="client-item">
+          <div class="client-meta">
+            <span class="client-name">RuneLite</span>
+            <span id="runelite-path" class="client-path">Checking...</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="runelite-status" class="tag tag-warn">Checking</span>
+            <button id="rl-launch-btn" class="btn-launch" onclick="launchClient('runelite')" style="display:none;">Launch</button>
+          </div>
+        </div>
+
+        <div class="client-item">
+          <div class="client-meta">
+            <span class="client-name">HDOS</span>
+            <span id="hdos-path" class="client-path">Checking...</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="hdos-status" class="tag tag-warn">Checking</span>
+            <button id="hdos-launch-btn" class="btn-launch" onclick="launchClient('hdos')" style="display:none;">Launch</button>
+          </div>
+        </div>
+      </div>
+
+      <details style="margin-top: 12px;">
+        <summary style="font-size: 0.75rem; color: var(--text-subtle); cursor: pointer; user-select: none;">Path overrides</summary>
+        <div class="grid-2" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border);">
+          <div class="form-group">
+            <label for="rl-custom-jar">RuneLite Jar Path</label>
+            <input type="text" id="rl-custom-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+          </div>
+          <div class="form-group">
+            <label for="hdos-jar">HDOS Jar Path</label>
+            <input type="text" id="hdos-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+          </div>
+        </div>
+      </details>
+    </div>
+
     <div class="card">
       <div class="card-header">
         <div class="card-title-group">
@@ -466,47 +540,6 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
         <label for="java-custom-path">Binary Location</label>
         <input type="text" id="java-custom-path" class="font-mono" placeholder="/usr/bin/java or C:\Program Files\Java\bin\java.exe" oninput="markDirty()">
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <div class="card-title">Game Clients</div>
-          <div class="card-desc">Installed game clients detected on this system.</div>
-        </div>
-      </div>
-      
-      <div class="client-list">
-        <div class="client-item">
-          <div class="client-meta">
-            <span class="client-name">RuneLite</span>
-            <span id="runelite-path" class="client-path">Checking...</span>
-          </div>
-          <span id="runelite-status" class="tag tag-warn">Checking</span>
-        </div>
-
-        <div class="client-item">
-          <div class="client-meta">
-            <span class="client-name">HDOS</span>
-            <span id="hdos-path" class="client-path">Checking...</span>
-          </div>
-          <span id="hdos-status" class="tag tag-warn">Checking</span>
-        </div>
-      </div>
-
-      <details style="margin-top: 12px;">
-        <summary style="font-size: 0.75rem; color: var(--text-subtle); cursor: pointer; user-select: none;">Path overrides</summary>
-        <div class="grid-2" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border);">
-          <div class="form-group">
-            <label for="rl-custom-jar">RuneLite Jar Path</label>
-            <input type="text" id="rl-custom-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
-          </div>
-          <div class="form-group">
-            <label for="hdos-jar">HDOS Jar Path</label>
-            <input type="text" id="hdos-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
-          </div>
-        </div>
-      </details>
     </div>
 
     <div class="card">
@@ -643,17 +676,28 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
     <div class="card">
       <div class="card-header">
         <div class="card-title-group">
-          <div class="card-title">Home Directory Isolation</div>
-          <div class="card-desc">Isolated mode keeps launcher settings distinct from ~/.runelite.</div>
+          <div class="card-title">Launcher Settings</div>
+          <div class="card-desc">Client environment and launcher behavior.</div>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="home-kind">Mode</label>
+        <label for="home-kind">Home Directory Isolation</label>
         <select id="home-kind" onchange="markDirty()">
-          <option value="isolated">Isolated (Recommended)</option>
+          <option value="isolated">Isolated (Recommended — keeps settings distinct)</option>
           <option value="system">System Default (~/.runelite)</option>
         </select>
+      </div>
+
+      <div class="toggle-row" style="margin-top: 14px; border-top: 1px solid var(--card-border); padding-top: 14px;">
+        <div class="toggle-text">
+          <span class="toggle-label">Close Launcher After Launch</span>
+          <span class="toggle-sub">Automatically shut down rustyBolt when a game client starts</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="close-after-launch" onchange="markDirty()">
+          <span class="slider"></span>
+        </label>
       </div>
     </div>
 
@@ -680,7 +724,8 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 
   <div class="dock">
     <span class="toast" id="toast">Saved</span>
-    <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
+    <button class="btn-ghost" onclick="saveSettings()">Save Settings</button>
+    <button id="dock-launch-rl" class="btn-primary" onclick="launchClient('runelite')">Launch RuneLite</button>
   </div>
 
   <script>
@@ -733,28 +778,50 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       }
       onJavaSelectChange();
 
+      const sessionPill = document.getElementById('session-pill');
+      if (sessionPill) {
+        sessionPill.style.display = state.has_session ? 'inline-flex' : 'none';
+      }
+
       const rlStatus = document.getElementById('runelite-status');
       const rlPath = document.getElementById('runelite-path');
+      const rlBtn = document.getElementById('rl-launch-btn');
+      const dockRlBtn = document.getElementById('dock-launch-rl');
       if (state.clients.runelite_detected) {
         rlStatus.className = 'tag tag-ok';
         rlStatus.textContent = 'Detected';
         rlPath.textContent = state.clients.runelite_detected;
+        if (rlBtn) rlBtn.style.display = 'inline-block';
+        if (dockRlBtn) {
+          dockRlBtn.disabled = false;
+          dockRlBtn.style.opacity = '1';
+          dockRlBtn.style.pointerEvents = 'auto';
+        }
       } else {
         rlStatus.className = 'tag tag-err';
         rlStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/RuneLite" target="_blank">Wiki</a>';
         rlPath.textContent = 'No RuneLite.jar detected in standard locations';
+        if (rlBtn) rlBtn.style.display = 'none';
+        if (dockRlBtn) {
+          dockRlBtn.disabled = true;
+          dockRlBtn.style.opacity = '0.4';
+          dockRlBtn.style.pointerEvents = 'none';
+        }
       }
 
       const hdosStatus = document.getElementById('hdos-status');
       const hdosPath = document.getElementById('hdos-path');
+      const hdosBtn = document.getElementById('hdos-launch-btn');
       if (state.clients.hdos_detected) {
         hdosStatus.className = 'tag tag-ok';
         hdosStatus.textContent = 'Detected';
         hdosPath.textContent = state.clients.hdos_detected;
+        if (hdosBtn) hdosBtn.style.display = 'inline-block';
       } else {
         hdosStatus.className = 'tag tag-warn';
         hdosStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/HDOS" target="_blank">Wiki</a>';
         hdosPath.textContent = 'No HDOS jar detected in standard locations';
+        if (hdosBtn) hdosBtn.style.display = 'none';
       }
 
       document.getElementById('rl-custom-jar').value = config.runelite_custom_jar || '';
@@ -783,6 +850,11 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
 
       const homeKind = document.getElementById('home-kind');
       homeKind.value = (config.runelite_home_kind === 'system') ? 'system' : 'isolated';
+
+      const closeCheck = document.getElementById('close-after-launch');
+      if (closeCheck) {
+        closeCheck.checked = !!config.close_after_launch;
+      }
 
       document.getElementById('preview-text').textContent = state.runelite_plan || 'Ready to launch';
     }
@@ -861,6 +933,10 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       };
 
       config.runelite_home_kind = document.getElementById('home-kind').value;
+      const closeCheck = document.getElementById('close-after-launch');
+      if (closeCheck) {
+        config.close_after_launch = closeCheck.checked;
+      }
 
       try {
         const res = await fetch('/api/config', {
@@ -875,7 +951,8 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
           }
           if (!silent) {
             const toast = document.getElementById('toast');
-            toast.classList.add('show');
+            toast.className = 'toast show';
+            toast.textContent = 'Saved';
             setTimeout(() => toast.classList.remove('show'), 2000);
           }
         }
@@ -883,6 +960,50 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
         if (!silent) {
           alert('Failed to save settings: ' + err);
         }
+      }
+    }
+
+    let launching = false;
+    async function launchClient(kind) {
+      if (launching) return;
+      launching = true;
+      const toast = document.getElementById('toast');
+      toast.className = 'toast show';
+      toast.textContent = `Starting ${kind === 'runelite' ? 'RuneLite' : 'HDOS'}...`;
+
+      await saveSettings(true);
+
+      try {
+        const res = await fetch(`/api/launch/${kind}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          toast.className = 'toast show';
+          if (data.close) {
+            toast.textContent = `Launched (PID ${data.pid}). Closing launcher...`;
+            setTimeout(() => {
+              window.close();
+              document.body.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:center;height:80vh;flex-direction:column;gap:12px;">
+                  <h2 style="font-size:1.1rem;font-weight:600;">Game client launched</h2>
+                  <p style="color:var(--text-muted);font-size:0.85rem;">Launcher closed. Enjoy your session!</p>
+                </div>
+              `;
+            }, 1200);
+          } else {
+            toast.textContent = `Launched ${kind === 'runelite' ? 'RuneLite' : 'HDOS'} (PID ${data.pid})`;
+            setTimeout(() => toast.classList.remove('show'), 3500);
+          }
+        } else {
+          toast.className = 'toast show toast-err';
+          toast.textContent = `Launch failed: ${data.error || 'Unknown error'}`;
+          setTimeout(() => toast.classList.remove('show'), 5000);
+        }
+      } catch (err) {
+        toast.className = 'toast show toast-err';
+        toast.textContent = `Launch error: ${err.message || err}`;
+        setTimeout(() => toast.classList.remove('show'), 5000);
+      } finally {
+        launching = false;
       }
     }
 
