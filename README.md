@@ -227,4 +227,6 @@ Do not add an attribution line for an AI tool to a commit or a pull request. `AI
 
 rustyBolt is an unofficial project. It is not affiliated with Jagex, RuneLite or HDOS. Those parties are not responsible for any problem with rustyBolt or any damage that rustyBolt causes.
 
-rustyBolt is not a game client. It downloads and runs the unmodified clients. It cannot modify or automate gameplay.
+rustyBolt is not a game client. It downloads and runs the unmodified clients. It cannot modify or automate gameplay. The launcher uses only the public login endpoints, and it never reads or alters game data.
+
+RuneScape, Old School RuneScape and Jagex are trademarks of Jagex Limited.
