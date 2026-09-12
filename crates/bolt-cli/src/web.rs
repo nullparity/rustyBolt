@@ -395,29 +395,143 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       transform: scale(0.98);
     }
 
-    .btn-launch {
-      background: var(--patina);
+    .clients-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+
+    .client-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      box-shadow: inset 0 1px 0 0 var(--card-highlight), 0 4px 20px -4px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.15s ease;
+    }
+    .client-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .client-card-top {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .client-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .client-card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .client-card-path {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-use {
+      background: #ffffff;
       color: #09090b;
       border: none;
       font-weight: 600;
-      font-size: 0.8rem;
-      padding: 5px 14px;
-      border-radius: 6px;
+      font-size: 0.9rem;
+      padding: 10px 18px;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.15s ease;
       font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
     }
-    .btn-launch:hover {
-      filter: brightness(1.1);
-      box-shadow: 0 0 12px rgba(34, 161, 132, 0.35);
+    .btn-use:hover {
+      background: #e4e4e7;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.12);
     }
-    .btn-launch:active {
-      transform: scale(0.97);
+    .btn-use:active {
+      transform: translateY(0);
     }
-    .btn-launch:disabled {
-      opacity: 0.4;
+    .btn-use:disabled {
+      opacity: 0.35;
       cursor: not-allowed;
       pointer-events: none;
+      background: #27272a;
+      color: var(--text-muted);
+    }
+
+    .advanced-wrapper {
+      margin-top: 6px;
+    }
+
+    .advanced-details {
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      background: rgba(17, 17, 20, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .advanced-details[open] {
+      border-color: var(--card-border);
+      background: transparent;
+    }
+
+    .advanced-summary {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-subtle);
+      cursor: pointer;
+      user-select: none;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.15s ease;
+    }
+
+    .advanced-summary:hover {
+      color: var(--text-muted);
+    }
+
+    .advanced-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-chevron {
+      width: 13px;
+      height: 13px;
+      transition: transform 0.2s ease;
+      stroke: currentColor;
+    }
+
+    .advanced-details[open] .advanced-chevron {
+      transform: rotate(90deg);
+    }
+
+    .advanced-body {
+      padding: 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
     .toast {
@@ -473,259 +587,272 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
   </header>
 
   <main>
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <div class="card-title">Game Clients</div>
-          <div class="card-desc">Installed game clients detected on this system. Launch directly or configure overrides below.</div>
-        </div>
-      </div>
-      
-      <div class="client-list">
-        <div class="client-item">
-          <div class="client-meta">
-            <span class="client-name">RuneLite</span>
-            <span id="runelite-path" class="client-path">Checking...</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;">
+    <div class="clients-hero">
+      <div class="client-card">
+        <div class="client-card-top">
+          <div class="client-card-header">
+            <div class="client-card-title">RuneLite</div>
             <span id="runelite-status" class="tag tag-warn">Checking</span>
-            <button id="rl-launch-btn" class="btn-launch" onclick="launchClient('runelite')" style="display:none;">Launch</button>
           </div>
+          <div id="runelite-path" class="client-card-path">Checking...</div>
         </div>
-
-        <div class="client-item">
-          <div class="client-meta">
-            <span class="client-name">HDOS</span>
-            <span id="hdos-path" class="client-path">Checking...</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span id="hdos-status" class="tag tag-warn">Checking</span>
-            <button id="hdos-launch-btn" class="btn-launch" onclick="launchClient('hdos')" style="display:none;">Launch</button>
-          </div>
-        </div>
+        <button id="rl-launch-btn" class="btn-use" onclick="launchClient('runelite')">
+          Use RuneLite
+        </button>
       </div>
 
-      <details style="margin-top: 12px;">
-        <summary style="font-size: 0.75rem; color: var(--text-subtle); cursor: pointer; user-select: none;">Path overrides</summary>
-        <div class="grid-2" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border);">
-          <div class="form-group">
-            <label for="rl-custom-jar">RuneLite Jar Path</label>
-            <input type="text" id="rl-custom-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+      <div class="client-card">
+        <div class="client-card-top">
+          <div class="client-card-header">
+            <div class="client-card-title">HDOS</div>
+            <span id="hdos-status" class="tag tag-warn">Checking</span>
           </div>
-          <div class="form-group">
-            <label for="hdos-jar">HDOS Jar Path</label>
-            <input type="text" id="hdos-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+          <div id="hdos-path" class="client-card-path">Checking...</div>
+        </div>
+        <button id="hdos-launch-btn" class="btn-use" onclick="launchClient('hdos')">
+          Use HDOS
+        </button>
+      </div>
+    </div>
+
+    <div class="advanced-wrapper">
+      <details class="advanced-details">
+        <summary class="advanced-summary">
+          <svg class="advanced-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>Advanced options</span>
+        </summary>
+        
+        <div class="advanced-body">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-title">JVM Tuning</div>
+                <div class="card-desc">Low-latency garbage collection and memory sizing for RuneLite.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="tuning-enabled" onchange="onToggleTuning()">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div id="tuning-body">
+              <div class="form-group">
+                <label>Garbage Collector</label>
+                <div class="segmented">
+                  <button type="button" class="seg-btn" data-gc="z" onclick="setGc('z')">ZGC (Generational)</button>
+                  <button type="button" class="seg-btn" data-gc="g1" onclick="setGc('g1')">G1</button>
+                  <button type="button" class="seg-btn" data-gc="parallel" onclick="setGc('parallel')">Parallel</button>
+                  <button type="button" class="seg-btn" data-gc="default" onclick="setGc('default')">Default</button>
+                </div>
+              </div>
+
+              <div class="grid-2" style="margin-top: 14px;">
+                <div class="form-group">
+                  <label for="heap-min">Initial Heap (-Xms)</label>
+                  <input type="text" id="heap-min" class="font-mono" placeholder="2g" oninput="markDirty()">
+                </div>
+                <div class="form-group">
+                  <label for="heap-max">Maximum Heap (-Xmx)</label>
+                  <input type="text" id="heap-max" class="font-mono" placeholder="2g" oninput="markDirty()">
+                </div>
+              </div>
+
+              <div class="grid-2" style="margin-top: 14px;">
+                <div class="form-group">
+                  <label for="launch-mode">Launch Mode (--launch-mode)</label>
+                  <select id="launch-mode" onchange="markDirty()">
+                    <option value="reflect">Reflect (Recommended)</option>
+                    <option value="launcher">Launcher</option>
+                    <option value="auto">Automatic</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="hw-accel">Hardware Acceleration (--hw-accel)</label>
+                  <select id="hw-accel" onchange="markDirty()">
+                    <option value="metal">Metal (Recommended)</option>
+                    <option value="opengl">OpenGL</option>
+                    <option value="off">Off</option>
+                    <option value="auto">Automatic</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid-2" style="margin-top: 14px;">
+                <div class="form-group">
+                  <label for="direct-memory">Direct Memory (-XX:MaxDirectMemorySize)</label>
+                  <input type="text" id="direct-memory" class="font-mono" placeholder="512m" oninput="markDirty()">
+                </div>
+                <div class="form-group">
+                  <label for="metaspace">Metaspace (-XX:MaxMetaspaceSize)</label>
+                  <input type="text" id="metaspace" class="font-mono" placeholder="1g" oninput="markDirty()">
+                </div>
+              </div>
+
+              <div class="grid-2" style="margin-top: 14px;">
+                <div class="form-group">
+                  <label for="code-cache">Code Cache (-XX:ReservedCodeCacheSize)</label>
+                  <input type="text" id="code-cache" class="font-mono" placeholder="240m" oninput="markDirty()">
+                </div>
+                <div class="form-group">
+                  <label for="native-memory">Native Memory Tracking (-XX:NativeMemoryTracking)</label>
+                  <input type="text" id="native-memory" class="font-mono" placeholder="summary" oninput="markDirty()">
+                </div>
+              </div>
+
+              <div style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 4px;">
+                <div class="toggle-row">
+                  <div class="toggle-text">
+                    <span class="toggle-label">Compact Object Headers</span>
+                    <span class="toggle-sub">-XX:+UseCompactObjectHeaders (JDK 24+)</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="compact-headers" onchange="markDirty()">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-text">
+                    <span class="toggle-label">String Deduplication</span>
+                    <span class="toggle-sub">-XX:+UseStringDeduplication</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="string-dedup" onchange="markDirty()">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-text">
+                    <span class="toggle-label">Native Memory Access</span>
+                    <span class="toggle-sub">--enable-native-access</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="native-access" onchange="markDirty()">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-text">
+                    <span class="toggle-label">Ahead-Of-Time Cache</span>
+                    <span class="toggle-sub">Pre-loads classes on subsequent launches</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="aot-cache" onchange="markDirty()">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-text">
+                    <span class="toggle-label">GC Diagnostic Logging</span>
+                    <span class="toggle-sub">-Xlog:gc* into cache directory</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="gc-log" onchange="markDirty()">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-title">Java Runtime</div>
+                <div class="card-desc">Runtime discovered on this machine. Feature 24 or newer unlocks modern JVM options.</div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="java-select">Runtime Candidate</label>
+              <select id="java-select" class="font-mono" onchange="onJavaSelectChange()">
+                <option value="auto">Automatic (First Available)</option>
+                <option value="custom">Custom Path...</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="java-custom-group" style="display:none;">
+              <label for="java-custom-path">Binary Location</label>
+              <input type="text" id="java-custom-path" class="font-mono" placeholder="/usr/bin/java or C:\Program Files\Java\bin\java.exe" oninput="markDirty()">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-title">Client Path Overrides</div>
+                <div class="card-desc">Explicit jar locations if not using standard system installation paths.</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label for="rl-custom-jar">RuneLite Jar Path</label>
+                <input type="text" id="rl-custom-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+              </div>
+              <div class="form-group">
+                <label for="hdos-jar">HDOS Jar Path</label>
+                <input type="text" id="hdos-jar" class="font-mono" placeholder="Default detected path" oninput="markDirty()">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-title">Launcher Settings</div>
+                <div class="card-desc">Client environment and launcher behavior.</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="home-kind">Home Directory Isolation</label>
+              <select id="home-kind" onchange="markDirty()">
+                <option value="isolated">Isolated (Recommended — keeps settings distinct)</option>
+                <option value="system">System Default (~/.runelite)</option>
+              </select>
+            </div>
+
+            <div class="toggle-row" style="margin-top: 14px; border-top: 1px solid var(--card-border); padding-top: 14px;">
+              <div class="toggle-text">
+                <span class="toggle-label">Close Launcher After Launch</span>
+                <span class="toggle-sub">Automatically shut down rustyBolt when a game client starts</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="close-after-launch" onchange="markDirty()">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-title">Launch Command Preview</div>
+                <div class="card-desc">Live command generated for RuneLite based on active settings.</div>
+              </div>
+            </div>
+            
+            <div class="terminal-box">
+              <button class="copy-btn" onclick="copyPreview()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                </svg>
+                <span id="copy-label">Copy</span>
+              </button>
+              <span id="preview-text">Loading command preview...</span>
+            </div>
           </div>
         </div>
       </details>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <div class="card-title">Java Runtime</div>
-          <div class="card-desc">Runtime discovered on this machine. Feature 24 or newer unlocks modern JVM options.</div>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="java-select">Runtime Candidate</label>
-        <select id="java-select" class="font-mono" onchange="onJavaSelectChange()">
-          <option value="auto">Automatic (First Available)</option>
-          <option value="custom">Custom Path...</option>
-        </select>
-      </div>
-
-      <div class="form-group" id="java-custom-group" style="display:none;">
-        <label for="java-custom-path">Binary Location</label>
-        <input type="text" id="java-custom-path" class="font-mono" placeholder="/usr/bin/java or C:\Program Files\Java\bin\java.exe" oninput="markDirty()">
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <div class="card-title">JVM Tuning</div>
-          <div class="card-desc">Low-latency garbage collection and memory sizing for RuneLite.</div>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="tuning-enabled" onchange="onToggleTuning()">
-          <span class="slider"></span>
-        </label>
-      </div>
-
-      <div id="tuning-body">
-        <div class="form-group">
-          <label>Garbage Collector</label>
-          <div class="segmented">
-            <button type="button" class="seg-btn" data-gc="z" onclick="setGc('z')">ZGC (Generational)</button>
-            <button type="button" class="seg-btn" data-gc="g1" onclick="setGc('g1')">G1</button>
-            <button type="button" class="seg-btn" data-gc="parallel" onclick="setGc('parallel')">Parallel</button>
-            <button type="button" class="seg-btn" data-gc="default" onclick="setGc('default')">Default</button>
-          </div>
-        </div>
-
-        <div class="grid-2" style="margin-top: 14px;">
-          <div class="form-group">
-            <label for="heap-min">Initial Heap (-Xms)</label>
-            <input type="text" id="heap-min" class="font-mono" placeholder="2g" oninput="markDirty()">
-          </div>
-          <div class="form-group">
-            <label for="heap-max">Maximum Heap (-Xmx)</label>
-            <input type="text" id="heap-max" class="font-mono" placeholder="2g" oninput="markDirty()">
-          </div>
-        </div>
-
-        <div class="grid-2" style="margin-top: 14px;">
-          <div class="form-group">
-            <label for="launch-mode">Launch Mode (--launch-mode)</label>
-            <select id="launch-mode" onchange="markDirty()">
-              <option value="reflect">Reflect (Recommended)</option>
-              <option value="launcher">Launcher</option>
-              <option value="auto">Automatic</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="hw-accel">Hardware Acceleration (--hw-accel)</label>
-            <select id="hw-accel" onchange="markDirty()">
-              <option value="metal">Metal (Recommended)</option>
-              <option value="opengl">OpenGL</option>
-              <option value="off">Off</option>
-              <option value="auto">Automatic</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid-2" style="margin-top: 14px;">
-          <div class="form-group">
-            <label for="direct-memory">Direct Memory (-XX:MaxDirectMemorySize)</label>
-            <input type="text" id="direct-memory" class="font-mono" placeholder="512m" oninput="markDirty()">
-          </div>
-          <div class="form-group">
-            <label for="metaspace">Metaspace (-XX:MaxMetaspaceSize)</label>
-            <input type="text" id="metaspace" class="font-mono" placeholder="1g" oninput="markDirty()">
-          </div>
-        </div>
-
-        <div class="grid-2" style="margin-top: 14px;">
-          <div class="form-group">
-            <label for="code-cache">Code Cache (-XX:ReservedCodeCacheSize)</label>
-            <input type="text" id="code-cache" class="font-mono" placeholder="240m" oninput="markDirty()">
-          </div>
-          <div class="form-group">
-            <label for="native-memory">Native Memory Tracking (-XX:NativeMemoryTracking)</label>
-            <input type="text" id="native-memory" class="font-mono" placeholder="summary" oninput="markDirty()">
-          </div>
-        </div>
-
-        <div style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 4px;">
-          <div class="toggle-row">
-            <div class="toggle-text">
-              <span class="toggle-label">Compact Object Headers</span>
-              <span class="toggle-sub">-XX:+UseCompactObjectHeaders (JDK 24+)</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="compact-headers" onchange="markDirty()">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-text">
-              <span class="toggle-label">String Deduplication</span>
-              <span class="toggle-sub">-XX:+UseStringDeduplication</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="string-dedup" onchange="markDirty()">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-text">
-              <span class="toggle-label">Native Memory Access</span>
-              <span class="toggle-sub">--enable-native-access</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="native-access" onchange="markDirty()">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-text">
-              <span class="toggle-label">Ahead-Of-Time Cache</span>
-              <span class="toggle-sub">Pre-loads classes on subsequent launches</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="aot-cache" onchange="markDirty()">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-text">
-              <span class="toggle-label">GC Diagnostic Logging</span>
-              <span class="toggle-sub">-Xlog:gc* into cache directory</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="gc-log" onchange="markDirty()">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <div class="card-title">Launcher Settings</div>
-          <div class="card-desc">Client environment and launcher behavior.</div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="home-kind">Home Directory Isolation</label>
-        <select id="home-kind" onchange="markDirty()">
-          <option value="isolated">Isolated (Recommended — keeps settings distinct)</option>
-          <option value="system">System Default (~/.runelite)</option>
-        </select>
-      </div>
-
-      <div class="toggle-row" style="margin-top: 14px; border-top: 1px solid var(--card-border); padding-top: 14px;">
-        <div class="toggle-text">
-          <span class="toggle-label">Close Launcher After Launch</span>
-          <span class="toggle-sub">Automatically shut down rustyBolt when a game client starts</span>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="close-after-launch" onchange="markDirty()">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <div class="card-title">Launch Command Preview</div>
-          <div class="card-desc">Live command generated for RuneLite based on active settings.</div>
-        </div>
-      </div>
-      
-      <div class="terminal-box">
-        <button class="copy-btn" onclick="copyPreview()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-          </svg>
-          <span id="copy-label">Copy</span>
-        </button>
-        <span id="preview-text">Loading command preview...</span>
-      </div>
     </div>
   </main>
 
   <div class="dock">
     <span class="toast" id="toast">Saved</span>
     <button class="btn-ghost" onclick="saveSettings()">Save Settings</button>
-    <button id="dock-launch-rl" class="btn-primary" onclick="launchClient('runelite')">Launch RuneLite</button>
   </div>
 
   <script>
@@ -786,26 +913,21 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
       const rlStatus = document.getElementById('runelite-status');
       const rlPath = document.getElementById('runelite-path');
       const rlBtn = document.getElementById('rl-launch-btn');
-      const dockRlBtn = document.getElementById('dock-launch-rl');
       if (state.clients.runelite_detected) {
         rlStatus.className = 'tag tag-ok';
         rlStatus.textContent = 'Detected';
         rlPath.textContent = state.clients.runelite_detected;
-        if (rlBtn) rlBtn.style.display = 'inline-block';
-        if (dockRlBtn) {
-          dockRlBtn.disabled = false;
-          dockRlBtn.style.opacity = '1';
-          dockRlBtn.style.pointerEvents = 'auto';
+        if (rlBtn) {
+          rlBtn.disabled = false;
+          rlBtn.textContent = 'Use RuneLite';
         }
       } else {
         rlStatus.className = 'tag tag-err';
         rlStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/RuneLite" target="_blank">Wiki</a>';
         rlPath.textContent = 'No RuneLite.jar detected in standard locations';
-        if (rlBtn) rlBtn.style.display = 'none';
-        if (dockRlBtn) {
-          dockRlBtn.disabled = true;
-          dockRlBtn.style.opacity = '0.4';
-          dockRlBtn.style.pointerEvents = 'none';
+        if (rlBtn) {
+          rlBtn.disabled = true;
+          rlBtn.textContent = 'RuneLite Not Found';
         }
       }
 
@@ -816,12 +938,18 @@ pub const HTML_PAGE: &str = r#"<!DOCTYPE html>
         hdosStatus.className = 'tag tag-ok';
         hdosStatus.textContent = 'Detected';
         hdosPath.textContent = state.clients.hdos_detected;
-        if (hdosBtn) hdosBtn.style.display = 'inline-block';
+        if (hdosBtn) {
+          hdosBtn.disabled = false;
+          hdosBtn.textContent = 'Use HDOS';
+        }
       } else {
         hdosStatus.className = 'tag tag-warn';
         hdosStatus.innerHTML = 'Not Found &middot; <a class="link" href="https://oldschool.runescape.wiki/w/HDOS" target="_blank">Wiki</a>';
         hdosPath.textContent = 'No HDOS jar detected in standard locations';
-        if (hdosBtn) hdosBtn.style.display = 'none';
+        if (hdosBtn) {
+          hdosBtn.disabled = true;
+          hdosBtn.textContent = 'HDOS Not Found';
+        }
       }
 
       document.getElementById('rl-custom-jar').value = config.runelite_custom_jar || '';
