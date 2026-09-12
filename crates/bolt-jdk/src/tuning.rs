@@ -323,8 +323,18 @@ mod tests {
             .unwrap();
     }
 
+    /// The path separator differs on Windows, so the tests build the flag.
+    fn gc_log_flag(dir: &str) -> String {
+        let file = Path::new(dir).join("gc-%p.log");
+        format!(
+            "-Xlog:gc*:file={}:time,uptime:filecount=3,filesize=10m",
+            file.display()
+        )
+    }
+
     #[test]
     fn test_flags_full_order_feature_25() {
+        let gc_log = gc_log_flag("/tmp/bolt/logs");
         let expected = vec![
             "-Xms2g",
             "-Xmx2g",
@@ -341,7 +351,7 @@ mod tests {
             "--add-opens=java.desktop/sun.awt=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.event=ALL-UNNAMED",
             "-XX:AOTCache=/tmp/bolt/client-1.0.aot",
-            "-Xlog:gc*:file=/tmp/bolt/logs/gc-%p.log:time,uptime:filecount=3,filesize=10m",
+            gc_log.as_str(),
             "-Dsun.java2d.metal=true",
             "-Drunelite.launcher.nojvm=true",
         ];
@@ -350,6 +360,7 @@ mod tests {
 
     #[test]
     fn test_flags_full_order_feature_21() {
+        let gc_log = gc_log_flag("/tmp/bolt/logs");
         let expected = vec![
             "-Xms2g",
             "-Xmx2g",
@@ -363,7 +374,7 @@ mod tests {
             "--add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED",
             "--add-opens=java.desktop/sun.awt=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.event=ALL-UNNAMED",
-            "-Xlog:gc*:file=/tmp/bolt/logs/gc-%p.log:time,uptime:filecount=3,filesize=10m",
+            gc_log.as_str(),
             "-Dsun.java2d.metal=true",
             "-Drunelite.launcher.nojvm=true",
         ];
@@ -419,10 +430,7 @@ mod tests {
             gc_log: Some(PathBuf::from("/var/log/bolt")),
             ..Tuning::default()
         };
-        assert_eq!(
-            tuning.flags(21),
-            vec!["-Xlog:gc*:file=/var/log/bolt/gc-%p.log:time,uptime:filecount=3,filesize=10m"]
-        );
+        assert_eq!(tuning.flags(21), vec![gc_log_flag("/var/log/bolt")]);
     }
 
     #[test]
