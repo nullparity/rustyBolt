@@ -475,11 +475,17 @@ mod tests {
             std::fs::set_permissions(&good, std::fs::Permissions::from_mode(0o755)).unwrap();
         }
 
+        // Windows has no execute bit, so every file counts as executable.
+        let expected = if cfg!(windows) {
+            plain.clone()
+        } else {
+            good.clone()
+        };
         let config = Config {
-            java_candidates: vec![missing, plain, good.clone()],
+            java_candidates: vec![missing, plain, good],
             ..Default::default()
         };
-        assert_eq!(resolve_java(None, &config).unwrap(), good);
+        assert_eq!(resolve_java(None, &config).unwrap(), expected);
         assert_eq!(java_feature(&temp.path().join("absent")), 11);
     }
 
