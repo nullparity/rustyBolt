@@ -31,27 +31,31 @@ Then download a rustyBolt archive from the [Releases](https://github.com/nullpar
 
 ## Use the launcher
 
-The default way to use rustyBolt is as a desktop application:
+The default way to use rustyBolt is as a standalone desktop application:
 
 - **macOS**: Open `rustyBolt.app` from `/Applications` or Spotlight.
 - **Windows**: Double-click `rustybolt.exe`.
 - **Linux**: Open `rustyBolt` from your application menu or run `rustybolt`.
 
-Launching rustyBolt opens the clean launcher dashboard in your default browser:
-- Click **Use RuneLite** or **Use HDOS** to launch your client immediately.
-- Advanced settings (JVM tuning, garbage collection, and custom paths) remain collapsed out of view until you need them.
+Launching rustyBolt opens a native standalone desktop window:
+- View your active **Jagex Account** and switch between accounts with 1 click.
+- Select your **Character (Account)** from the visual picker.
+- Choose your client: **RuneLite** or **HDOS**.
+- Click **PLAY** to launch directly.
+- Configure JVM tuning, memory allocation, and custom paths under **Settings**.
 
 ### Command Line
 
 You can also run rustyBolt from a terminal:
 
 ```sh
-rustybolt                    # open the launcher dashboard
+rustybolt                    # open native desktop window
+rustybolt --browser          # open launcher in your default browser
 rustybolt launch runelite    # start RuneLite directly
 rustybolt launch hdos        # start HDOS directly
 rustybolt login              # log in to your Jagex account, once
 rustybolt verify             # show what a launch does without starting anything
-rustybolt configure          # open the launcher dashboard explicitly
+rustybolt configure          # open launcher explicitly
 rustybolt help               # display command-line usage
 ```
 

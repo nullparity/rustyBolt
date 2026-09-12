@@ -5,6 +5,7 @@
 
 mod auth;
 mod configure;
+mod gui;
 mod launch;
 mod verify;
 mod web;
@@ -16,17 +17,18 @@ use bolt_core::{ClientKind, CoreError, SessionStore};
 const USAGE: &str = "\
 rustybolt is the fast, portable launcher for RuneLite and HDOS.
 
-Running `rustybolt` with no arguments opens the interactive launcher dashboard.
+Running `rustybolt` opens the native desktop launcher window.
 
 Usage:
-  rustybolt [configure]
+  rustybolt [configure] [--browser]
   rustybolt launch <runelite|hdos> [--sub <sub>] [--character <id>]
                   [--configure] [--jar <path>]
   rustybolt login
   rustybolt verify [runelite|hdos] [--sub <sub>] [--character <id>] [--jar <path>]
   rustybolt help
 
-A default launch opens the browser interface with client detection and tuning.
+A default launch opens the native desktop application window.
+Use `--browser` to open the interface in your default browser.
 A login writes a session into the session file.
 A launch uses the first saved session, unless --sub selects another one.
 `rustybolt verify` tests the configuration and displays the command line.
@@ -107,6 +109,9 @@ fn dispatch(args: &[String]) -> Result<(), CliError> {
     let Some(command) = args.first().map(String::as_str) else {
         return configure::run(&[]);
     };
+    if command == "--browser" {
+        return configure::run(args);
+    }
     let rest = &args[1..];
 
     match command {

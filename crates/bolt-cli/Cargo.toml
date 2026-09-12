@@ -16,3 +16,5 @@ bolt-jdk.workspace = true
 bolt-core.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+wry = "0.56.1"
+tao = "0.36.0"

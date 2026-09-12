@@ -17,8 +17,11 @@ use bolt_core::{
 };
 use serde::{Deserialize, Serialize};
 
+use tao::event_loop::EventLoopProxy;
+
+use crate::gui::AppEvent;
 use crate::web::HTML_PAGE;
-use crate::{no_arguments, CliError};
+use crate::CliError;
 
 pub const ICON_SVG: &str = include_str!("../../../icon/rustybolt.svg");
 
@@ -98,41 +101,78 @@ struct SaveResponse {
 
 /// Runs `rustybolt configure`.
 pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
-    no_arguments(args)?;
+    let use_browser = args.iter().any(|arg| arg == "--browser");
+    for arg in args {
+        if arg != "--browser" {
+            return Err(CliError::Message(format!(
+                "unknown flag `{arg}`. Use `--browser` to force system browser."
+            )));
+        }
+    }
 
     let paths = Arc::new(Paths::resolve()?);
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let port = listener.local_addr()?.port();
-    let url = format!("http://127.0.0.1:{port}/");
-
-    println!("rustybolt: launcher server running at {url}");
-    println!("Opening your default web browser. Press Ctrl+C to close.");
-
-    open_browser(&url);
+    let url = format!("http://127.0.0.1:{port}/#play");
 
     let running = Arc::new(AtomicBool::new(true));
     let flow_state = Arc::new(Mutex::new(None));
 
-    for stream in listener.incoming() {
-        if !running.load(Ordering::SeqCst) {
-            break;
-        }
-        match stream {
-            Ok(stream) => {
-                let paths = Arc::clone(&paths);
-                let running = Arc::clone(&running);
-                let flow_state = Arc::clone(&flow_state);
-                thread::spawn(move || {
-                    handle_connection(stream, &paths, &running, &flow_state, port);
-                });
+    let (event_loop_opt, proxy_opt) = if !use_browser && crate::gui::has_display() {
+        let (event_loop, proxy) = crate::gui::create_event_loop();
+        (Some(event_loop), Some(proxy))
+    } else {
+        (None, None)
+    };
+
+    let s_paths = Arc::clone(&paths);
+    let s_running = Arc::clone(&running);
+    let s_flow_state = Arc::clone(&flow_state);
+    let s_proxy = proxy_opt.clone();
+
+    let server_thread = thread::spawn(move || {
+        for stream in listener.incoming() {
+            if !s_running.load(Ordering::SeqCst) {
+                break;
             }
-            Err(e) => {
-                if !running.load(Ordering::SeqCst) {
-                    break;
+            match stream {
+                Ok(stream) => {
+                    let paths = Arc::clone(&s_paths);
+                    let running = Arc::clone(&s_running);
+                    let flow_state = Arc::clone(&s_flow_state);
+                    let proxy = s_proxy.clone();
+                    thread::spawn(move || {
+                        handle_connection(
+                            stream,
+                            &paths,
+                            &running,
+                            &flow_state,
+                            proxy.as_ref(),
+                            port,
+                        );
+                    });
                 }
-                eprintln!("rustybolt: connection error: {e}");
+                Err(e) => {
+                    if !s_running.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    eprintln!("rustybolt: connection error: {e}");
+                }
             }
         }
+    });
+
+    if let Some(event_loop) = event_loop_opt {
+        if let Err(error) = crate::gui::run_window(event_loop, &url, Arc::clone(&running)) {
+            eprintln!("rustybolt: native window failed: {error}. Falling back to browser.");
+            open_browser(&url);
+            let _ = server_thread.join();
+        }
+    } else {
+        println!("rustybolt: launcher server running at {url}");
+        println!("Opening your default web browser. Press Ctrl+C to close.");
+        open_browser(&url);
+        let _ = server_thread.join();
     }
 
     println!("rustybolt: launcher server stopped.");
@@ -144,6 +184,7 @@ fn handle_connection(
     paths: &Paths,
     running: &AtomicBool,
     flow_state: &Arc<Mutex<Option<LoginFlow>>>,
+    proxy: Option<&EventLoopProxy<AppEvent>>,
     port: u16,
 ) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
@@ -200,6 +241,9 @@ fn handle_connection(
 
         if should_exit {
             running.store(false, Ordering::SeqCst);
+            if let Some(proxy) = proxy {
+                let _ = proxy.send_event(AppEvent::Shutdown);
+            }
             let _ = TcpStream::connect(("127.0.0.1", port));
             break;
         }
