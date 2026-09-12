@@ -17,9 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # GitHub retired the Intel macOS runner. The arm64 runner builds the Intel binary as a cross target.
         include:
           - { os: macos-14,         target: aarch64-apple-darwin,       name: darwin_arm64  }
-          - { os: macos-13,         target: x86_64-apple-darwin,        name: darwin_amd64  }
+          - { os: macos-14,         target: x86_64-apple-darwin,        name: darwin_amd64  }
           - { os: ubuntu-latest,    target: x86_64-unknown-linux-gnu,   name: linux_amd64   }
           - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu,  name: linux_arm64   }
           - { os: windows-latest,   target: x86_64-pc-windows-msvc,     name: windows_amd64 }
