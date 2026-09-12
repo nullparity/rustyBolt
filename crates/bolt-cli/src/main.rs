@@ -4,22 +4,29 @@
 //! It holds the command line only. The core holds the logic.
 
 mod auth;
+mod configure;
 mod home;
 mod import;
 mod info;
-mod install;
 mod java;
 mod launch;
 mod tuning;
+mod verify;
 
 use bolt_auth::Session;
 use bolt_core::{ClientKind, CoreError, SessionStore};
 
 /// The usage text of the program.
 const USAGE: &str = "\
-rustybolt is the headless driver of the rustyBolt core.
+rustybolt is the command line of rustyBolt.
 
 Usage:
+  rustybolt login
+  rustybolt launch <runelite|hdos> [--sub <sub>] [--character <id>]
+                  [--configure] [--jar <path>] [--dry-run] [--show-env]
+  rustybolt verify [runelite|hdos] [--sub <sub>]
+  rustybolt configure
+
   rustybolt java list
   rustybolt java select [--min <n>]
   rustybolt java use <path|auto>
@@ -27,10 +34,6 @@ Usage:
   rustybolt config
   rustybolt sessions
   rustybolt accounts [--sub <sub>]
-  rustybolt login
-  rustybolt install <runelite|hdos>
-  rustybolt launch <runelite|hdos> [--sub <sub>] [--character <id>]
-                  [--configure] [--jar <path>] [--dry-run] [--show-env]
   rustybolt usage
   rustybolt tuning [on|off]
   rustybolt tuning set <key> <value>
@@ -159,7 +162,8 @@ fn dispatch(args: &[String]) -> Result<(), CliError> {
         "sessions" => info::sessions(rest),
         "accounts" => auth::accounts(rest),
         "login" => auth::login(rest),
-        "install" => install::run(rest),
+        "verify" => verify::run(rest),
+        "configure" => configure::run(rest),
         "launch" => launch::run(rest),
         "usage" => info::usage(rest),
         "tuning" => tuning::run(rest),

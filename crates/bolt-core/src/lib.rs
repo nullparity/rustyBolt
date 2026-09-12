@@ -5,12 +5,12 @@
 //! RuneLite and HDOS installers, and the child process launch.
 //! The crate uses `bolt-auth` for the OAuth2 flow and `bolt-jdk` for Java.
 
+mod client;
 mod config;
 mod credentials;
 mod file;
 mod http;
 mod import;
-mod install;
 mod launch;
 mod paths;
 mod profile;
@@ -19,13 +19,13 @@ mod tuning;
 mod usage;
 
 pub use bolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};
+pub use client::{candidates as client_candidates, locate as locate_client, ClientKind};
 pub use config::{Config, DEFAULT_RECENT_WINDOW};
 pub use credentials::{CommandCredentials, CredentialFormat, CredentialSource};
 pub use http::HttpAuth;
 pub use import::{
     import_apply, import_plan, system_runelite_dir, ImportEntry, ImportPlan, RuneLiteHome,
 };
-pub use install::{ClientKind, InstalledClient, Installer, Release};
 pub use launch::{
     client_invocation, client_options, launch, plan, tuned_client_options, GameCredentials,
     LaunchPlan, LaunchRequest,
@@ -58,13 +58,10 @@ pub enum CoreError {
     Auth(#[from] bolt_auth::AuthError),
     #[error("no Java runtime of version 11 or newer exists")]
     NoJava,
-    /// The downloaded file does not have the digest that the release gives.
-    #[error("sha256 mismatch: expected {expected}, got {actual}")]
-    DigestMismatch { expected: String, actual: String },
     /// The server rejected the session. The user must log in again.
     #[error("the session expired")]
     SessionExpired,
-    #[error("the client is not installed")]
+    #[error("the client jar was not found")]
     NotInstalled,
     /// The user launch template is not valid.
     #[error("launch template error: {0}")]

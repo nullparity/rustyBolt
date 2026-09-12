@@ -47,11 +47,6 @@ impl Paths {
     pub fn credentials_file(&self) -> PathBuf {
         self.config_dir.join(CREDENTIALS_FILE)
     }
-
-    /// The directory of the installed game clients.
-    pub fn client_dir(&self) -> PathBuf {
-        self.data_dir.clone()
-    }
 }
 
 /// The operating system rules that select the base directories.
@@ -299,6 +294,5 @@ mod tests {
             paths.credentials_file(),
             PathBuf::from("/base/config/creds.json")
         );
-        assert_eq!(paths.client_dir(), PathBuf::from("/base/data"));
     }
 }

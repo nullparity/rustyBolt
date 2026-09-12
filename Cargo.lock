@@ -74,7 +74,6 @@ dependencies = [
  "bolt-jdk",
  "serde",
  "serde_json",
- "sha2",
  "thiserror",
  "ureq",
 ]

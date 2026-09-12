@@ -7,20 +7,20 @@ use std::path::PathBuf;
 
 use bolt_core::{
     AuthConfig, Character, ClientKind, Config, CredentialSource, GameCredentials, HttpAuth,
-    Installer, LaunchRequest, Paths, SessionStore, UsageStore,
+    LaunchRequest, Paths, SessionStore, UsageStore,
 };
 
 use crate::{client_kind, flag_value, pick_session, short_secret, CliError};
 
 /// The arguments of one launch.
-struct Options {
-    kind: ClientKind,
-    sub: Option<String>,
-    character: Option<String>,
-    configure: bool,
-    jar: Option<PathBuf>,
-    dry_run: bool,
-    show_env: bool,
+pub(crate) struct Options {
+    pub(crate) kind: ClientKind,
+    pub(crate) sub: Option<String>,
+    pub(crate) character: Option<String>,
+    pub(crate) configure: bool,
+    pub(crate) jar: Option<PathBuf>,
+    pub(crate) dry_run: bool,
+    pub(crate) show_env: bool,
 }
 
 /// Runs `rustybolt launch <client> [flags]`.
@@ -29,7 +29,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let paths = Paths::resolve()?;
     let config = Config::load(&paths);
 
-    let jar = resolve_jar(&paths, &config, &options)?;
+    let jar = resolve_jar(&config, &options)?;
     let credentials = resolve_credentials(&paths, &config, &options)?;
     let template = match options.kind {
         ClientKind::RuneLite => config.runelite_launch_command.as_deref(),
@@ -83,7 +83,7 @@ fn record_use(paths: &Paths, character_id: &str) {
 }
 
 /// Reads the client name and the flags.
-fn parse(args: &[String]) -> Result<Options, CliError> {
+pub(crate) fn parse(args: &[String]) -> Result<Options, CliError> {
     let name = args
         .first()
         .ok_or_else(|| CliError::Message("`launch` needs a client name".to_string()))?;
@@ -136,30 +136,29 @@ fn parse(args: &[String]) -> Result<Options, CliError> {
     Ok(options)
 }
 
-/// Selects the jar file: the flag, then the installed client, then the config.
-fn resolve_jar(paths: &Paths, config: &Config, options: &Options) -> Result<PathBuf, CliError> {
-    let jar = if let Some(jar) = &options.jar {
-        jar.clone()
-    } else if let Some(client) = Installer::new(paths).installed(options.kind) {
-        client.jar
-    } else if options.kind == ClientKind::RuneLite && config.runelite_use_custom_jar {
-        match &config.runelite_custom_jar {
-            Some(jar) => jar.clone(),
-            None => {
-                return Err(CliError::Message(
-                    "the config selects a custom jar, but it holds no jar path".to_string(),
-                ))
+/// Selects the jar file: the flag, then the config, then the usual places.
+pub(crate) fn resolve_jar(config: &Config, options: &Options) -> Result<PathBuf, CliError> {
+    let jar = match &options.jar {
+        Some(jar) => jar.clone(),
+        None => bolt_core::locate_client(options.kind, config).ok_or_else(|| {
+            let mut lines = vec![format!(
+                "{} is not installed. Install it from {} and start it once.",
+                options.kind.title(),
+                options.kind.wiki_url()
+            )];
+            lines.push("The launcher looked here:".to_string());
+            for path in bolt_core::client_candidates(options.kind) {
+                lines.push(format!("  {}", path.display()));
             }
-        }
-    } else {
-        return Err(CliError::Message(format!(
-            "the {} client is not installed. Run `rustybolt install {}`.",
-            options.kind.name(),
-            options.kind.name()
-        )));
+            lines.push(
+                "A jar in another place: `rustybolt configure`, or `launch --jar <path>`."
+                    .to_string(),
+            );
+            CliError::Message(lines.join("\n"))
+        })?,
     };
 
-    if !jar.exists() {
+    if !jar.is_file() {
         return Err(CliError::Message(format!(
             "the jar file does not exist: {}",
             jar.display()
@@ -172,7 +171,7 @@ fn resolve_jar(paths: &Paths, config: &Config, options: &Options) -> Result<Path
 ///
 /// The characters follow the use order, so the character of the last launch
 /// comes first. A credential command gives the values of one item instead.
-fn resolve_credentials(
+pub(crate) fn resolve_credentials(
     paths: &Paths,
     config: &Config,
     options: &Options,

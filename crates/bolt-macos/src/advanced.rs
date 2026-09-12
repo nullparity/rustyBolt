@@ -25,7 +25,7 @@ use objc2_foundation::{
 
 use bolt_core::{
     import_apply, import_plan, plan, ClientKind, Config, CoreError, GcChoice, ImportPlan,
-    Installer, LaunchRequest, Paths, RuneLiteHome, TuningConfig,
+    LaunchRequest, Paths, RuneLiteHome, TuningConfig,
 };
 use bolt_jdk::{JavaRuntime, Source};
 
@@ -542,10 +542,9 @@ fn env_names(env: &[(String, String)]) -> String {
         .join(", ")
 }
 
-/// Builds the preview of a system without an installed RuneLite jar.
+/// Builds the preview of a system without a RuneLite jar.
 fn plain_preview(state: &AdvancedState, config: &Config, feature: u32) -> String {
-    let mut lines =
-        vec!["No RuneLite jar is installed, so the jar arguments are absent.".to_string()];
+    let mut lines = vec!["No RuneLite jar was found, so the jar arguments are absent.".to_string()];
     let tuning_config = &config.runelite_tuning;
     if !tuning_config.enabled {
         lines.push("The tuned profile is off.".to_string());
@@ -573,8 +572,7 @@ fn plain_preview(state: &AdvancedState, config: &Config, feature: u32) -> String
 
 /// Shows the command line that the current settings produce.
 fn preview_text(state: &AdvancedState, config: &Config, feature: u32) -> String {
-    let installer = Installer::new(&state.paths);
-    let Some(client) = installer.installed(ClientKind::RuneLite) else {
+    let Some(jar) = bolt_core::locate_client(ClientKind::RuneLite, config) else {
         return plain_preview(state, config, feature);
     };
     let Some(java) = runtime_for(&state.runtimes, config.java_path.as_deref()) else {
@@ -592,7 +590,7 @@ fn preview_text(state: &AdvancedState, config: &Config, feature: u32) -> String 
         return format!("The preview is not available: {error}");
     }
     let request = LaunchRequest {
-        jar: &client.jar,
+        jar: &jar,
         kind: ClientKind::RuneLite,
         credentials: None,
         java: Some(java.path.as_path()),

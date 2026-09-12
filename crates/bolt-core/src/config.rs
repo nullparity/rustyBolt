@@ -26,6 +26,8 @@ pub struct Config {
     pub runelite_launch_command: Option<String>,
     /// A template for HDOS. `%command%` expands to the default invocation.
     pub hdos_launch_command: Option<String>,
+    /// The HDOS launcher jar. `None` makes the launcher search the usual places.
+    pub hdos_jar: Option<PathBuf>,
     /// The Java binary that the launcher must use.
     pub java_path: Option<PathBuf>,
     /// Java binaries to try in order, before the automatic search.
@@ -61,6 +63,7 @@ impl Default for Config {
             runelite_custom_jar: None,
             runelite_launch_command: None,
             hdos_launch_command: None,
+            hdos_jar: None,
             java_path: None,
             java_candidates: Vec::new(),
             close_after_launch: false,

@@ -2,9 +2,9 @@
 //!
 //! AppKit gives the window and the controls. WKWebView gives the login page.
 //! The shell holds user interface code only. It calls `bolt-core` for the
-//! sessions, the characters, the install and the launch.
+//! sessions, the characters, the client lookup and the launch.
 //!
-//! Every network call and every install runs on a worker thread. The worker
+//! Every network call and every launch runs on a worker thread. The worker
 //! posts the result to the main thread with
 //! `performSelectorOnMainThread:withObject:waitUntilDone:` on a helper object
 //! that carries a boxed Rust closure.
@@ -35,7 +35,7 @@ use objc2_web_kit::{
 use bolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};
 use bolt_core::{
     launch, plan, ClientKind, Config, CredentialSource, GameCredentials, GcChoice, HttpAuth,
-    Installer, LaunchRequest, Paths, SessionStore, TuningConfig, UsageStore,
+    LaunchRequest, Paths, SessionStore, TuningConfig, UsageStore,
 };
 
 mod advanced;
@@ -624,7 +624,7 @@ define_class!(
             self.load_characters();
         }
 
-        /// Installs the client when it is absent, then starts it.
+        /// Finds the client jar, then starts it.
         #[unsafe(method(launchClicked:))]
         fn launch_clicked(&self, _sender: Option<&AnyObject>) {
             let job = {
@@ -652,6 +652,7 @@ define_class!(
                     .or_else(|| bolt_jdk::select(11).map(|runtime| runtime.path));
                 LaunchJob {
                     paths: state.paths.clone(),
+                    jar: bolt_core::locate_client(ClientKind::RuneLite, &state.config),
                     java,
                     template: state.config.runelite_launch_command.clone(),
                     credentials_source: state.config.credential_source.clone(),
@@ -840,6 +841,9 @@ impl AppDelegate {
         self.refresh_sessions();
         self.set_status("Ready.");
 
+        if std::env::args().any(|argument| argument == "--advanced") {
+            self.open_advanced(mtm, false);
+        }
         if std::env::args()
             .any(|argument| argument == "--self-check" || argument == "--self-check-advanced")
         {
@@ -1077,6 +1081,7 @@ impl AppDelegate {
 /// One launch request. Every value is owned, so a worker thread can hold it.
 struct LaunchJob {
     paths: Paths,
+    jar: Option<PathBuf>,
     java: Option<PathBuf>,
     template: Option<String>,
     credentials_source: CredentialSource,
@@ -1112,36 +1117,18 @@ fn credentials_for(job: &LaunchJob, app: MainRef<AppDelegate>) -> Result<GameCre
     }
 }
 
-/// Installs RuneLite when it is absent, then starts the client.
+/// Starts the client with the jar that the job found.
 fn run_launch(job: &LaunchJob, app: MainRef<AppDelegate>) -> Result<u32, String> {
-    let installer = Installer::new(&job.paths);
     let kind = ClientKind::RuneLite;
-    let client = match installer.installed(kind) {
-        Some(client) => client,
-        None => {
-            let release = installer.latest(kind).map_err(|error| describe(&error))?;
-            post_status(app, format!("Downloading RuneLite {}.", release.version));
-            let mut shown = u64::MAX;
-            installer
-                .install(kind, &release, &mut |done, total| {
-                    let step = match total {
-                        Some(total) if total > 0 => done.saturating_mul(100) / total,
-                        _ => done / (1024 * 1024),
-                    };
-                    if step != shown {
-                        shown = step;
-                        let text = match total {
-                            Some(total) if total > 0 => {
-                                format!("Downloading RuneLite {step} percent.")
-                            }
-                            _ => format!("Downloading RuneLite {step} megabytes."),
-                        };
-                        post_status(app, text);
-                    }
-                })
-                .map_err(|error| describe(&error))?
-        }
-    };
+    let jar = job.jar.clone().ok_or_else(|| {
+        format!(
+            "RuneLite is not installed. Install it from {} and start it once, or name the jar in Advanced.",
+            kind.wiki_url()
+        )
+    })?;
+    if !jar.is_file() {
+        return Err(format!("The jar file does not exist: {}", jar.display()));
+    }
 
     let java = match job.java.clone() {
         Some(java) => java,
@@ -1152,7 +1139,7 @@ fn run_launch(job: &LaunchJob, app: MainRef<AppDelegate>) -> Result<u32, String>
 
     let credentials = credentials_for(job, app)?;
     let request = LaunchRequest {
-        jar: &client.jar,
+        jar: &jar,
         kind,
         credentials: Some(&credentials),
         java: Some(&java),

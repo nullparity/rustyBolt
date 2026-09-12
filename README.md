@@ -14,9 +14,11 @@ rustyBolt is an alternative to the Bolt launcher. Bolt holds the login, the Java
 
 ## Install
 
-You need a Java runtime of version 11 or newer. Version 24 or newer turns on every tuned flag. [Adoptium](https://adoptium.net) gives a free build for each system. The launcher finds a runtime through `JAVA_HOME`, `PATH` and the standard locations of macOS, Linux and Windows.
+rustyBolt starts a client that you already have. Install [RuneLite](https://oldschool.runescape.wiki/w/RuneLite) or [HDOS](https://oldschool.runescape.wiki/w/HDOS) with the installer of that project, and start it once. The launcher then finds the jar where the installer put it.
 
-Download an archive from the [Releases](https://github.com/nullparity/rustyBolt/releases) page.
+You also need a Java runtime of version 11 or newer. Version 24 or newer turns on every tuned flag. The launcher finds a runtime through `JAVA_HOME`, `PATH` and the standard locations of macOS, Linux and Windows.
+
+Then download a rustyBolt archive from the [Releases](https://github.com/nullparity/rustyBolt/releases) page.
 
 | system | file | steps |
 | --- | --- | --- |
@@ -33,24 +35,26 @@ xattr -d com.apple.quarantine /Applications/rustyBolt.app
 
 ## Use the launcher
 
-The macOS application shows a login page. After the login it lists your characters. Pick one and click Launch. The Advanced window shows the Java runtime, the tuned flags and the exact command line.
+The macOS application shows a login page. After the login it lists your characters. Pick one and click Launch. The Advanced window holds every setting: the Java runtime, the client jar, the tuned flags and the exact command line.
 
-The command line tool does the same work in four commands:
+The command line tool has four commands:
 
 ```sh
-rustybolt login              # prints a login URL, then asks for the redirect address
-rustybolt accounts           # lists the characters of the saved session
-rustybolt install runelite   # downloads the newest client
-rustybolt launch runelite    # starts the client and returns
+rustybolt login              # log in to your Jagex account, once
+rustybolt launch runelite    # start the client
+rustybolt verify             # show what a launch does, and start nothing
+rustybolt configure          # open the settings window
 ```
 
 `rustybolt login` prints a URL. Open it in a browser and log in. The browser then lands on a redirect page. Copy the whole address bar of that page and paste it at the prompt. The launcher saves the session, so the next launch needs no login.
 
-`rustybolt launch runelite --dry-run` prints the command line and starts nothing. `rustybolt tuning` shows the tuned profile and `rustybolt tuning set <key> <value>` changes one setting. `rustybolt help` lists every command.
+`rustybolt verify` checks the client jar, the session and the Java runtime, then prints the command line that `launch` runs. `rustybolt help` lists every command, including the ones for Java runtimes, tuning and the RuneLite home.
 
 The launcher gives RuneLite its own home directory, so it never writes into `~/.runelite`. `rustybolt import` copies your existing RuneLite settings into that home. `rustybolt home use system` makes the launcher use `~/.runelite` instead.
 
 ## Troubleshooting
+
+**RuneLite is not installed.** Install it from the [wiki page](https://oldschool.runescape.wiki/w/RuneLite) and start it once. The error lists every place that the launcher looked. A jar in another place: `rustybolt configure`, or `rustybolt launch runelite --jar <path>`.
 
 **No Java runtime of version 11 or newer exists.** Install a runtime, or point the launcher at one: `rustybolt java use /path/to/bin/java`. `rustybolt java list` shows every runtime that the launcher can see.
 
@@ -98,11 +102,10 @@ Pull requests and pushes to `main` run `cargo fmt`, `cargo clippy` and
 rustybolt java list                 # every Java runtime of this machine
 rustybolt java select --min 21      # the runtime that the launcher would use
 rustybolt paths                     # the four platform directories
-rustybolt login                     # drives the flow with pasted redirect addresses
 rustybolt sessions                  # the saved sessions
 rustybolt accounts                  # the characters of a session
-rustybolt install runelite          # downloads the newest client
-rustybolt launch runelite --dry-run # prints the command line and starts nothing
+rustybolt tuning flags              # the tuned flags, and the ones the Java version drops
+rustybolt launch runelite --dry-run # the command line, one argument per line
 ```
 
 ## How it is made
@@ -113,7 +116,7 @@ rustybolt launch runelite --dry-run # prints the command line and starts nothing
 graph TD
     A[bolt-auth: OAuth2 PKCE state machine, no input or output] --> C[bolt-core]
     B[bolt-jdk: Java discovery, JVM argv] --> C
-    C[bolt-core: paths, config, sessions, install, launch] --> D[bolt-cli: command line]
+    C[bolt-core: paths, config, sessions, client lookup, launch] --> D[bolt-cli: command line]
     C --> E[bolt-macos: AppKit and WKWebView]
     C -.-> F[a Windows or Linux shell: user interface only]
 ```
@@ -122,7 +125,7 @@ graph TD
 | --- | --- | --- |
 | `bolt-auth` | the Jagex OAuth2 PKCE flow | nothing, no input or output |
 | `bolt-jdk` | Java discovery and JVM arguments | the file system only |
-| `bolt-core` | paths, config, sessions, install, launch | `bolt-auth`, `bolt-jdk`, HTTP |
+| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, HTTP |
 | `bolt-cli` | a headless driver | `bolt-core` |
 | `bolt-macos` | the native macOS application | `bolt-core` |
 
@@ -142,7 +145,7 @@ comes back. The protocol, the Java rules and the file layout do not change.
 
 - Log in with your Jagex account. The launcher keeps the session, so the next start needs no login.
 - Pick a character. The launcher offers the one you opened last.
-- Install RuneLite or HDOS, with a progress bar. The launcher checks the download when the release publishes a digest.
+- Find RuneLite or HDOS where its own installer put it. You can also name the jar.
 - Find Java on its own. The launcher looks in `JAVA_HOME`, on `PATH` and in the standard places of each system. You can also name a Java binary.
 - Start the client as its own process. The launcher can close after that.
 - Start RuneLite with a tuned set of JVM flags. The launcher drops each flag that your Java version does not accept.
@@ -189,8 +192,7 @@ that `bolt_core::launch` runs, so a dry run and a real launch never differ.
 | `std::rand` makes the state and the verifier | the operating system generator makes them |
 | the `id_token` goes to standard output | no token is printed |
 | the credential file keeps the default mode | the session file uses mode 0600 |
-| a download overwrites the live file | a download writes a temporary file, then renames it |
-| no digest check on any download | the digest is checked when the release gives one |
+| the launcher downloads the client itself | the launcher starts the client that the user installed |
 | Java discovery reads `JAVA_HOME` and `PATH` | discovery also reads the standard locations |
 
 ### Storage
@@ -208,7 +210,7 @@ that `bolt_core::launch` runs, so a dry run and a real launch never differ.
 3. Open a browser view at `LoginFlow::authorize_url()`.
 4. Give every URL to `LoginFlow::on_navigation`, and run the action through
    `HttpAuth::advance`. Stop the navigation when the action is not `Action::Ignore`.
-5. Call `Installer` and `bolt_core::launch` from a worker thread.
+5. Call `bolt_core::locate_client` and `bolt_core::launch` from a worker thread.
 
 Do not repeat protocol logic, Java rules or path rules in the shell.
 

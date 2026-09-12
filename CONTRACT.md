@@ -16,7 +16,7 @@ rustyBolt splits them:
 | --- | --- | --- |
 | `bolt-auth` | Jagex OAuth2 PKCE state machine | nothing, no I/O |
 | `bolt-jdk` | Java discovery and JVM argv | file system only |
-| `bolt-core` | paths, config, sessions, install, launch | `bolt-auth`, `bolt-jdk`, HTTP |
+| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, HTTP |
 | `bolt-cli` | headless driver | `bolt-core` |
 | `bolt-macos` | AppKit and WKWebView shell | `bolt-core` |
 
@@ -161,7 +161,6 @@ impl Paths {
     pub fn resolve() -> io::Result<Paths>;   // creates the directories
     pub fn config_file(&self) -> PathBuf;    // launcher.json
     pub fn credentials_file(&self) -> PathBuf; // creds.json, mode 0600 on unix
-    pub fn client_dir(&self) -> PathBuf;
 }
 
 pub struct Config { /* serde, see src; keeps Bolt key names where they still apply */ }
@@ -177,16 +176,12 @@ impl SessionStore {
 }
 
 pub enum ClientKind { RuneLite, Hdos }
-pub struct InstalledClient { pub kind: ClientKind, pub jar: PathBuf, pub version: String }
+impl ClientKind { pub fn name(self) -> &'static str; pub fn title(self) -> &'static str; pub fn wiki_url(self) -> &'static str; }
 
-pub struct Installer<'a> { /* paths */ }
-impl<'a> Installer<'a> {
-    pub fn installed(&self, kind: ClientKind) -> Option<InstalledClient>;
-    pub fn latest(&self, kind: ClientKind) -> Result<Release, CoreError>;
-    pub fn install(&self, kind: ClientKind, rel: &Release,
-                   progress: &mut dyn FnMut(u64, Option<u64>)) -> Result<InstalledClient, CoreError>;
-}
-pub struct Release { pub version: String, pub url: String, pub size: Option<u64>, pub sha256: Option<String> }
+// The user installs the client with the installer of that project. The launcher
+// only looks for the jar. A path from the config wins, even when the file is absent.
+pub fn client_candidates(kind: ClientKind) -> Vec<PathBuf>;           // every place the launcher looks
+pub fn locate_client(kind: ClientKind, config: &Config) -> Option<PathBuf>;
 
 pub struct GameCredentials { pub session_id: String, pub character_id: String, pub display_name: String }
 pub struct LaunchRequest<'a> {
