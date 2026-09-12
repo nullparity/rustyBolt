@@ -22,35 +22,34 @@ Then download a rustyBolt archive from the [Releases](https://github.com/nullpar
 
 | system | file | steps |
 | --- | --- | --- |
-| macOS (Apple Silicon) | `rustybolt_<version>_darwin_arm64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
-| macOS (Intel) | `rustybolt_<version>_darwin_amd64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
-| Linux (x86_64) | `rustybolt_<version>_linux_amd64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
-| Linux (ARM64) | `rustybolt_<version>_linux_arm64.tar.gz` | Extract it. Put `rustybolt` on your `PATH`. |
-| Windows (x86_64) | `rustybolt_<version>_windows_amd64.zip` | Extract it. Put `rustybolt.exe` on your `PATH`. |
-| Windows (ARM64) | `rustybolt_<version>_windows_arm64.zip` | Extract it. Put `rustybolt.exe` on your `PATH`. |
+| macOS (Apple Silicon) | `rustybolt_<version>_darwin_arm64.tar.gz` | Extract it. Drag `rustyBolt.app` to `/Applications` or double-click to launch. |
+| macOS (Intel) | `rustybolt_<version>_darwin_amd64.tar.gz` | Extract it. Drag `rustyBolt.app` to `/Applications` or double-click to launch. |
+| Linux (x86_64) | `rustybolt_<version>_linux_amd64.tar.gz` | Extract it. Run `./install.sh` to add rustyBolt to your desktop menu. |
+| Linux (ARM64) | `rustybolt_<version>_linux_arm64.tar.gz` | Extract it. Run `./install.sh` to add rustyBolt to your desktop menu. |
+| Windows (x86_64) | `rustybolt_<version>_windows_amd64.zip` | Extract it. Double-click `rustybolt.exe` to launch. |
+| Windows (ARM64) | `rustybolt_<version>_windows_arm64.zip` | Extract it. Double-click `rustybolt.exe` to launch. |
 
 ## Use the launcher
 
-The default and recommended way to use rustyBolt is through the interactive launcher dashboard:
+The default way to use rustyBolt is as a desktop application:
+
+- **macOS**: Open `rustyBolt.app` from `/Applications` or Spotlight.
+- **Windows**: Double-click `rustybolt.exe`.
+- **Linux**: Open `rustyBolt` from your application menu or run `rustybolt`.
+
+Launching rustyBolt opens the clean launcher dashboard in your default browser:
+- Click **Use RuneLite** or **Use HDOS** to launch your client immediately.
+- Advanced settings (JVM tuning, garbage collection, and custom paths) remain collapsed out of view until you need them.
+
+### Command Line
+
+You can also run rustyBolt from a terminal:
 
 ```sh
-rustybolt
-```
-
-Running `rustybolt` with no arguments automatically opens the dashboard in your default web browser. From the dashboard, you can:
-- View detected installations of RuneLite and HDOS.
-- Launch RuneLite or HDOS directly with a single click.
-- Select discovered Java runtimes or set a custom path.
-- Tune low-latency garbage collection (Generational ZGC, G1), memory sizing, and modern JVM flags.
-- Toggle isolated home directory mode and automatic launcher shutdown upon game start.
-
-### Headless CLI Commands
-
-For scripts, CI, and terminal power users, headless subcommands are also available:
-
-```sh
+rustybolt                    # open the launcher dashboard
+rustybolt launch runelite    # start RuneLite directly
+rustybolt launch hdos        # start HDOS directly
 rustybolt login              # log in to your Jagex account, once
-rustybolt launch runelite    # start the client from the terminal
 rustybolt verify             # show what a launch does without starting anything
 rustybolt configure          # open the launcher dashboard explicitly
 rustybolt help               # display command-line usage

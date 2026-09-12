@@ -44,9 +44,17 @@ jobs:
           cp README.md CONTRACT.md "$stem/"
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp "target/${{ matrix.target }}/release/rustybolt.exe" "$stem/"
+            cp icon/rustybolt.ico "$stem/"
             7z a -tzip "$stem.zip" "$stem" >/dev/null
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            macos/build-app.sh "target/${{ matrix.target }}/release/rustybolt" "$version" "$stem/rustyBolt.app"
+            cp "target/${{ matrix.target }}/release/rustybolt" "$stem/"
+            tar -czf "$stem.tar.gz" "$stem"
           else
             cp "target/${{ matrix.target }}/release/rustybolt" "$stem/"
+            cp linux/rustybolt.desktop "$stem/"
+            cp linux/install.sh "$stem/"
+            cp icon/rustybolt.svg "$stem/"
             tar -czf "$stem.tar.gz" "$stem"
           fi
 

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=rustyBolt
+Comment=Fast, portable launcher for RuneLite and HDOS
+Exec=rustybolt
+Icon=rustybolt
+Terminal=false
+Categories=Game;
+Keywords=runelite;hdos;osrs;oldschool;runescape;
