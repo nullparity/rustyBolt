@@ -1,18 +1,21 @@
-//! The `configure` command.
+//! The `configure` command and native local application server.
 //!
-//! Spawns a lightweight local HTTP server and opens the configuration dashboard
+//! Spawns a lightweight local HTTP server and opens the launcher dashboard
 //! in the default web browser on macOS, Linux, and Windows.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use bolt_core::{ClientKind, Config, LaunchRequest, Paths};
-use serde::Serialize;
+use bolt_core::{
+    Action, AuthConfig, ClientKind, Config, HttpAuth, LaunchRequest, LoginFlow, Paths,
+    SessionStore, UsageStore,
+};
+use serde::{Deserialize, Serialize};
 
 use crate::web::HTML_PAGE;
 use crate::{no_arguments, CliError};
@@ -34,12 +37,30 @@ struct ClientInfo {
     hdos_candidates: Vec<String>,
 }
 
+#[derive(Serialize, Clone)]
+struct SessionView {
+    sub: String,
+    display_name: String,
+    suffix: String,
+}
+
+#[derive(Serialize, Clone)]
+struct CharacterView {
+    account_id: String,
+    display_name: String,
+    last_used: u64,
+    use_count: u64,
+}
+
 #[derive(Serialize)]
 struct ServerState {
     config: Config,
     runtimes: Vec<JavaInfo>,
     clients: ClientInfo,
     runelite_plan: Option<String>,
+    sessions: Vec<SessionView>,
+    active_sub: Option<String>,
+    characters: Vec<CharacterView>,
     has_session: bool,
 }
 
@@ -49,6 +70,24 @@ struct LaunchResponse {
     pid: Option<u32>,
     close: bool,
     error: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct LaunchPayload {
+    client: Option<String>,
+    sub: Option<String>,
+    character_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct AuthAddressPayload {
+    url: Option<String>,
+    address: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RemoveSessionPayload {
+    sub: String,
 }
 
 #[derive(Serialize)]
@@ -66,12 +105,13 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let port = listener.local_addr()?.port();
     let url = format!("http://127.0.0.1:{port}/");
 
-    println!("rustybolt: configuration server running at {url}");
+    println!("rustybolt: launcher server running at {url}");
     println!("Opening your default web browser. Press Ctrl+C to close.");
 
     open_browser(&url);
 
     let running = Arc::new(AtomicBool::new(true));
+    let flow_state = Arc::new(Mutex::new(None));
 
     for stream in listener.incoming() {
         if !running.load(Ordering::SeqCst) {
@@ -81,8 +121,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
             Ok(stream) => {
                 let paths = Arc::clone(&paths);
                 let running = Arc::clone(&running);
+                let flow_state = Arc::clone(&flow_state);
                 thread::spawn(move || {
-                    handle_connection(stream, &paths, &running, port);
+                    handle_connection(stream, &paths, &running, &flow_state, port);
                 });
             }
             Err(e) => {
@@ -94,11 +135,17 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
         }
     }
 
-    println!("rustybolt: configuration server stopped.");
+    println!("rustybolt: launcher server stopped.");
     Ok(())
 }
 
-fn handle_connection(mut stream: TcpStream, paths: &Paths, running: &AtomicBool, port: u16) {
+fn handle_connection(
+    mut stream: TcpStream,
+    paths: &Paths,
+    running: &AtomicBool,
+    flow_state: &Arc<Mutex<Option<LoginFlow>>>,
+    port: u16,
+) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
 
@@ -116,7 +163,9 @@ fn handle_connection(mut stream: TcpStream, paths: &Paths, running: &AtomicBool,
         let mut parts = request_line.split_whitespace();
         let Some(method) = parts.next() else { break };
         let Some(raw_path) = parts.next() else { break };
-        let path = raw_path.split('?').next().unwrap_or(raw_path);
+        let mut path_parts = raw_path.splitn(2, '?');
+        let path = path_parts.next().unwrap_or(raw_path);
+        let query = path_parts.next().unwrap_or("");
 
         let mut content_length = 0usize;
         let mut keep_alive = false;
@@ -139,7 +188,14 @@ fn handle_connection(mut stream: TcpStream, paths: &Paths, running: &AtomicBool,
             break;
         }
 
-        let should_exit = respond(method, path, &body, &mut stream, paths, keep_alive);
+        let req = HttpRequest {
+            method,
+            path,
+            query,
+            body: &body,
+            keep_alive,
+        };
+        let should_exit = respond(&req, &mut stream, paths, flow_state);
         let _ = stream.flush();
 
         if should_exit {
@@ -155,16 +211,26 @@ fn handle_connection(mut stream: TcpStream, paths: &Paths, running: &AtomicBool,
     let _ = stream.shutdown(std::net::Shutdown::Both);
 }
 
+struct HttpRequest<'a> {
+    method: &'a str,
+    path: &'a str,
+    query: &'a str,
+    body: &'a [u8],
+    keep_alive: bool,
+}
+
 fn respond(
-    method: &str,
-    path: &str,
-    body: &[u8],
+    req: &HttpRequest<'_>,
     stream: &mut TcpStream,
     paths: &Paths,
-    keep_alive: bool,
+    flow_state: &Arc<Mutex<Option<LoginFlow>>>,
 ) -> bool {
-    let conn_header = if keep_alive { "keep-alive" } else { "close" };
-    match (method, path) {
+    let conn_header = if req.keep_alive {
+        "keep-alive"
+    } else {
+        "close"
+    };
+    match (req.method, req.path) {
         ("GET", "/" | "/index.html") => {
             let config = Config::load(paths);
             let state = build_state(paths, config);
@@ -199,8 +265,138 @@ fn respond(
             let _ = stream.write_all(response.as_bytes());
             false
         }
+        ("GET", "/api/characters") => {
+            let sub = req.query.split('&').find_map(|pair| {
+                let mut kv = pair.splitn(2, '=');
+                if kv.next() == Some("sub") {
+                    kv.next()
+                } else {
+                    None
+                }
+            });
+            let store = SessionStore::load(paths);
+            let session = match sub {
+                Some(wanted) => store.sessions().iter().find(|s| s.sub == wanted),
+                None => store.sessions().first(),
+            };
+            let config = Config::load(paths);
+            let chars = match session {
+                Some(s) => fetch_characters(paths, &config, &s.session_id),
+                None => Vec::new(),
+            };
+            let json = serde_json::to_string(&chars).unwrap_or_else(|_| "[]".to_string());
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("POST", "/api/auth/start") => {
+            let config = AuthConfig::default();
+            let flow = LoginFlow::new(config);
+            let url = flow.authorize_url();
+            if let Ok(mut lock) = flow_state.lock() {
+                *lock = Some(flow);
+            }
+            let json = format!("{{\"ok\":true,\"url\":\"{url}\"}}");
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("POST", "/api/auth/complete") => {
+            let payload = serde_json::from_slice::<AuthAddressPayload>(req.body);
+            let address = payload
+                .ok()
+                .and_then(|p| p.address.or(p.url))
+                .unwrap_or_default();
+            let mut flow_opt = flow_state.lock().ok().and_then(|mut g| g.take());
+            let (success, result_json) = if let Some(mut flow) = flow_opt.take() {
+                let auth_config = AuthConfig::default();
+                let http = HttpAuth::new(&auth_config);
+                let action_res = match flow.on_navigation(&address) {
+                    Ok(action) => http.advance(&mut flow, action).map_err(|e| e.to_string()),
+                    Err(err) => Err(err.to_string()),
+                };
+                match action_res {
+                    Ok(Action::Done(session)) => {
+                        let mut store = SessionStore::load(paths);
+                        store.upsert(session.clone());
+                        let _ = store.save();
+                        let config = Config::load(paths);
+                        let chars = fetch_characters(paths, &config, &session.session_id);
+                        let view = SessionView {
+                            sub: session.sub.clone(),
+                            display_name: session.display_name.clone(),
+                            suffix: session.suffix.clone(),
+                        };
+                        #[derive(Serialize)]
+                        struct LoginSuccess {
+                            ok: bool,
+                            session: SessionView,
+                            characters: Vec<CharacterView>,
+                        }
+                        let json = serde_json::to_string(&LoginSuccess {
+                            ok: true,
+                            session: view,
+                            characters: chars,
+                        })
+                        .unwrap_or_else(|_| "{\"ok\":true}".to_string());
+                        (true, json)
+                    }
+                    Ok(_) => {
+                        if let Ok(mut lock) = flow_state.lock() {
+                            *lock = Some(flow);
+                        }
+                        (
+                            false,
+                            "{\"ok\":false,\"error\":\"More verification steps needed. Please paste final redirect URL.\"}".to_string(),
+                        )
+                    }
+                    Err(err) => (false, format!("{{\"ok\":false,\"error\":\"{err}\"}}")),
+                }
+            } else {
+                (
+                    false,
+                    "{\"ok\":false,\"error\":\"No login flow active. Click Start Login first.\"}"
+                        .to_string(),
+                )
+            };
+
+            let status = if success { "200 OK" } else { "400 Bad Request" };
+            let response = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{result_json}",
+                result_json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("POST", "/api/auth/remove") => {
+            if let Ok(payload) = serde_json::from_slice::<RemoveSessionPayload>(req.body) {
+                let mut store = SessionStore::load(paths);
+                store.remove(&payload.sub);
+                let _ = store.save();
+                let _ = stream.write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: 11\r\nConnection: {conn_header}\r\n\r\n{{\"ok\":true}}"
+                    )
+                    .as_bytes(),
+                );
+            } else {
+                let _ = stream.write_all(
+                    format!(
+                        "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: {conn_header}\r\n\r\n"
+                    )
+                    .as_bytes(),
+                );
+            }
+            false
+        }
         ("POST" | "PUT", "/api/save" | "/api/config") => {
-            if let Ok(config) = serde_json::from_slice::<Config>(body) {
+            if let Ok(config) = serde_json::from_slice::<Config>(req.body) {
                 let _ = config.save(paths);
                 let plan = compute_preview(paths, &config, ClientKind::RuneLite);
                 let res = SaveResponse { ok: true, plan };
@@ -227,14 +423,68 @@ fn respond(
             );
             true
         }
+        ("POST", "/api/launch") => {
+            let payload =
+                serde_json::from_slice::<LaunchPayload>(req.body).unwrap_or(LaunchPayload {
+                    client: None,
+                    sub: None,
+                    character_id: None,
+                });
+            let kind = match payload.client.as_deref() {
+                Some("hdos") => ClientKind::Hdos,
+                _ => ClientKind::RuneLite,
+            };
+            let config = Config::load(paths);
+            match crate::launch::launch_client(
+                paths,
+                &config,
+                kind,
+                payload.sub.as_deref(),
+                payload.character_id.as_deref(),
+            ) {
+                Ok(pid) => {
+                    let should_close = config.close_after_launch;
+                    let res = LaunchResponse {
+                        ok: true,
+                        pid: Some(pid),
+                        close: should_close,
+                        error: None,
+                    };
+                    let json =
+                        serde_json::to_string(&res).unwrap_or_else(|_| "{\"ok\":true}".to_string());
+                    let response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                        json.len()
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                    should_close
+                }
+                Err(error) => {
+                    let res = LaunchResponse {
+                        ok: false,
+                        pid: None,
+                        close: false,
+                        error: Some(error.to_string()),
+                    };
+                    let json = serde_json::to_string(&res)
+                        .unwrap_or_else(|_| "{\"ok\":false}".to_string());
+                    let response = format!(
+                        "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                        json.len()
+                    );
+                    let _ = stream.write_all(response.as_bytes());
+                    false
+                }
+            }
+        }
         ("POST", "/api/launch/runelite" | "/api/launch/hdos") => {
-            let kind = if path.ends_with("hdos") {
+            let kind = if req.path.ends_with("hdos") {
                 ClientKind::Hdos
             } else {
                 ClientKind::RuneLite
             };
             let config = Config::load(paths);
-            match crate::launch::launch_client(paths, &config, kind) {
+            match crate::launch::launch_client(paths, &config, kind, None, None) {
                 Ok(pid) => {
                     let should_close = config.close_after_launch;
                     let res = LaunchResponse {
@@ -282,6 +532,28 @@ fn respond(
     }
 }
 
+fn fetch_characters(paths: &Paths, config: &Config, session_id: &str) -> Vec<CharacterView> {
+    let auth_config = AuthConfig::default();
+    let http = HttpAuth::new(&auth_config);
+    let Ok(chars) = http.characters(session_id) else {
+        return Vec::new();
+    };
+    let usage = UsageStore::load(paths);
+    let ordered = usage.order(&chars, config.usage_recent_window_secs, |c| &c.account_id);
+    ordered
+        .into_iter()
+        .map(|c| {
+            let u = usage.usage(&c.account_id);
+            CharacterView {
+                account_id: c.account_id.clone(),
+                display_name: c.display_name.clone(),
+                last_used: u.last_used,
+                use_count: u.count,
+            }
+        })
+        .collect()
+}
+
 fn build_state(paths: &Paths, config: Config) -> ServerState {
     let runtimes = bolt_jdk::discover()
         .into_iter()
@@ -317,13 +589,34 @@ fn build_state(paths: &Paths, config: Config) -> ServerState {
     };
 
     let runelite_plan = compute_preview(paths, &config, ClientKind::RuneLite);
-    let has_session = !bolt_core::SessionStore::load(paths).sessions().is_empty();
+    let store = SessionStore::load(paths);
+    let sessions: Vec<SessionView> = store
+        .sessions()
+        .iter()
+        .map(|s| SessionView {
+            sub: s.sub.clone(),
+            display_name: s.display_name.clone(),
+            suffix: s.suffix.clone(),
+        })
+        .collect();
+
+    let active_session = store.sessions().first();
+    let active_sub = active_session.map(|s| s.sub.clone());
+    let characters = if let Some(session) = active_session {
+        fetch_characters(paths, &config, &session.session_id)
+    } else {
+        Vec::new()
+    };
+    let has_session = !sessions.is_empty();
 
     ServerState {
         config,
         runtimes,
         clients,
         runelite_plan,
+        sessions,
+        active_sub,
+        characters,
         has_session,
     }
 }

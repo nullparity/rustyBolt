@@ -71,16 +71,18 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     Ok(())
 }
 
-/// Starts a client for the given kind and configuration.
+/// Starts a client for the given kind, session, and character.
 pub(crate) fn launch_client(
     paths: &Paths,
     config: &Config,
     kind: ClientKind,
+    sub: Option<&str>,
+    character: Option<&str>,
 ) -> Result<u32, CliError> {
     let options = Options {
         kind,
-        sub: None,
-        character: None,
+        sub: sub.map(ToString::to_string),
+        character: character.map(ToString::to_string),
         configure: false,
         jar: None,
         dry_run: false,
