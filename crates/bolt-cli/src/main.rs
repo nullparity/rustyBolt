@@ -9,6 +9,7 @@ mod gui;
 mod launch;
 mod verify;
 mod web;
+pub(crate) mod wifi;
 
 use bolt_auth::Session;
 use bolt_core::{ClientKind, CoreError, SessionStore};

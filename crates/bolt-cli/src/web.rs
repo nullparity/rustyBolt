@@ -802,6 +802,90 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     .btn-primary:hover {
       background: var(--copper-hover);
     }
+    .wifi-card {
+      margin-bottom: 24px;
+      padding: 16px 20px;
+    }
+    .wifi-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .wifi-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    .wifi-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: var(--text-primary);
+    }
+    .wifi-btn.active {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.15);
+    }
+    .wifi-icon {
+      width: 18px;
+      height: 18px;
+      transition: transform 0.2s ease;
+    }
+    .wifi-btn.active .wifi-icon {
+      transform: scale(1.1);
+      stroke: #34d399;
+    }
+    .wifi-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-subtle);
+      letter-spacing: 0.04em;
+    }
+    .wifi-btn.active .wifi-pill {
+      background: rgba(16, 185, 129, 0.25);
+      color: #34d399;
+    }
+    .wifi-details {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      text-align: right;
+    }
+    .wifi-desc {
+      font-size: 0.8rem;
+      color: var(--text-subtle);
+    }
+    .wifi-stat {
+      font-size: 0.82rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #34d399;
+      font-weight: 600;
+    }
+    .wifi-tooltip-tip {
+      font-size: 0.76rem;
+      color: var(--copper);
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
@@ -903,7 +987,27 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           </div>
         </div>
 
-        
+        <div class="card wifi-card">
+          <div class="wifi-row">
+            <button class="wifi-btn" id="wifi-mode-btn" onclick="toggleWifiMode()"
+                    title="Sends a small &quot;u up?&quot; to your wifi router and reduces gmae lag due to wifi">
+              <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+              <span>Wifi mode</span>
+              <span class="wifi-pill" id="wifi-pill">OFF</span>
+            </button>
+            <div class="wifi-details">
+              <span class="wifi-desc" id="wifi-desc">Pings default gateway every 100ms to prevent 802.11 sleep jitter</span>
+              <span class="wifi-stat" id="wifi-stat"></span>
+            </div>
+          </div>
+          <div class="wifi-tooltip-tip">Sends a small "u up?" to your wifi router and reduces gmae lag due to wifi</div>
+        </div>
+
         <div class="play-section">
           <button class="btn-play" id="main-play-btn" onclick="triggerPlay()">
             <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -1091,6 +1195,12 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       renderCharacters();
       renderClientChoice();
       renderSettingsFields();
+
+      if (state.wifi) {
+        wifiState = state.wifi;
+      }
+      updateWifiUI();
+      setInterval(pollWifiStatus, 1500);
 
       if (window.location.hash === '#settings') {
         switchTab('settings');
@@ -1518,6 +1628,70 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         toastMsg.textContent = msg;
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
+      }
+    }
+
+    let wifiState = {
+      enabled: false,
+      gateway: null,
+      latency_ms: null,
+      error: null
+    };
+
+    function updateWifiUI() {
+      const btn = document.getElementById('wifi-mode-btn');
+      const pill = document.getElementById('wifi-pill');
+      const stat = document.getElementById('wifi-stat');
+      const desc = document.getElementById('wifi-desc');
+
+      if (!btn) return;
+
+      if (wifiState.enabled) {
+        btn.classList.add('active');
+        if (pill) pill.textContent = 'ACTIVE';
+        if (stat) {
+          const latText = wifiState.latency_ms != null ? `${wifiState.latency_ms.toFixed(1)}ms` : 'Active';
+          const gwText = wifiState.gateway ? `${wifiState.gateway} • ` : '';
+          stat.textContent = `${gwText}${latText}`;
+        }
+        if (desc) desc.textContent = 'Pinging gateway every 100ms';
+      } else {
+        btn.classList.remove('active');
+        if (pill) pill.textContent = 'OFF';
+        if (stat) stat.textContent = '';
+        if (desc) desc.textContent = 'Pings default gateway every 100ms to prevent 802.11 sleep jitter';
+      }
+    }
+
+    async function toggleWifiMode() {
+      const next = !wifiState.enabled;
+      try {
+        const res = await fetch('/api/wifi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: next })
+        });
+        const data = await res.json();
+        wifiState = data;
+        updateWifiUI();
+        if (wifiState.enabled) {
+          showToast('Wi-Fi Mode active: keepalive ping running');
+        } else {
+          showToast('Wi-Fi Mode disabled');
+        }
+      } catch (err) {
+        console.error('Failed to toggle wifi mode:', err);
+      }
+    }
+
+    async function pollWifiStatus() {
+      try {
+        const res = await fetch('/api/wifi');
+        if (res.ok) {
+          wifiState = await res.json();
+          updateWifiUI();
+        }
+      } catch (e) {
       }
     }
 

@@ -18,3 +18,5 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 wry = "0.56.1"
 tao = "0.36.0"
+default-net = "0.22.0"
+tray-icon = "0.24.2"

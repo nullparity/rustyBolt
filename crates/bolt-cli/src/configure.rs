@@ -21,6 +21,7 @@ use tao::event_loop::EventLoopProxy;
 
 use crate::gui::AppEvent;
 use crate::web::HTML_PAGE;
+use crate::wifi::{WifiManager, WifiStatus};
 use crate::CliError;
 
 pub const ICON_SVG: &str = include_str!("../../../icon/rustybolt.svg");
@@ -65,6 +66,7 @@ struct ServerState {
     active_sub: Option<String>,
     characters: Vec<CharacterView>,
     has_session: bool,
+    wifi: WifiStatus,
 }
 
 #[derive(Serialize)]
@@ -117,6 +119,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
 
     let running = Arc::new(AtomicBool::new(true));
     let flow_state = Arc::new(Mutex::new(None));
+    let wifi_manager = WifiManager::new(false);
 
     let (event_loop_opt, proxy_opt) = if !use_browser && crate::gui::has_display() {
         let (event_loop, proxy) = crate::gui::create_event_loop();
@@ -129,6 +132,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let s_running = Arc::clone(&running);
     let s_flow_state = Arc::clone(&flow_state);
     let s_proxy = proxy_opt.clone();
+    let s_wifi = wifi_manager.clone();
 
     let server_thread = thread::spawn(move || {
         for stream in listener.incoming() {
@@ -141,12 +145,14 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
                     let running = Arc::clone(&s_running);
                     let flow_state = Arc::clone(&s_flow_state);
                     let proxy = s_proxy.clone();
+                    let wifi = s_wifi.clone();
                     thread::spawn(move || {
                         handle_connection(
                             stream,
                             &paths,
                             &running,
                             &flow_state,
+                            &wifi,
                             proxy.as_ref(),
                             port,
                         );
@@ -163,7 +169,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     });
 
     if let Some(event_loop) = event_loop_opt {
-        if let Err(error) = crate::gui::run_window(event_loop, &url, Arc::clone(&running)) {
+        if let Err(error) =
+            crate::gui::run_window(event_loop, &url, Arc::clone(&running), wifi_manager)
+        {
             eprintln!("rustybolt: native window failed: {error}. Falling back to browser.");
             open_browser(&url);
             let _ = server_thread.join();
@@ -184,6 +192,7 @@ fn handle_connection(
     paths: &Paths,
     running: &AtomicBool,
     flow_state: &Arc<Mutex<Option<LoginFlow>>>,
+    wifi: &WifiManager,
     proxy: Option<&EventLoopProxy<AppEvent>>,
     port: u16,
 ) {
@@ -235,17 +244,26 @@ fn handle_connection(
             query,
             body: &body,
             keep_alive,
+            wifi,
         };
         let should_exit = respond(&req, &mut stream, paths, flow_state);
         let _ = stream.flush();
 
         if should_exit {
-            running.store(false, Ordering::SeqCst);
-            if let Some(proxy) = proxy {
-                let _ = proxy.send_event(AppEvent::Shutdown);
+            if req.path == "/api/shutdown" {
+                running.store(false, Ordering::SeqCst);
+                if let Some(proxy) = proxy {
+                    let _ = proxy.send_event(AppEvent::Shutdown);
+                }
+                let _ = TcpStream::connect(("127.0.0.1", port));
+                break;
+            } else if let Some(proxy) = proxy {
+                let _ = proxy.send_event(AppEvent::HideWindow);
+            } else {
+                running.store(false, Ordering::SeqCst);
+                let _ = TcpStream::connect(("127.0.0.1", port));
+                break;
             }
-            let _ = TcpStream::connect(("127.0.0.1", port));
-            break;
         }
 
         if !keep_alive {
@@ -261,6 +279,7 @@ struct HttpRequest<'a> {
     query: &'a str,
     body: &'a [u8],
     keep_alive: bool,
+    wifi: &'a WifiManager,
 }
 
 fn respond(
@@ -277,7 +296,7 @@ fn respond(
     match (req.method, req.path) {
         ("GET", "/" | "/index.html") => {
             let config = Config::load(paths);
-            let state = build_state(paths, config);
+            let state = build_state(paths, config, req.wifi.status());
             let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
             let html = HTML_PAGE.replace("<!--LOGO_SVG-->", ICON_SVG).replace(
                 "/*INITIAL_STATE*/",
@@ -300,8 +319,39 @@ fn respond(
         }
         ("GET", "/api/state" | "/api/config") => {
             let config = Config::load(paths);
-            let state = build_state(paths, config);
+            let state = build_state(paths, config, req.wifi.status());
             let json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("GET", "/api/wifi") => {
+            let status = req.wifi.status();
+            let json = serde_json::to_string(&status).unwrap_or_else(|_| "{}".to_string());
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
+        ("POST", "/api/wifi") => {
+            #[derive(Deserialize)]
+            struct WifiTogglePayload {
+                enabled: Option<bool>,
+            }
+            let payload = serde_json::from_slice::<WifiTogglePayload>(req.body).ok();
+            match payload.and_then(|p| p.enabled) {
+                Some(enabled) => req.wifi.set_enabled(enabled),
+                None => {
+                    let _ = req.wifi.toggle();
+                }
+            }
+            let status = req.wifi.status();
+            let json = serde_json::to_string(&status).unwrap_or_else(|_| "{}".to_string());
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
                 json.len()
@@ -598,7 +648,7 @@ fn fetch_characters(paths: &Paths, config: &Config, session_id: &str) -> Vec<Cha
         .collect()
 }
 
-fn build_state(paths: &Paths, config: Config) -> ServerState {
+fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
     let runtimes = bolt_jdk::discover()
         .into_iter()
         .map(|rt| JavaInfo {
@@ -662,6 +712,7 @@ fn build_state(paths: &Paths, config: Config) -> ServerState {
         active_sub,
         characters,
         has_session,
+        wifi,
     }
 }
 

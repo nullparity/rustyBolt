@@ -136,8 +136,9 @@ comes back. The protocol, the Java rules and the file layout do not change.
 - Pick a character. The launcher offers the one you opened last.
 - Find RuneLite or HDOS where its own installer put it. You can also name the jar.
 - Find Java on its own. The launcher looks in `JAVA_HOME`, on `PATH` and in the standard places of each system. You can also name a Java binary.
-- Start the client as its own process. The launcher can close after that.
 - Start RuneLite with a tuned set of JVM flags. The launcher drops each flag that your Java version does not accept.
+- Wi-Fi mode sends a 100ms ICMP keepalive to the default gateway to stop Wi-Fi sleep lag.
+- Closing the application window hides it to the system tray so the background keepalive stays active.
 - Start faster from the second run on, through a startup cache that the launcher rebuilds when the client updates.
 - Show the client under its own name in the Dock and the process list, not as `java`.
 - Keep RuneLite settings in a home of its own, so the launcher never touches `~/.runelite`. One command copies your existing settings in.
