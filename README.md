@@ -140,23 +140,20 @@ comes back. The protocol, the Java rules and the file layout do not change.
 
 ### What works today
 
-- The complete Jagex login: authorization, token exchange, consent, game session.
-- The character list of a session.
-- Java discovery through `JAVA_HOME`, `PATH` and the standard locations of macOS,
-  Linux and Windows.
-- RuneLite and HDOS install with progress, and a digest check when the release gives
-  one.
-- A detached client process with the `JX_SESSION_ID`, `JX_CHARACTER_ID` and
-  `JX_DISPLAY_NAME` values.
-- A user launch template with the `%command%` token.
-- A command line shell and a native macOS application.
-- A tuned RuneLite launch profile, with the flags gated by the Java feature number.
-- An AOT startup cache that is keyed to the client jar, and a stale cache clean up.
-- Optional GC logging, with a clean up of the log of each dead client.
-- A process name for the client, made with a hard link to the Java binary.
-- An account picker that offers the character that the user opened last.
-- Login values from a secret manager, such as the 1Password command line tool.
-- Forced RuneLite profile properties, for example a fixed graphics block.
+- Log in with your Jagex account. The launcher keeps the session, so the next start needs no login.
+- Pick a character. The launcher offers the one you opened last.
+- Install RuneLite or HDOS, with a progress bar. The launcher checks the download when the release publishes a digest.
+- Find Java on its own. The launcher looks in `JAVA_HOME`, on `PATH` and in the standard places of each system. You can also name a Java binary.
+- Start the client as its own process. The launcher can close after that.
+- Start RuneLite with a tuned set of JVM flags. The launcher drops each flag that your Java version does not accept.
+- Start faster from the second run on, through a startup cache that the launcher rebuilds when the client updates.
+- Show the client under its own name in the Dock and the process list, not as `java`.
+- Keep RuneLite settings in a home of its own, so the launcher never touches `~/.runelite`. One command copies your existing settings in.
+- Force RuneLite profile settings, for example a fixed graphics block.
+- Wrap the launch in your own command, for example a wrapper script or a sandbox.
+- Read login values from a secret manager, such as the 1Password command line tool.
+- Write a GC log per client, and remove the log when that client ends.
+- Use the native macOS application or the command line tool. Both do the same work.
 
 Out of scope for now: the official RS3 and OSRS native clients, the plugin library and
 the Lua overlay. Those parts of Bolt do not touch the three seams that this project
