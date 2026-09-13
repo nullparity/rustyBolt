@@ -133,6 +133,31 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     }
 
     
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .lang-select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding: 6px 28px 6px 12px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04)
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='3'><polyline points='6 9 12 15 18 9'/></svg>")
+        no-repeat right 11px center;
+      border: 1px solid var(--input-border);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      width: auto;
+      transition: all 0.15s ease;
+    }
+    .lang-select:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
     .account-wrapper {
       position: relative;
     }
@@ -910,6 +935,8 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     </div>
 
     
+    <div class="header-right">
+      <select id="lang-select" class="lang-select" onchange="changeLanguage(this.value)" aria-label="Language"></select>
     <div class="account-wrapper" id="account-wrapper">
       <button class="account-btn" id="account-toggle-btn" onclick="toggleAccountDropdown()">
         <span class="account-avatar" id="account-avatar">J</span>
@@ -931,6 +958,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           Sign Out of Account
         </button>
       </div>
+    </div>
     </div>
   </header>
 
@@ -1111,12 +1139,6 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
               <span class="slider"></span>
             </label>
           </div>
-          <div class="form-grid" style="margin-top: 14px;">
-            <div class="field-group">
-              <label for="cfg-language" data-i18n="settings.language">Language</label>
-              <select id="cfg-language"></select>
-            </div>
-          </div>
         </div>
 
         
@@ -1240,6 +1262,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     function init() {
       applyI18n();
+      renderLanguageSelect();
       if (state.clients) {
         const rlFound = !!state.clients.runelite_detected;
         const hdosFound = !!state.clients.hdos_detected;
@@ -1728,11 +1751,32 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       const preview = document.getElementById('command-preview');
       if (preview) preview.textContent = state.runelite_plan || t('settings.preview_none');
 
-      const langSelect = document.getElementById('cfg-language');
-      if (langSelect) {
-        const options = [{ tag: '', name: t('settings.language_auto') }].concat(window.RUSTYBOLT_LANGUAGES || []);
-        langSelect.innerHTML = options.map(o => `<option value="${escapeHtml(o.tag)}">${escapeHtml(o.name)}</option>`).join('');
-        langSelect.value = cfg.language || '';
+    }
+
+    function renderLanguageSelect() {
+      const select = document.getElementById('lang-select');
+      if (!select) return;
+      const cfg = state.config || {};
+      const options = [{ tag: '', name: t('settings.language_auto') }].concat(window.RUSTYBOLT_LANGUAGES || []);
+      select.innerHTML = options.map(o => `<option value="${escapeHtml(o.tag)}">${escapeHtml(o.name)}</option>`).join('');
+      select.value = cfg.language || '';
+    }
+
+    async function changeLanguage(tag) {
+      const cfg = state.config || {};
+      cfg.language = tag || null;
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+        if ((await res.json()).ok) {
+          // The server picks the language when it serves the page.
+          window.location.reload();
+        }
+      } catch (e) {
+        showToast(t('settings.save_failed', { error: e.message }));
       }
     }
 
@@ -1757,8 +1801,6 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       cfg.java_path = getValue('cfg-java-path') || null;
       cfg.close_after_launch = isChecked('cfg-close-after-launch');
       cfg.runelite_home_kind = isChecked('cfg-isolated-home') ? 'isolated' : 'default';
-      const previousLanguage = cfg.language || '';
-      cfg.language = getValue('cfg-language') || null;
 
       tuning.gc_choice = getValue('cfg-gc');
       tuning.max_heap_size = getValue('cfg-max-heap');
@@ -1779,10 +1821,6 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           if (data.plan) {
             const preview = document.getElementById('command-preview');
             if (preview) preview.textContent = data.plan;
-          }
-          if ((cfg.language || '') !== previousLanguage) {
-            // The server picks the language when it serves the page.
-            setTimeout(() => window.location.reload(), 600);
           }
         }
       } catch (e) {
