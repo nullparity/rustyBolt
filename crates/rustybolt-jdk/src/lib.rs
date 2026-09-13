@@ -27,6 +27,8 @@ pub enum Source {
     JavaHome,
     Path,
     SystemLocation,
+    /// The runtime that a game client installer put next to the client.
+    ClientBundle,
 }
 
 #[derive(Debug, Clone)]
@@ -363,6 +365,37 @@ fn discover_from_system_location() -> Vec<JavaRuntime> {
         .collect()
 }
 
+/// The runtimes that the RuneLite installers ship. A Windows machine with
+/// RuneLite installed often has no other Java at all.
+fn client_bundle_candidates() -> Vec<PathBuf> {
+    #[cfg(windows)]
+    {
+        std::env::var_os("LOCALAPPDATA")
+            .map(|local| vec![PathBuf::from(local).join("RuneLite").join("jre")])
+            .unwrap_or_default()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        vec![PathBuf::from(
+            "/Applications/RuneLite.app/Contents/PlugIns/jre/Contents/Home",
+        )]
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::env::var_os("HOME")
+            .map(|home| vec![PathBuf::from(home).join(".local/share/RuneLite/jre")])
+            .unwrap_or_default()
+    }
+}
+
+fn discover_from_client_bundles() -> Vec<JavaRuntime> {
+    let candidates = client_bundle_candidates();
+    find_java_in_candidates(&candidates, system_location_executable_name())
+        .into_iter()
+        .filter_map(|path| probe_with_source(&path, Source::ClientBundle))
+        .collect()
+}
+
 fn probe_with_source(path: &Path, source: Source) -> Option<JavaRuntime> {
     let mut runtime = probe(path)?;
     runtime.source = source;
@@ -379,6 +412,7 @@ pub fn discover() -> Vec<JavaRuntime> {
     runtimes.extend(discover_from_java_home());
     runtimes.extend(discover_from_path());
     runtimes.extend(discover_from_system_location());
+    runtimes.extend(discover_from_client_bundles());
 
     let mut unique: Vec<JavaRuntime> = vec![];
     let mut seen = HashSet::new();

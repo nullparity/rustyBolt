@@ -965,6 +965,7 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
                 rustybolt_jdk::Source::JavaHome => "JAVA_HOME",
                 rustybolt_jdk::Source::Path => "PATH",
                 rustybolt_jdk::Source::SystemLocation => "System",
+                rustybolt_jdk::Source::ClientBundle => "Bundled with RuneLite",
             }
             .to_string(),
         })
