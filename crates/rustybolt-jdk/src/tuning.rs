@@ -17,6 +17,9 @@ const GENERATIONAL_ONLY_ZGC: u32 = 24;
 /// The first feature with the `ZGenerational` flag. JDK 17 has ZGC, but the
 /// flag is unrecognised there and the JVM refuses to start.
 const GENERATIONAL_ZGC_FLAG: u32 = 21;
+/// The first feature where ZGC is a product option. On 11 to 14 it is
+/// experimental and the JVM refuses `-XX:+UseZGC` outright.
+const PRODUCT_ZGC: u32 = 15;
 
 /// Garbage collector selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -95,6 +98,9 @@ impl Tuning {
 
         match self.gc {
             Gc::Default => {}
+            // ZGC is experimental before 15; the JVM refuses the flag. G1 is
+            // the default collector there anyway.
+            Gc::Z if feature < PRODUCT_ZGC => flags.push("-XX:+UseG1GC".to_string()),
             Gc::Z => {
                 flags.push("-XX:+UseZGC".to_string());
                 if (GENERATIONAL_ZGC_FLAG..GENERATIONAL_ONLY_ZGC).contains(&feature) {
@@ -402,6 +408,9 @@ mod tests {
 
     #[test]
     fn test_feature_gates_present_at_24_and_above() {
+        let flags = source_tuning().flags(11);
+        assert!(flags.contains(&"-XX:+UseG1GC".to_string()));
+        assert!(!flags.contains(&"-XX:+UseZGC".to_string()));
         let flags = source_tuning().flags(17);
         assert!(flags.contains(&"-XX:+UseZGC".to_string()));
         assert!(!flags.contains(&"-XX:+ZGenerational".to_string()));
