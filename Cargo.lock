@@ -108,11 +108,14 @@ name = "bolt-auth"
 version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
+ "form_urlencoded",
+ "percent-encoding",
  "rand",
  "serde",
  "serde_json",
  "sha2",
  "thiserror 2.0.20",
+ "url",
 ]
 
 [[package]]
@@ -125,7 +128,9 @@ dependencies = [
  "bolt-security",
  "core-foundation 0.10.1",
  "default-net",
+ "httparse",
  "png",
+ "rand",
  "serde",
  "serde_json",
  "tao",
@@ -160,6 +165,7 @@ name = "bolt-security"
 version = "0.2.1"
 dependencies = [
  "thiserror 2.0.20",
+ "url",
 ]
 
 [[package]]

@@ -1195,6 +1195,17 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     /*INITIAL_STATE*/
 
     let state = window.INITIAL_STATE || {};
+
+    // Every API call carries the per-launch token; the server refuses
+    // requests without it, so a stray web page cannot drive the launcher.
+    {
+      const rawFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        headers.set('X-RustyBolt-Token', window.RUSTYBOLT_TOKEN || '');
+        return rawFetch(input, { ...init, headers });
+      };
+    }
     let activeSub = state.active_sub || (state.sessions && state.sessions[0] ? state.sessions[0].sub : null);
     let selectedCharId = null;
     let selectedClient = 'runelite';

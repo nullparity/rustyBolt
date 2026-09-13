@@ -8,3 +8,4 @@ description = "Network egress guard, Content Security Policy, and runtime isolat
 
 [dependencies]
 thiserror.workspace = true
+url.workspace = true

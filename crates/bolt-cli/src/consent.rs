@@ -5,7 +5,7 @@
 //! port 80. The tokens arrive in the fragment, which the browser never sends,
 //! so the served page forwards `location.hash` with a POST.
 
-use std::io::{Read, Write};
+use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 use tao::event_loop::EventLoopProxy;
 
 use crate::gui::AppEvent;
+use crate::httpd::Connection;
 
 /// How long the browser gets to finish the consent step.
 const TIMEOUT: Duration = Duration::from_secs(300);
@@ -92,61 +93,31 @@ pub(crate) fn start(proxy: EventLoopProxy<AppEvent>) -> Option<ConsentListener> 
 }
 
 /// Serves one request. Returns `true` once the redirect was delivered.
-fn handle(mut stream: TcpStream, proxy: &EventLoopProxy<AppEvent>) -> bool {
+fn handle(stream: TcpStream, proxy: &EventLoopProxy<AppEvent>) -> bool {
     let _ = stream.set_nonblocking(false);
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
-    let mut raw = Vec::new();
-    let mut buf = [0u8; 4096];
-    loop {
-        match stream.read(&mut buf) {
-            Ok(0) => break,
-            Ok(n) => {
-                raw.extend_from_slice(&buf[..n]);
-                if let Some(header_end) = find(&raw, b"\r\n\r\n") {
-                    let head = String::from_utf8_lossy(&raw[..header_end]).to_string();
-                    let length = head
-                        .lines()
-                        .find_map(|l| {
-                            l.to_ascii_lowercase()
-                                .strip_prefix("content-length:")
-                                .map(|v| v.trim().parse::<usize>().unwrap_or(0))
-                        })
-                        .unwrap_or(0);
-                    if raw.len() >= header_end + 4 + length {
-                        break;
-                    }
-                }
-                if raw.len() > 64 * 1024 {
-                    break;
-                }
-            }
-            Err(_) => break,
-        }
-    }
-
-    let Some(header_end) = find(&raw, b"\r\n\r\n") else {
+    let mut conn = Connection::new(stream);
+    let Ok(Some(request)) = conn.next_request() else {
         return false;
     };
-    let head = String::from_utf8_lossy(&raw[..header_end]).to_string();
-    let body = String::from_utf8_lossy(&raw[header_end + 4..]).to_string();
-    let mut parts = head.lines().next().unwrap_or("").split_whitespace();
-    let method = parts.next().unwrap_or("");
-    let path = parts.next().unwrap_or("");
+    let stream = conn.stream();
+    let body = String::from_utf8_lossy(&request.body);
+    let (method, path) = (request.method.as_str(), request.path.as_str());
 
     match (method, path) {
         ("GET", "/") => {
-            respond(&mut stream, "200 OK", "text/html; charset=utf-8", PAGE);
+            respond(stream, "200 OK", "text/html; charset=utf-8", PAGE);
             false
         }
         ("POST", "/callback") => {
             let url = format!("http://localhost/{}", body.trim());
             if bolt_security::is_login_redirect(&url) && body.trim_start().starts_with('#') {
                 let _ = proxy.send_event(AppEvent::LoginRedirect(url));
-                respond(&mut stream, "200 OK", "text/plain", "ok");
+                respond(stream, "200 OK", "text/plain", "ok");
                 true
             } else {
                 respond(
-                    &mut stream,
+                    stream,
                     "400 Bad Request",
                     "text/plain",
                     "not a login redirect",
@@ -155,7 +126,7 @@ fn handle(mut stream: TcpStream, proxy: &EventLoopProxy<AppEvent>) -> bool {
             }
         }
         _ => {
-            respond(&mut stream, "404 Not Found", "text/plain", "");
+            respond(stream, "404 Not Found", "text/plain", "");
             false
         }
     }
@@ -168,8 +139,4 @@ fn respond(stream: &mut TcpStream, status: &str, content_type: &str, body: &str)
     );
     let _ = stream.write_all(response.as_bytes());
     let _ = stream.flush();
-}
-
-fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack.windows(needle.len()).position(|w| w == needle)
 }

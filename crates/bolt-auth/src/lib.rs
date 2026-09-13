@@ -5,12 +5,20 @@
 //! next action. A native shell, a web view and a command line tool can all drive
 //! the same flow.
 //!
-//! Bolt puts this logic inside a CEF window class. That design ties the protocol
+//! The upstream Bolt launcher puts this logic inside a CEF window class. That design ties the protocol
 //! to one user interface toolkit. This crate keeps the two apart.
 
 use base64::Engine as _;
+use percent_encoding::{percent_decode_str, utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+
+/// The bytes that a URL query keeps as they are: the RFC 3986 unreserved set.
+const QUERY_ESCAPES: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'.')
+    .remove(b'_')
+    .remove(b'~');
 
 /// Default origin of the account service.
 pub const ACCOUNT_ORIGIN: &str = "https://account.jagex.com";
@@ -77,7 +85,7 @@ pub struct Pkce {
 impl Pkce {
     /// Makes a pair from 43 random characters.
     ///
-    /// The random source is the operating system generator. Bolt uses `std::rand`,
+    /// The random source is the operating system generator. the upstream Bolt launcher uses `std::rand`,
     /// which an attacker can predict.
     pub fn generate() -> Self {
         Self::from_verifier(&random_string(VERIFIER_LEN, VERIFIER_CHARS))
@@ -260,12 +268,7 @@ impl LoginFlow {
         // The launcher-redirect page bounces to `jagex:code=..,state=..,intent=..`
         // when the login ran in an external browser.
         if let Some(intent) = url.trim().strip_prefix("jagex:") {
-            let parsed = Url {
-                host: String::new(),
-                path: String::new(),
-                query: parse_pairs(&intent.replace(',', "&")),
-                fragment: HashMap::new(),
-            };
+            let parsed = Url::from_query(&intent.replace(',', "&"));
             return self.on_code_redirect(&parsed);
         }
         let parsed = match Url::parse(url) {
@@ -288,13 +291,13 @@ impl LoginFlow {
         }
         provider_error(&parsed.query)?;
 
-        let code = parsed.raw(&parsed.query, "code")?;
-        let state = parsed.get(&parsed.query, "state")?;
+        let code = parsed.raw_query("code")?;
+        let state = get(&parsed.query, "state")?;
         if state != self.state1 {
             return Err(AuthError::StateMismatch);
         }
 
-        // The code arrives encoded. Bolt forwards the raw value, so no second
+        // The code arrives encoded. the upstream Bolt launcher forwards the raw value, so no second
         // encode takes place here.
         let body = format!(
             "grant_type=authorization_code&client_id={}&code={}&code_verifier={}&redirect_uri={}",
@@ -317,9 +320,9 @@ impl LoginFlow {
         provider_error(&parsed.fragment)?;
 
         // The provider puts the values in the fragment, not in the query.
-        parsed.get(&parsed.fragment, "code")?;
-        let state = parsed.get(&parsed.fragment, "state")?;
-        let id_token = parsed.get(&parsed.fragment, "id_token")?;
+        get(&parsed.fragment, "code")?;
+        let state = get(&parsed.fragment, "state")?;
+        let id_token = get(&parsed.fragment, "id_token")?;
         if state != self.state2 {
             return Err(AuthError::StateMismatch);
         }
@@ -463,8 +466,8 @@ fn provider_error_json(json: &serde_json::Value) -> Result<(), AuthError> {
 fn provider_error(values: &HashMap<String, String>) -> Result<(), AuthError> {
     match values.get("error") {
         Some(error) => Err(AuthError::Provider {
-            error: decode(error),
-            description: values.get("error_description").map(|v| decode(v)),
+            error: error.clone(),
+            description: values.get("error_description").cloned(),
         }),
         None => Ok(()),
     }
@@ -479,12 +482,8 @@ fn decode_jwt_payload(token: &str) -> Result<serde_json::Value, AuthError> {
         (Some(h), Some(p), Some(_)) => (h, p),
         _ => return Err(AuthError::BadJwt),
     };
-    let padded = match payload.len() % 4 {
-        0 => payload.to_string(),
-        n => format!("{}{}", payload, "=".repeat(4 - n)),
-    };
-    let bytes = base64::engine::general_purpose::URL_SAFE
-        .decode(padded)
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(payload)
         .map_err(|_| AuthError::BadJwt)?;
     let text = String::from_utf8(bytes).map_err(|_| AuthError::BadJwt)?;
     serde_json::from_str(&text).map_err(|_| AuthError::BadJwt)
@@ -518,132 +517,77 @@ fn random_string(len: usize, alphabet: &[u8]) -> String {
 
 /// Encodes every byte that a URL query does not accept.
 fn encode(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
-                out.push(byte as char)
-            }
-            _ => out.push_str(&format!("%{byte:02X}")),
-        }
-    }
-    out
+    utf8_percent_encode(value, QUERY_ESCAPES).to_string()
 }
 
-/// Decodes percent escapes and the plus sign.
-fn decode(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        match bytes[i] {
-            b'%' if i + 2 < bytes.len() => match u8::from_str_radix(&value[i + 1..i + 3], 16) {
-                Ok(byte) => {
-                    out.push(byte);
-                    i += 3;
-                }
-                Err(_) => {
-                    out.push(b'%');
-                    i += 1;
-                }
-            },
-            b'+' => {
-                out.push(b' ');
-                i += 1;
-            }
-            byte => {
-                out.push(byte);
-                i += 1;
-            }
-        }
-    }
-    String::from_utf8_lossy(&out).into_owned()
-}
-
-/// Parts of a URL. The parser keeps every value in its raw form.
+/// The parts of a URL that the flow reads. Query and fragment values are decoded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Url {
     host: String,
     path: String,
+    raw_query: String,
     query: HashMap<String, String>,
     fragment: HashMap<String, String>,
 }
 
 impl Url {
-    /// Reads a URL. The function returns `None` for input that has no authority.
+    /// Reads a URL. The function returns `None` for input that has no host.
     fn parse(input: &str) -> Option<Self> {
-        let (_scheme, rest) = input.split_once("://")?;
-        let (authority, remainder) = match rest.find(['/', '?', '#']) {
-            Some(pos) => (&rest[..pos], &rest[pos..]),
-            None => (rest, ""),
-        };
-        if authority.is_empty() {
-            return None;
-        }
-        let host = authority
-            .rsplit_once('@')
-            .map(|(_, host)| host)
-            .unwrap_or(authority);
-        let host = match host.rsplit_once(':') {
-            Some((name, port)) if port.chars().all(|c| c.is_ascii_digit()) => name,
-            _ => host,
-        };
-
-        let (before_fragment, fragment) = match remainder.split_once('#') {
-            Some((before, after)) => (before, after),
-            None => (remainder, ""),
-        };
-        let (path, query) = match before_fragment.split_once('?') {
-            Some((path, query)) => (path, query),
-            None => (before_fragment, ""),
-        };
-
+        let parsed = url::Url::parse(input.trim()).ok()?;
+        let host = parsed.host_str()?;
+        let raw_query = parsed.query().unwrap_or("").to_string();
         Some(Self {
             host: host.to_ascii_lowercase(),
-            path: path.to_string(),
-            query: parse_pairs(query),
-            fragment: parse_pairs(fragment),
+            path: parsed.path().to_string(),
+            query: parse_pairs(&raw_query),
+            fragment: parse_pairs(parsed.fragment().unwrap_or("")),
+            raw_query,
         })
     }
 
-    /// Returns a decoded value.
-    fn get(
-        &self,
-        values: &HashMap<String, String>,
-        name: &'static str,
-    ) -> Result<String, AuthError> {
-        values
-            .get(name)
-            .map(|value| decode(value))
-            .ok_or(AuthError::MissingField(name))
+    /// A URL that is only a query string, such as the `jagex:` intent.
+    fn from_query(raw_query: &str) -> Self {
+        Self {
+            host: String::new(),
+            path: String::new(),
+            query: parse_pairs(raw_query),
+            fragment: HashMap::new(),
+            raw_query: raw_query.to_string(),
+        }
     }
 
-    /// Returns a value in its raw, still encoded form.
-    fn raw(
-        &self,
-        values: &HashMap<String, String>,
-        name: &'static str,
-    ) -> Result<String, AuthError> {
-        values
-            .get(name)
-            .cloned()
+    /// Returns a query value in its raw, still encoded form.
+    fn raw_query(&self, name: &'static str) -> Result<String, AuthError> {
+        self.raw_query
+            .split('&')
+            .filter_map(|pair| pair.split_once('=').or(Some((pair, ""))))
+            .find(|(key, _)| decode(key) == name)
+            .map(|(_, value)| value.to_string())
             .ok_or(AuthError::MissingField(name))
     }
 }
 
+/// Returns a decoded value from a query or fragment map.
+fn get(values: &HashMap<String, String>, name: &'static str) -> Result<String, AuthError> {
+    values
+        .get(name)
+        .cloned()
+        .ok_or(AuthError::MissingField(name))
+}
+
+/// Decodes percent escapes and the plus sign. Bad escapes stay as they are.
+fn decode(value: &str) -> String {
+    percent_decode_str(&value.replace('+', " "))
+        .decode_utf8_lossy()
+        .into_owned()
+}
+
+/// Reads `key=value&key=value` into a map of decoded values.
 fn parse_pairs(input: &str) -> HashMap<String, String> {
-    let mut out = HashMap::new();
-    for pair in input.split('&') {
-        if pair.is_empty() {
-            continue;
-        }
-        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
-        let key = decode(key);
-        if !key.is_empty() {
-            out.insert(key, value.to_string());
-        }
-    }
-    out
+    form_urlencoded::parse(input.as_bytes())
+        .filter(|(key, _)| !key.is_empty())
+        .map(|(key, value)| (key.into_owned(), value.into_owned()))
+        .collect()
 }
 
 #[cfg(test)]

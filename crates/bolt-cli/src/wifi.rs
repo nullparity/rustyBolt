@@ -2,7 +2,6 @@
 
 use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr, TcpStream, UdpSocket};
-use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -22,62 +21,7 @@ pub(crate) struct WifiStatus {
 }
 
 pub(crate) fn detect_gateway() -> Option<IpAddr> {
-    if let Ok(gw) = default_net::get_default_gateway() {
-        return Some(gw.ip_addr);
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(output) = Command::new("route")
-            .args(["-n", "get", "default"])
-            .output()
-        {
-            let text = String::from_utf8_lossy(&output.stdout);
-            for line in text.lines() {
-                let trimmed = line.trim();
-                if let Some(ip_str) = trimmed.strip_prefix("gateway:") {
-                    if let Ok(ip) = ip_str.trim().parse::<IpAddr>() {
-                        return Some(ip);
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(output) = Command::new("ip")
-            .args(["route", "show", "default"])
-            .output()
-        {
-            let text = String::from_utf8_lossy(&output.stdout);
-            let parts: Vec<&str> = text.split_whitespace().collect();
-            if let Some(pos) = parts.iter().position(|&p| p == "via") {
-                if let Some(ip_str) = parts.get(pos + 1) {
-                    if let Ok(ip) = ip_str.parse::<IpAddr>() {
-                        return Some(ip);
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(output) = Command::new("route").args(["print", "0.0.0.0"]).output() {
-            let text = String::from_utf8_lossy(&output.stdout);
-            for line in text.lines() {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 3 && parts[0] == "0.0.0.0" && parts[1] == "0.0.0.0" {
-                    if let Ok(ip) = parts[2].parse::<IpAddr>() {
-                        return Some(ip);
-                    }
-                }
-            }
-        }
-    }
-
-    None
+    default_net::get_default_gateway().ok().map(|gw| gw.ip_addr)
 }
 
 #[derive(Clone)]

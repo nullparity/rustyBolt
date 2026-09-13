@@ -33,11 +33,7 @@ pub fn is_allowed_remote_host(host: &str) -> bool {
 
 pub fn is_allowed_host(host: &str) -> bool {
     let lower = host.trim().to_ascii_lowercase();
-    is_allowed_remote_host(&lower)
-        || lower == "127.0.0.1"
-        || lower == "localhost"
-        || lower == "::1"
-        || lower == "[::1]"
+    is_allowed_remote_host(&lower) || is_local_host(&lower)
 }
 
 pub fn is_allowed_navigation(url: &str) -> bool {
@@ -58,16 +54,18 @@ pub fn is_allowed_external_url(url: &str) -> bool {
         || lower.starts_with("https://secure.runescape.com/")
 }
 
-/// Extracts the lowercase host of `url`, without port or userinfo checks.
-fn url_host(url: &str) -> Option<String> {
-    let remainder = url.trim().split_once("://")?.1;
-    let authority = remainder.split(['/', '?', '#']).next().unwrap_or(remainder);
-    let host = if authority.starts_with('[') {
-        &authority[..authority.find(']')? + 1]
-    } else {
-        authority.split(':').next().unwrap_or(authority)
-    };
-    Some(host.to_ascii_lowercase())
+/// Reads `url` and rejects one that carries user info.
+fn parse_url(url: &str) -> Result<url::Url, SecurityError> {
+    let parsed = url::Url::parse(url.trim())
+        .map_err(|error| SecurityError::MalformedUrl(error.to_string()))?;
+    if !parsed.username().is_empty() || parsed.password().is_some() {
+        return Err(SecurityError::InvalidUserInfo);
+    }
+    Ok(parsed)
+}
+
+fn is_local_host(host: &str) -> bool {
+    matches!(host, "127.0.0.1" | "localhost" | "::1" | "[::1]")
 }
 
 /// Reports whether `url` is one of the two OAuth redirect targets that the
@@ -98,12 +96,12 @@ pub fn is_allowed_login_navigation(url: &str) -> bool {
     {
         return false;
     }
-    let Some(host) = url_host(trimmed) else {
+    let Some(host) = parse_url(trimmed)
+        .ok()
+        .and_then(|parsed| parsed.host_str().map(str::to_ascii_lowercase))
+    else {
         return false;
     };
-    if host.contains('@') {
-        return false;
-    }
     // Jagex fronts its login with Cloudflare Turnstile; the challenge widget
     // is an iframe on challenges.cloudflare.com.
     const DOMAINS: [&str; 2] = ["jagex.com", "runescape.com"];
@@ -123,88 +121,32 @@ pub fn csp_meta_tag() -> &'static str {
 }
 
 pub fn validate_url(raw_url: &str) -> Result<(), SecurityError> {
-    let (scheme, remainder) = match raw_url.find("://") {
-        Some(idx) => (&raw_url[..idx], &raw_url[idx + 3..]),
-        None => {
-            return Err(SecurityError::MalformedUrl(
-                "missing scheme separator".to_string(),
-            ))
-        }
-    };
+    let parsed = parse_url(raw_url)?;
+    let scheme = parsed.scheme();
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| SecurityError::MalformedUrl("empty authority".to_string()))?
+        .to_ascii_lowercase();
 
-    let scheme_lower = scheme.to_ascii_lowercase();
-
-    let authority = match remainder.find(['/', '?', '#']) {
-        Some(idx) => &remainder[..idx],
-        None => remainder,
-    };
-
-    if authority.is_empty() {
-        return Err(SecurityError::MalformedUrl("empty authority".to_string()));
-    }
-
-    if authority.contains('@') {
-        return Err(SecurityError::InvalidUserInfo);
-    }
-
-    let (host, port_str) = if authority.starts_with('[') {
-        match authority.find(']') {
-            Some(close_bracket) => {
-                let host_part = &authority[1..close_bracket];
-                let after = &authority[close_bracket + 1..];
-                let port = after.strip_prefix(':');
-                (host_part, port)
-            }
-            None => {
-                return Err(SecurityError::MalformedUrl(
-                    "unclosed IPv6 bracket".to_string(),
-                ))
-            }
-        }
-    } else {
-        match authority.find(':') {
-            Some(idx) => (&authority[..idx], Some(&authority[idx + 1..])),
-            None => (authority, None),
-        }
-    };
-
-    let host_lower = host.to_ascii_lowercase();
-    let port = match port_str {
-        Some(p) => match p.parse::<u16>() {
-            Ok(parsed) => Some(parsed),
-            Err(_) => {
-                return Err(SecurityError::MalformedUrl(
-                    "invalid port number".to_string(),
-                ))
-            }
-        },
-        None => None,
-    };
-
-    if is_allowed_remote_host(&host_lower) {
-        if scheme_lower != "https" {
+    if is_allowed_remote_host(&host) {
+        if scheme != "https" {
             return Err(SecurityError::InsecureScheme(scheme.to_string()));
         }
-        if let Some(p) = port {
-            if p != 443 {
-                return Err(SecurityError::DisallowedPort(p));
-            }
+        // `port()` is `None` for the default port of the scheme.
+        if let Some(port) = parsed.port() {
+            return Err(SecurityError::DisallowedPort(port));
         }
         return Ok(());
     }
 
-    if host_lower == "127.0.0.1"
-        || host_lower == "localhost"
-        || host_lower == "::1"
-        || host_lower == "[::1]"
-    {
-        if scheme_lower != "http" && scheme_lower != "https" && scheme_lower != "ws" {
+    if is_local_host(&host) {
+        if scheme != "http" && scheme != "https" && scheme != "ws" {
             return Err(SecurityError::InsecureScheme(scheme.to_string()));
         }
         return Ok(());
     }
 
-    Err(SecurityError::DisallowedHost(host.to_string()))
+    Err(SecurityError::DisallowedHost(host))
 }
 
 #[cfg(test)]

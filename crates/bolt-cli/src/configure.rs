@@ -3,7 +3,7 @@
 //! Spawns a lightweight local HTTP server and opens the launcher dashboard
 //! in the default web browser on macOS, Linux, and Windows.
 
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use tao::event_loop::EventLoopProxy;
 
 use crate::gui::AppEvent;
+use crate::httpd::{Connection, Request};
 use crate::web::HTML_PAGE;
 use crate::wifi::{WifiManager, WifiStatus};
 use crate::CliError;
@@ -123,8 +124,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let port = listener.local_addr()?.port();
     let url = format!("http://127.0.0.1:{port}/#play");
 
+    let guard = Guard::new(port);
     // `rustybolt jagex:...` (the Linux scheme handler) finds this instance here.
-    let port_file = PortFile::write(&paths, port);
+    let port_file = PortFile::write(&paths, port, &guard.token);
 
     let running = Arc::new(AtomicBool::new(true));
     let flow_state = Arc::new(Mutex::new(None));
@@ -142,6 +144,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let s_flow_state = Arc::clone(&flow_state);
     let s_proxy = proxy_opt.clone();
     let s_wifi = wifi_manager.clone();
+    let s_guard = guard.clone();
 
     let server_thread = thread::spawn(move || {
         for stream in listener.incoming() {
@@ -155,6 +158,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
                     let flow_state = Arc::clone(&s_flow_state);
                     let proxy = s_proxy.clone();
                     let wifi = s_wifi.clone();
+                    let guard = s_guard.clone();
                     thread::spawn(move || {
                         handle_connection(
                             stream,
@@ -163,7 +167,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
                             &flow_state,
                             &wifi,
                             proxy.as_ref(),
-                            port,
+                            &guard,
                         );
                     });
                 }
@@ -202,7 +206,72 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     Ok(())
 }
 
-/// The file that records the port of the running launcher. Removed on drop.
+/// Header that carries the per-launch API token.
+const TOKEN_HEADER: &str = "x-rustybolt-token";
+
+/// What every request must prove before the launcher API answers it.
+///
+/// The server listens on loopback only, but any web page in the user's
+/// browser can still send it a request, and DNS rebinding lets such a page
+/// read the answer. `Host` must be this server, `Origin` (when a browser
+/// sends one) must be this server, and every `/api/` request must carry the
+/// token that only the served page and the port file know.
+#[derive(Clone)]
+struct Guard {
+    port: u16,
+    /// `127.0.0.1:<port>`
+    host: String,
+    /// `http://127.0.0.1:<port>`
+    origin: String,
+    token: String,
+}
+
+impl Guard {
+    fn new(port: u16) -> Self {
+        Self {
+            port,
+            host: format!("127.0.0.1:{port}"),
+            origin: format!("http://127.0.0.1:{port}"),
+            token: new_token(),
+        }
+    }
+
+    /// The reason to refuse `request`, or `None` when it may proceed.
+    fn refuse(&self, request: &Request) -> Option<&'static str> {
+        if request.header("host") != Some(self.host.as_str()) {
+            return Some("wrong Host");
+        }
+        if let Some(origin) = request.header("origin") {
+            if origin != self.origin {
+                return Some("cross-origin request");
+            }
+        }
+        if let Some(site) = request.header("sec-fetch-site") {
+            if site != "same-origin" && site != "none" {
+                return Some("cross-site request");
+            }
+        }
+        if request.path.starts_with("/api/")
+            && request.header(TOKEN_HEADER) != Some(self.token.as_str())
+        {
+            return Some("missing or wrong API token");
+        }
+        None
+    }
+}
+
+/// 32 random bytes from the operating system, as hex.
+fn new_token() -> String {
+    use rand::TryRngCore as _;
+    let mut bytes = [0u8; 32];
+    rand::rngs::OsRng
+        .try_fill_bytes(&mut bytes)
+        .expect("the operating system random generator failed");
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The file that records the port and the API token of the running
+/// launcher, so `rustybolt jagex:...` can reach it. Removed on drop.
 struct PortFile(PathBuf);
 
 impl PortFile {
@@ -210,19 +279,24 @@ impl PortFile {
         paths.runtime_dir.join("launcher.port")
     }
 
-    fn write(paths: &Paths, port: u16) -> Self {
+    fn write(paths: &Paths, port: u16, token: &str) -> Self {
         let path = Self::path(paths);
-        let _ = std::fs::write(&path, port.to_string());
+        let _ = std::fs::write(&path, format!("{port}\n{token}\n"));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        }
         Self(path)
     }
 
-    /// Reads the port of a running launcher, if any.
-    fn read(paths: &Paths) -> Option<u16> {
-        std::fs::read_to_string(Self::path(paths))
-            .ok()?
-            .trim()
-            .parse()
-            .ok()
+    /// Reads the port and the token of a running launcher, if any.
+    fn read(paths: &Paths) -> Option<(u16, String)> {
+        let text = std::fs::read_to_string(Self::path(paths)).ok()?;
+        let mut lines = text.lines();
+        let port = lines.next()?.trim().parse().ok()?;
+        let token = lines.next()?.trim().to_string();
+        Some((port, token))
     }
 }
 
@@ -243,7 +317,7 @@ pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
         )));
     }
     let paths = Paths::resolve()?;
-    let Some(port) = PortFile::read(&paths) else {
+    let Some((port, token)) = PortFile::read(&paths) else {
         return Err(CliError::Message(
             "no running launcher found. Start rustybolt, then click Add Jagex Account.".to_string(),
         ));
@@ -252,7 +326,7 @@ pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
     let mut stream = TcpStream::connect(("127.0.0.1", port))
         .map_err(|e| CliError::Message(format!("cannot reach the running launcher: {e}")))?;
     let request = format!(
-        "POST /api/auth/redirect HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        "POST /api/auth/redirect HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n{TOKEN_HEADER}: {token}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
         body.len()
     );
     stream.write_all(request.as_bytes())?;
@@ -269,66 +343,43 @@ pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
 }
 
 fn handle_connection(
-    mut stream: TcpStream,
+    stream: TcpStream,
     paths: &Paths,
     running: &AtomicBool,
     flow_state: &Arc<Mutex<Option<LoginFlow>>>,
     wifi: &WifiManager,
     proxy: Option<&EventLoopProxy<AppEvent>>,
-    port: u16,
+    guard: &Guard,
 ) {
+    let port = guard.port;
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    let mut conn = Connection::new(stream);
 
-    let mut reader = match stream.try_clone() {
-        Ok(s) => BufReader::new(s),
-        Err(_) => return,
-    };
-
-    loop {
-        let mut request_line = String::new();
-        if reader.read_line(&mut request_line).unwrap_or(0) == 0 {
+    while let Ok(Some(request)) = conn.next_request() {
+        let keep_alive = request.keep_alive;
+        if let Some(reason) = guard.refuse(&request) {
+            let _ = conn.stream().write_all(
+                format!(
+                    "HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reason}",
+                    reason.len()
+                )
+                .as_bytes(),
+            );
             break;
         }
-
-        let mut parts = request_line.split_whitespace();
-        let Some(method) = parts.next() else { break };
-        let Some(raw_path) = parts.next() else { break };
-        let mut path_parts = raw_path.splitn(2, '?');
-        let path = path_parts.next().unwrap_or(raw_path);
-        let query = path_parts.next().unwrap_or("");
-
-        let mut content_length = 0usize;
-        let mut keep_alive = false;
-        let mut line = String::new();
-        loop {
-            line.clear();
-            if reader.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" || line == "\n" {
-                break;
-            }
-            let lower = line.to_ascii_lowercase();
-            if let Some(stripped) = lower.strip_prefix("content-length:") {
-                content_length = stripped.trim().parse().unwrap_or(0);
-            } else if lower.starts_with("connection:") && lower.contains("keep-alive") {
-                keep_alive = true;
-            }
-        }
-
-        let mut body = vec![0u8; content_length];
-        if content_length > 0 && reader.read_exact(&mut body).is_err() {
-            break;
-        }
-
         let req = HttpRequest {
-            method,
-            path,
-            query,
-            body: &body,
+            token: &guard.token,
+            method: &request.method,
+            path: &request.path,
+            query: &request.query,
+            body: &request.body,
             keep_alive,
             wifi,
             proxy,
         };
-        let should_exit = respond(&req, &mut stream, paths, flow_state);
+        let stream = conn.stream();
+        let should_exit = respond(&req, stream, paths, flow_state);
         let _ = stream.flush();
 
         if should_exit {
@@ -352,10 +403,11 @@ fn handle_connection(
             break;
         }
     }
-    let _ = stream.shutdown(std::net::Shutdown::Both);
+    let _ = conn.stream().shutdown(std::net::Shutdown::Both);
 }
 
 struct HttpRequest<'a> {
+    token: &'a str,
     method: &'a str,
     path: &'a str,
     query: &'a str,
@@ -394,7 +446,10 @@ fn respond(
                 .replace("<!--VERSION-->", env!("CARGO_PKG_VERSION"))
                 .replace(
                     "/*INITIAL_STATE*/",
-                    &format!("window.INITIAL_STATE = {state_json};"),
+                    &format!(
+                        "window.INITIAL_STATE = {state_json}; window.RUSTYBOLT_TOKEN = {};",
+                        serde_json::to_string(req.token).unwrap_or_default()
+                    ),
                 );
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n{sec_hdrs}\r\n{html}",

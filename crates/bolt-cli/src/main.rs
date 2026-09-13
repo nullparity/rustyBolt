@@ -7,6 +7,7 @@ mod auth;
 mod configure;
 mod consent;
 mod gui;
+mod httpd;
 mod launch;
 mod platform;
 mod verify;
