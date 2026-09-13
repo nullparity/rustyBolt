@@ -56,6 +56,12 @@ pub struct LaunchRequest<'a> {
 pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> {
     let plan = plan(paths, request)?;
 
+    // A missing entry only costs the window its name in the top bar.
+    #[cfg(target_os = "linux")]
+    if request.kind == ClientKind::RuneLite {
+        let _ = crate::desktop::ensure_runelite_entry(request.jar);
+    }
+
     let mut command = Command::new(&plan.program);
     command.args(&plan.args);
     command.current_dir(&plan.working_dir);

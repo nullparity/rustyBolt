@@ -8,6 +8,7 @@
 mod client;
 mod config;
 mod credentials;
+pub mod desktop;
 mod file;
 mod http;
 mod import;

@@ -15,6 +15,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 ureq.workspace = true
 keyring.workspace = true
+flate2 = "1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_SystemInformation"] }
