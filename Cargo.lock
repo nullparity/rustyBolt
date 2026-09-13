@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "bolt-auth"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "rand",
@@ -117,7 +117,7 @@ dependencies = [
 
 [[package]]
 name = "bolt-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bolt-auth",
  "bolt-core",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "bolt-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bolt-auth",
  "bolt-jdk",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "bolt-jdk"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "thiserror 2.0.20",
@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "bolt-security"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "thiserror 2.0.20",
 ]
