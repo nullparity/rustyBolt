@@ -12,7 +12,7 @@ use tray_icon::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, TrayIconBuilder, TrayIconEvent};
 use wry::{NewWindowResponse, WebView, WebViewBuilder};
 
-use bolt_core::{LoginFlow, Paths};
+use rustybolt_core::{LoginFlow, Paths};
 
 use crate::platform::claim_jagex_scheme;
 
@@ -99,11 +99,11 @@ fn open_login_window(
         // Cloudflare Turnstile stalls on the bare embedded-webview UA.
         .with_user_agent(LOGIN_USER_AGENT)
         .with_navigation_handler(move |nav_url| {
-            if bolt_security::is_login_redirect(&nav_url) {
+            if rustybolt_security::is_login_redirect(&nav_url) {
                 let _ = proxy.send_event(AppEvent::LoginRedirect(nav_url));
                 return false;
             }
-            let allowed = bolt_security::is_allowed_login_navigation(&nav_url);
+            let allowed = rustybolt_security::is_allowed_login_navigation(&nav_url);
             if !allowed {
                 eprintln!("rustybolt: login window blocked navigation to {nav_url}");
             }
@@ -184,10 +184,10 @@ pub(crate) fn run_window(
     let builder = WebViewBuilder::new()
         .with_url(url)
         .with_navigation_handler(|nav_url| {
-            if bolt_security::is_allowed_navigation(&nav_url) {
+            if rustybolt_security::is_allowed_navigation(&nav_url) {
                 true
             } else {
-                if bolt_security::is_allowed_external_url(&nav_url) {
+                if rustybolt_security::is_allowed_external_url(&nav_url) {
                     crate::configure::open_browser(&nav_url);
                 }
                 false
@@ -196,7 +196,7 @@ pub(crate) fn run_window(
         .with_new_window_req_handler(|nav_url, _features| {
             // `target="_blank"` links and window.open never get a webview;
             // allowed Jagex URLs go to the system browser instead.
-            if bolt_security::is_allowed_external_url(&nav_url) {
+            if rustybolt_security::is_allowed_external_url(&nav_url) {
                 crate::configure::open_browser(&nav_url);
             }
             NewWindowResponse::Deny
@@ -351,7 +351,7 @@ pub(crate) fn run_window(
             Event::Opened { urls } => {
                 for opened in urls {
                     let opened = opened.to_string();
-                    if bolt_security::is_login_redirect(&opened) {
+                    if rustybolt_security::is_login_redirect(&opened) {
                         let _ = proxy.send_event(AppEvent::LoginRedirect(opened));
                     }
                 }

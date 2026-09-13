@@ -1,7 +1,7 @@
 //! The user facing JVM tuning of the RuneLite client.
 //!
 //! The launcher keeps the tuning inside `launcher.json`. This module turns the
-//! stored values into the [`bolt_jdk::Tuning`] structure that builds the real
+//! stored values into the [`rustybolt_jdk::Tuning`] structure that builds the real
 //! JVM flags.
 
 use std::path::{Path, PathBuf};
@@ -196,7 +196,11 @@ impl Default for TuningConfig {
 impl TuningConfig {
     /// Builds the JVM tuning. `log_dir` holds the gc log and the AOT cache.
     /// `client_repository` is the RuneLite jar cache, normally `~/.runelite/repository2`.
-    pub fn to_tuning(&self, log_dir: &Path, client_repository: Option<&Path>) -> bolt_jdk::Tuning {
+    pub fn to_tuning(
+        &self,
+        log_dir: &Path,
+        client_repository: Option<&Path>,
+    ) -> rustybolt_jdk::Tuning {
         let aot_cache = self.take_aot_cache(log_dir, client_repository);
         let mut extra = self.extra_jvm_args.clone();
         if let Some(direct) = &self.direct_memory_max {
@@ -211,7 +215,7 @@ impl TuningConfig {
         if let Some(nmt) = &self.native_memory_tracking {
             extra.push(format!("-XX:NativeMemoryTracking={nmt}"));
         }
-        bolt_jdk::Tuning {
+        rustybolt_jdk::Tuning {
             heap_min: self.heap_min.clone(),
             heap_max: self.heap_max.clone(),
             stack_size: self.stack_size.clone(),
@@ -238,16 +242,16 @@ impl TuningConfig {
         &self,
         log_dir: &Path,
         client_repository: Option<&Path>,
-    ) -> Option<bolt_jdk::AotCache> {
+    ) -> Option<rustybolt_jdk::AotCache> {
         if !self.aot_cache {
             return None;
         }
         let jar = client_repository
-            .and_then(|dir| bolt_jdk::newest_jar(dir, "client-"))
+            .and_then(|dir| rustybolt_jdk::newest_jar(dir, "client-"))
             .unwrap_or_else(|| PathBuf::from(FALLBACK_JAR_NAME));
-        let cache = bolt_jdk::aot_cache_for(log_dir, &jar);
+        let cache = rustybolt_jdk::aot_cache_for(log_dir, &jar);
         // A stale cache is not a failure. The launch continues.
-        let _ = bolt_jdk::prune_aot_caches(log_dir, &cache.path);
+        let _ = rustybolt_jdk::prune_aot_caches(log_dir, &cache.path);
         Some(cache)
     }
 
@@ -346,12 +350,12 @@ impl TuningConfig {
     }
 
     /// Maps the stored collector to the collector of the JVM builder.
-    fn collector(&self) -> bolt_jdk::Gc {
+    fn collector(&self) -> rustybolt_jdk::Gc {
         match self.garbage_collector {
-            GcChoice::Default => bolt_jdk::Gc::Default,
-            GcChoice::Z => bolt_jdk::Gc::Z,
-            GcChoice::G1 => bolt_jdk::Gc::G1,
-            GcChoice::Parallel => bolt_jdk::Gc::Parallel,
+            GcChoice::Default => rustybolt_jdk::Gc::Default,
+            GcChoice::Z => rustybolt_jdk::Gc::Z,
+            GcChoice::G1 => rustybolt_jdk::Gc::G1,
+            GcChoice::Parallel => rustybolt_jdk::Gc::Parallel,
         }
     }
 }
@@ -554,7 +558,7 @@ mod tests {
 
         let tuning = TuningConfig::default().to_tuning(&log_dir, Some(&repository));
         let cache = tuning.aot_cache.expect("the default asks for an AOT cache");
-        assert!(matches!(cache.mode, bolt_jdk::AotMode::Record));
+        assert!(matches!(cache.mode, rustybolt_jdk::AotMode::Record));
         assert_eq!(cache.path, log_dir.join("client.aot"));
     }
 
@@ -571,7 +575,7 @@ mod tests {
 
         let tuning = TuningConfig::default().to_tuning(&log_dir, Some(&repository));
         let cache = tuning.aot_cache.expect("the default asks for an AOT cache");
-        assert!(matches!(cache.mode, bolt_jdk::AotMode::Load));
+        assert!(matches!(cache.mode, rustybolt_jdk::AotMode::Load));
         assert_eq!(cache.path, log_dir.join("client-1.10.0.aot"));
         assert!(!log_dir.join("client-1.9.0.aot").exists());
     }
@@ -593,7 +597,7 @@ mod tests {
         };
 
         let tuning = config.to_tuning(&log_dir, None);
-        assert!(matches!(tuning.gc, bolt_jdk::Gc::Parallel));
+        assert!(matches!(tuning.gc, rustybolt_jdk::Gc::Parallel));
         assert_eq!(tuning.heap_max.as_deref(), Some("4g"));
         assert_eq!(tuning.gc_log, Some(log_dir));
         assert_eq!(tuning.extra, vec!["-XX:+AlwaysPreTouch".to_string()]);

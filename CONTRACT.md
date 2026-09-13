@@ -14,15 +14,15 @@ rustyBolt splits them:
 
 | crate | owns | knows about |
 | --- | --- | --- |
-| `bolt-auth` | Jagex OAuth2 PKCE state machine | nothing, no I/O |
-| `bolt-jdk` | Java discovery and JVM argv | file system only |
-| `bolt-security` | egress allowlist and Content Security Policy | nothing, no I/O |
-| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, `bolt-security`, HTTP |
-| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk`, `bolt-security` |
+| `rustybolt-auth` | Jagex OAuth2 PKCE state machine | nothing, no I/O |
+| `rustybolt-jdk` | Java discovery and JVM argv | file system only |
+| `rustybolt-security` | egress allowlist and Content Security Policy | nothing, no I/O |
+| `rustybolt-core` | paths, config, sessions, client lookup, launch | `rustybolt-auth`, `rustybolt-jdk`, `rustybolt-security`, HTTP |
+| `rustybolt-cli` | portable CLI driver and configuration UI | `rustybolt-core`, `rustybolt-jdk`, `rustybolt-security` |
 
 The launcher driver is portable across macOS, Linux, and Windows. It never repeats protocol or launch logic.
 
-## bolt-auth
+## rustybolt-auth
 
 Sans-I/O. The caller does every network request. The flow returns the next action.
 
@@ -89,7 +89,7 @@ Rules:
 - `on_navigation` matches the code redirect by host and path, and the consent redirect
   by `localhost` host with the parameters in the fragment.
 
-## bolt-jdk
+## rustybolt-jdk
 
 ```rust
 pub struct JavaVersion { pub feature: u32, pub raw: String }
@@ -152,7 +152,7 @@ Gate rules:
 the process list show the file name of an unbundled executable, so the link gives the
 client its own identity. The function returns the original path when the link fails.
 
-## bolt-core
+## rustybolt-core
 
 ```rust
 pub struct Paths { pub config_dir: PathBuf, pub data_dir: PathBuf,
@@ -208,11 +208,11 @@ pub struct LaunchPlan { pub program: PathBuf, pub args: Vec<String>,
 /// so the shown command and the started command never differ.
 pub fn plan(paths: &Paths, req: &LaunchRequest) -> Result<LaunchPlan, CoreError>;
 
-// The serde form of the JVM tuning. It maps to `bolt_jdk::Tuning`.
+// The serde form of the JVM tuning. It maps to `rustybolt_jdk::Tuning`.
 pub enum GcChoice { Default, Z, G1, Parallel }
 pub struct TuningConfig { /* heap, stack, gc, gates, add_opens, dock, app args */ }
 impl TuningConfig {
-    pub fn to_tuning(&self, log_dir: &Path, client_repository: Option<&Path>) -> bolt_jdk::Tuning;
+    pub fn to_tuning(&self, log_dir: &Path, client_repository: Option<&Path>) -> rustybolt_jdk::Tuning;
     pub fn system_properties(&self) -> Vec<(String, String)>;
     pub fn dock_args(&self) -> Vec<String>;
 }
@@ -245,7 +245,7 @@ impl PropertyOverrides { pub fn gpu_defaults() -> PropertyOverrides;
                          pub fn apply_to_text(&self, text: &str) -> String; }
 pub fn apply_to_profiles(dir: &Path, overrides: &PropertyOverrides) -> Result<usize, CoreError>;
 
-pub struct HttpAuth<'a> { /* drives bolt-auth over ureq */ }
+pub struct HttpAuth<'a> { /* drives rustybolt-auth over ureq */ }
 impl<'a> HttpAuth<'a> {
     pub fn new(config: &'a AuthConfig) -> HttpAuth<'a>;
     /// Runs every network step that the flow asks for until the next UI step.
@@ -262,7 +262,7 @@ Launch rules taken from Bolt, with the errors fixed:
 - RuneLite argv: `-Duser.home=<data>` `-jar <jar>` `-J-Duser.home=<data>` `[--configure]`.
 - HDOS argv: `-Duser.home=<data>` `-Dapp.user.home=<data>` `-jar <jar>`.
 
-## bolt-security
+## rustybolt-security
 
 Validates every network destination and generates Content Security Policy rules.
 
@@ -291,4 +291,4 @@ pub fn validate_url(raw_url: &str) -> Result<(), SecurityError>;
 
 ## Verification
 
-`cargo test --workspace` and `cargo run -p bolt-cli -- verify`.
+`cargo test --workspace` and `cargo run -p rustybolt-cli -- verify`.

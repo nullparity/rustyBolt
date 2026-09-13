@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use bolt_core::{
+use rustybolt_core::{
     AuthConfig, Character, ClientKind, Config, CredentialSource, GameCredentials, HttpAuth,
     LaunchRequest, Paths, SessionStore, UsageStore,
 };
@@ -47,7 +47,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
 
     if options.dry_run {
         // The plan is the command that `launch` runs, so the two never differ.
-        let plan = bolt_core::plan(&paths, &request)?;
+        let plan = rustybolt_core::plan(&paths, &request)?;
         println!("program: {}", plan.program.display());
         for argument in &plan.args {
             println!("{argument}");
@@ -63,7 +63,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
         return Ok(());
     }
 
-    let pid = bolt_core::launch(&paths, &request)?;
+    let pid = rustybolt_core::launch(&paths, &request)?;
     println!("Started the client. The process id is {pid}.");
     if let Some(credentials) = &credentials {
         record_use(&paths, &credentials.character_id);
@@ -104,7 +104,7 @@ pub(crate) fn launch_client(
         configure: false,
     };
 
-    let pid = bolt_core::launch(paths, &request)?;
+    let pid = rustybolt_core::launch(paths, &request)?;
     if let Some(credentials) = &credentials {
         record_use(paths, &credentials.character_id);
     }
@@ -180,14 +180,14 @@ pub(crate) fn parse(args: &[String]) -> Result<Options, CliError> {
 pub(crate) fn resolve_jar(config: &Config, options: &Options) -> Result<PathBuf, CliError> {
     let jar = match &options.jar {
         Some(jar) => jar.clone(),
-        None => bolt_core::locate_client(options.kind, config).ok_or_else(|| {
+        None => rustybolt_core::locate_client(options.kind, config).ok_or_else(|| {
             let mut lines = vec![format!(
                 "{} is not installed. Install it from {} and start it once.",
                 options.kind.title(),
                 options.kind.wiki_url()
             )];
             lines.push("The launcher looked here:".to_string());
-            for path in bolt_core::client_candidates(options.kind) {
+            for path in rustybolt_core::client_candidates(options.kind) {
                 lines.push(format!("  {}", path.display()));
             }
             lines.push(
@@ -233,7 +233,7 @@ pub(crate) fn resolve_credentials(
     let characters = http
         .characters(&session.session_id)
         .map_err(|error| match error {
-            bolt_core::CoreError::SessionExpired => CliError::Message(
+            rustybolt_core::CoreError::SessionExpired => CliError::Message(
                 "the saved session expired. Run `rustybolt login` again.".to_string(),
             ),
             other => CliError::Core(other),

@@ -5,7 +5,7 @@
 
 use std::io::Write;
 
-use bolt_core::{Action, AuthConfig, HttpAuth, LoginFlow, Paths, SessionStore};
+use rustybolt_core::{Action, AuthConfig, HttpAuth, LoginFlow, Paths, SessionStore};
 
 use crate::{no_arguments, CliError};
 

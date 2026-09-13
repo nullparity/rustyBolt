@@ -4,8 +4,8 @@ You need a Rust toolchain of version 1.82 or newer from [rustup](https://rustup.
 
 ```sh
 cargo test --workspace
-cargo run -p bolt-cli -- help
-cargo run -p bolt-cli -- configure
+cargo run -p rustybolt-cli -- help
+cargo run -p rustybolt-cli -- configure
 ```
 
 ## Make a release

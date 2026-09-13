@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use bolt_core::{
+use rustybolt_core::{
     Action, AuthConfig, ClientKind, Config, HttpAuth, LaunchRequest, LoginFlow, Paths,
     SessionStore, UsageStore,
 };
@@ -311,7 +311,7 @@ impl Drop for PortFile {
 /// The desktop file (Linux) and the app bundle (macOS) register the scheme,
 /// so the browser starts `rustybolt jagex:code=...` for the login redirect.
 pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
-    if !bolt_security::is_login_redirect(url) {
+    if !rustybolt_security::is_login_redirect(url) {
         return Err(CliError::Message(format!(
             "`{url}` is not a login redirect"
         )));
@@ -420,7 +420,7 @@ struct HttpRequest<'a> {
 fn security_headers() -> String {
     format!(
         "X-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: {}\r\n",
-        bolt_security::csp_header_value()
+        rustybolt_security::csp_header_value()
     )
 }
 
@@ -611,7 +611,7 @@ fn respond(
                 .ok()
                 .and_then(|p| p.address.or(p.url))
                 .unwrap_or_default();
-            let (status, json) = if !bolt_security::is_login_redirect(&address) {
+            let (status, json) = if !rustybolt_security::is_login_redirect(&address) {
                 (
                     "400 Bad Request",
                     serde_json::json!({ "ok": false, "error": "not a login redirect" }),
@@ -939,7 +939,7 @@ pub(crate) fn complete_login(
 }
 
 fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
-    let runtimes = bolt_jdk::discover()
+    let runtimes = rustybolt_jdk::discover()
         .into_iter()
         .map(|rt| JavaInfo {
             path: rt.path.display().to_string(),
@@ -948,25 +948,25 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
                 .map(|v| format!("Feature {} ({})", v.feature, v.raw))
                 .unwrap_or_else(|| "Unknown".to_string()),
             source: match rt.source {
-                bolt_jdk::Source::Explicit => "Explicit",
-                bolt_jdk::Source::JavaHome => "JAVA_HOME",
-                bolt_jdk::Source::Path => "PATH",
-                bolt_jdk::Source::SystemLocation => "System",
+                rustybolt_jdk::Source::Explicit => "Explicit",
+                rustybolt_jdk::Source::JavaHome => "JAVA_HOME",
+                rustybolt_jdk::Source::Path => "PATH",
+                rustybolt_jdk::Source::SystemLocation => "System",
             }
             .to_string(),
         })
         .collect();
 
     let clients = ClientInfo {
-        runelite_detected: bolt_core::locate_client(ClientKind::RuneLite, &config)
+        runelite_detected: rustybolt_core::locate_client(ClientKind::RuneLite, &config)
             .map(|p| p.display().to_string()),
-        runelite_candidates: bolt_core::client_candidates(ClientKind::RuneLite)
+        runelite_candidates: rustybolt_core::client_candidates(ClientKind::RuneLite)
             .into_iter()
             .map(|p| p.display().to_string())
             .collect(),
-        hdos_detected: bolt_core::locate_client(ClientKind::Hdos, &config)
+        hdos_detected: rustybolt_core::locate_client(ClientKind::Hdos, &config)
             .map(|p| p.display().to_string()),
-        hdos_candidates: bolt_core::client_candidates(ClientKind::Hdos)
+        hdos_candidates: rustybolt_core::client_candidates(ClientKind::Hdos)
             .into_iter()
             .map(|p| p.display().to_string())
             .collect(),
@@ -1007,7 +1007,7 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
 }
 
 fn compute_preview(paths: &Paths, config: &Config, kind: ClientKind) -> Option<String> {
-    let jar = bolt_core::locate_client(kind, config).or_else(|| {
+    let jar = rustybolt_core::locate_client(kind, config).or_else(|| {
         if kind == ClientKind::RuneLite {
             Some(PathBuf::from(
                 "/Applications/RuneLite.app/Contents/Resources/RuneLite.jar",
@@ -1031,7 +1031,7 @@ fn compute_preview(paths: &Paths, config: &Config, kind: ClientKind) -> Option<S
         configure: false,
     };
 
-    let plan = bolt_core::plan(paths, &req).ok()?;
+    let plan = rustybolt_core::plan(paths, &req).ok()?;
     let mut parts = vec![plan.program.to_string_lossy().into_owned()];
     parts.extend(plan.args);
     Some(parts.join(" "))

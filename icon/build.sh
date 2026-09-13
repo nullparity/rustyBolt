@@ -34,7 +34,7 @@ iconutil --convert icns --output rustybolt.icns "$SET"
 rm -rf "$SET"
 echo "Made $(pwd)/rustybolt.icns"
 
-# Renders the tray icon that `bolt-cli` embeds.
+# Renders the tray icon that `rustybolt-cli` embeds.
 rsvg-convert -w 64 -h 64 rustybolt.svg -o rustybolt-tray.png
 echo "Made $(pwd)/rustybolt-tray.png"
 rsvg-convert -w 64 -h 64 rustybolt-template.svg -o rustybolt-tray-template.png

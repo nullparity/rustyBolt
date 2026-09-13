@@ -111,7 +111,7 @@ fn handle(stream: TcpStream, proxy: &EventLoopProxy<AppEvent>) -> bool {
         }
         ("POST", "/callback") => {
             let url = format!("http://localhost/{}", body.trim());
-            if bolt_security::is_login_redirect(&url) && body.trim_start().starts_with('#') {
+            if rustybolt_security::is_login_redirect(&url) && body.trim_start().starts_with('#') {
                 let _ = proxy.send_event(AppEvent::LoginRedirect(url));
                 respond(stream, "200 OK", "text/plain", "ok");
                 true

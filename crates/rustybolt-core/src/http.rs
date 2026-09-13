@@ -1,10 +1,10 @@
 //! The network steps of the OAuth2 flow.
 
-use bolt_auth::{Action, AuthConfig, Character, LoginFlow};
+use rustybolt_auth::{Action, AuthConfig, Character, LoginFlow};
 
 use crate::CoreError;
 
-/// Runs the network requests that `bolt-auth` asks for.
+/// Runs the network requests that `rustybolt-auth` asks for.
 pub struct HttpAuth<'a> {
     config: &'a AuthConfig,
 }
@@ -36,20 +36,20 @@ impl<'a> HttpAuth<'a> {
     }
 
     pub fn characters(&self, session_id: &str) -> Result<Vec<Character>, CoreError> {
-        let (url, (name, value)) = bolt_auth::accounts_request(self.config, session_id);
-        bolt_security::validate_url(&url)?;
+        let (url, (name, value)) = rustybolt_auth::accounts_request(self.config, session_id);
+        rustybolt_security::validate_url(&url)?;
         let mut response = match ureq::get(&url).header(&name, &value).call() {
             Ok(response) => response,
             Err(ureq::Error::StatusCode(401)) => return Err(CoreError::SessionExpired),
             Err(error) => return Err(error.into()),
         };
         let text = response.body_mut().read_to_string()?;
-        Ok(bolt_auth::parse_accounts(&text)?)
+        Ok(rustybolt_auth::parse_accounts(&text)?)
     }
 }
 
 fn post(url: &str, content_type: &str, body: &str) -> Result<String, CoreError> {
-    bolt_security::validate_url(url)?;
+    rustybolt_security::validate_url(url)?;
     let mut response = ureq::post(url)
         .header("Accept", "application/json")
         .content_type(content_type)

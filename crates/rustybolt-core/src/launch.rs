@@ -5,7 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use bolt_jdk::{Invocation, JvmOptions};
+use rustybolt_jdk::{Invocation, JvmOptions};
 
 use crate::{ClientKind, Config, CoreError, Paths};
 
@@ -142,7 +142,7 @@ pub fn plan(paths: &Paths, request: &LaunchRequest) -> Result<LaunchPlan, CoreEr
     );
     let default = options.invocation(&java);
     let invocation = match request.template {
-        Some(template) => bolt_jdk::apply_template(template, &default)?,
+        Some(template) => rustybolt_jdk::apply_template(template, &default)?,
         None => default,
     };
 
@@ -183,7 +183,7 @@ fn resolve_java(explicit: Option<&Path>, config: &Config) -> Result<PathBuf, Cor
             return Ok(candidate.clone());
         }
     }
-    bolt_jdk::select(11)
+    rustybolt_jdk::select(11)
         .map(|runtime| runtime.path)
         .ok_or(CoreError::NoJava)
 }
@@ -206,7 +206,7 @@ fn is_executable(path: &Path) -> bool {
 
 /// Finds the feature number of the Java binary. A failed probe gives 11.
 fn java_feature(java: &Path) -> u32 {
-    bolt_jdk::probe(java)
+    rustybolt_jdk::probe(java)
         .and_then(|runtime| runtime.version)
         .map(|version| version.feature)
         .unwrap_or(11)
@@ -219,7 +219,7 @@ fn java_feature(java: &Path) -> u32 {
 /// start. The function returns the original path when the runtime directory
 /// rejects the link, which happens when another user owns it.
 fn brand(java: &Path, name: &str) -> PathBuf {
-    let Some(home) = bolt_jdk::probe(java).and_then(|runtime| runtime.home) else {
+    let Some(home) = rustybolt_jdk::probe(java).and_then(|runtime| runtime.home) else {
         return java.to_path_buf();
     };
     let bin = home.join("bin");
@@ -227,7 +227,7 @@ fn brand(java: &Path, name: &str) -> PathBuf {
     if !real.is_file() {
         return java.to_path_buf();
     }
-    bolt_jdk::branded_java(&real, &bin, name)
+    rustybolt_jdk::branded_java(&real, &bin, name)
 }
 
 /// Removes every `gc-<pid>.log` of a dead client and returns the count.

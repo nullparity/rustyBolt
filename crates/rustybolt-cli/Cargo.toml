@@ -1,5 +1,5 @@
 [package]
-name = "bolt-cli"
+name = "rustybolt-cli"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,10 +11,10 @@ name = "rustybolt"
 path = "src/main.rs"
 
 [dependencies]
-bolt-auth.workspace = true
-bolt-jdk.workspace = true
-bolt-security.workspace = true
-bolt-core.workspace = true
+rustybolt-auth.workspace = true
+rustybolt-jdk.workspace = true
+rustybolt-security.workspace = true
+rustybolt-core.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 httparse.workspace = true

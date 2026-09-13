@@ -1,7 +1,7 @@
 //! Prints every Java runtime that this machine has.
 
 fn main() {
-    for runtime in bolt_jdk::discover() {
+    for runtime in rustybolt_jdk::discover() {
         let version = runtime
             .version
             .as_ref()

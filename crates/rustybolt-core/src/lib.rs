@@ -3,7 +3,7 @@
 //! This crate holds the logic that upstream Bolt keeps inside the launcher window:
 //! the platform directories, the launcher config, the saved sessions, the
 //! RuneLite and HDOS installers, and the child process launch.
-//! The crate uses `bolt-auth` for the OAuth2 flow and `bolt-jdk` for Java.
+//! The crate uses `rustybolt-auth` for the OAuth2 flow and `rustybolt-jdk` for Java.
 
 mod client;
 mod config;
@@ -18,7 +18,6 @@ mod session;
 mod tuning;
 mod usage;
 
-pub use bolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};
 pub use client::{candidates as client_candidates, locate as locate_client, ClientKind};
 pub use config::{Config, DEFAULT_RECENT_WINDOW};
 pub use credentials::{CommandCredentials, CredentialFormat, CredentialSource};
@@ -32,6 +31,7 @@ pub use launch::{
 };
 pub use paths::Paths;
 pub use profile::{apply_to_profiles, PropertyOverrides};
+pub use rustybolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};
 pub use session::{keychain_available, KeychainError, SessionStore, Vault};
 pub use tuning::{GcChoice, HwAccel, LaunchMode, TuningConfig};
 pub use usage::UsageStore;
@@ -55,7 +55,7 @@ pub enum CoreError {
     Json(#[from] serde_json::Error),
     /// The OAuth2 flow rejected a step.
     #[error("authentication error: {0}")]
-    Auth(#[from] bolt_auth::AuthError),
+    Auth(#[from] rustybolt_auth::AuthError),
     #[error("no Java runtime of version 11 or newer exists")]
     NoJava,
     /// The server rejected the session. The user must log in again.
@@ -65,10 +65,10 @@ pub enum CoreError {
     NotInstalled,
     /// The user launch template is not valid.
     #[error("launch template error: {0}")]
-    Template(#[from] bolt_jdk::TemplateError),
+    Template(#[from] rustybolt_jdk::TemplateError),
     /// A security policy rejected an operation or destination.
     #[error("security policy error: {0}")]
-    Security(#[from] bolt_security::SecurityError),
+    Security(#[from] rustybolt_security::SecurityError),
 }
 
 impl From<ureq::Error> for CoreError {
@@ -92,7 +92,7 @@ pub(crate) mod test_support {
     impl TempDir {
         pub(crate) fn new(label: &str) -> TempDir {
             let count = COUNTER.fetch_add(1, Ordering::Relaxed);
-            let name = format!("bolt-core-{}-{}-{}", label, std::process::id(), count);
+            let name = format!("rustybolt-core-{}-{}-{}", label, std::process::id(), count);
             let path = std::env::temp_dir().join(name);
             std::fs::create_dir_all(&path).expect("cannot create the temporary directory");
             TempDir { path }

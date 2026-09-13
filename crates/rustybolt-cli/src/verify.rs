@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 
-use bolt_core::{ClientKind, Config, LaunchRequest, Paths};
+use rustybolt_core::{ClientKind, Config, LaunchRequest, Paths};
 
 use crate::launch::{resolve_credentials, resolve_jar, Options};
 use crate::{client_kind, flag_value, CliError};
@@ -36,9 +36,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
         template,
         configure: false,
     };
-    let plan = bolt_core::plan(&paths, &request)?;
+    let plan = rustybolt_core::plan(&paths, &request)?;
 
-    let version = bolt_jdk::probe(&plan.program)
+    let version = rustybolt_jdk::probe(&plan.program)
         .and_then(|runtime| runtime.version)
         .map(|version| version.raw)
         .unwrap_or_else(|| "unknown version".to_string());

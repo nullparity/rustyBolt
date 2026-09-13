@@ -265,7 +265,7 @@ mod tests {
                 .unwrap()
                 .as_nanos();
             let path = std::env::temp_dir().join(format!(
-                "bolt-jdk-tuning-{label}-{}-{nanos}",
+                "rustybolt-jdk-tuning-{label}-{}-{nanos}",
                 std::process::id()
             ));
             std::fs::create_dir_all(&path).unwrap();

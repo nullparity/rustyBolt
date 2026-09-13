@@ -14,8 +14,8 @@ mod verify;
 mod web;
 pub(crate) mod wifi;
 
-use bolt_auth::Session;
-use bolt_core::{ClientKind, CoreError, SessionStore};
+use rustybolt_auth::Session;
+use rustybolt_core::{ClientKind, CoreError, SessionStore};
 
 /// The usage text of the program.
 const USAGE: &str = "\
@@ -95,8 +95,8 @@ impl From<serde_json::Error> for CliError {
     }
 }
 
-impl From<bolt_auth::AuthError> for CliError {
-    fn from(error: bolt_auth::AuthError) -> CliError {
+impl From<rustybolt_auth::AuthError> for CliError {
+    fn from(error: rustybolt_auth::AuthError) -> CliError {
         CliError::Core(CoreError::Auth(error))
     }
 }
@@ -125,7 +125,7 @@ fn main() {
 /// Secret Service provider (GNOME Keyring, KDE Wallet, KeePassXC) cannot
 /// hold it, so the launcher stops before it does any work.
 fn require_keychain() -> Result<(), CliError> {
-    bolt_core::keychain_available().map_err(|error| {
+    rustybolt_core::keychain_available().map_err(|error| {
         CliError::Message(format!(
             "{error}\nrustyBolt stores your Jagex session in the system keychain and does not run without one.\n\
              On Linux, start a Secret Service provider such as GNOME Keyring or KDE Wallet and try again."

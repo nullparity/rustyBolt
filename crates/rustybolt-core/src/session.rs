@@ -8,8 +8,8 @@
 use std::fs;
 use std::io;
 
-use bolt_auth::Session;
 use keyring::Entry;
+use rustybolt_auth::Session;
 
 use crate::Paths;
 

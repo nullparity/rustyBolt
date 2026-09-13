@@ -4,20 +4,20 @@
 
 ```mermaid
 graph TD
-    A[bolt-auth: OAuth2 PKCE state machine, no input or output] --> C[bolt-core]
-    B[bolt-jdk: Java discovery, JVM argv] --> C
-    E[bolt-security: egress allowlist, CSP policy] --> C
-    C[bolt-core: paths, config, sessions, client lookup, launch] --> D[bolt-cli: CLI & configuration dashboard]
+    A[rustybolt-auth: OAuth2 PKCE state machine, no input or output] --> C[rustybolt-core]
+    B[rustybolt-jdk: Java discovery, JVM argv] --> C
+    E[rustybolt-security: egress allowlist, CSP policy] --> C
+    C[rustybolt-core: paths, config, sessions, client lookup, launch] --> D[rustybolt-cli: CLI & configuration dashboard]
     E --> D
 ```
 
 | crate | owns | knows about |
 | --- | --- | --- |
-| `bolt-auth` | the Jagex OAuth2 PKCE flow | nothing, no input or output |
-| `bolt-jdk` | Java discovery and JVM arguments | the file system only |
-| `bolt-security` | egress allowlist and Content Security Policy | nothing, no input or output |
-| `bolt-core` | paths, config, sessions, client lookup, launch | `bolt-auth`, `bolt-jdk`, `bolt-security`, HTTP |
-| `bolt-cli` | portable CLI driver and configuration UI | `bolt-core`, `bolt-jdk`, `bolt-security` |
+| `rustybolt-auth` | the Jagex OAuth2 PKCE flow | nothing, no input or output |
+| `rustybolt-jdk` | Java discovery and JVM arguments | the file system only |
+| `rustybolt-security` | egress allowlist and Content Security Policy | nothing, no input or output |
+| `rustybolt-core` | paths, config, sessions, client lookup, launch | `rustybolt-auth`, `rustybolt-jdk`, `rustybolt-security`, HTTP |
+| `rustybolt-cli` | portable CLI driver and configuration UI | `rustybolt-core`, `rustybolt-jdk`, `rustybolt-security` |
 
 `CONTRACT.md` holds the public API of every crate.
 
@@ -65,7 +65,7 @@ The default RuneLite profile comes from `rl-launcher`. `rustybolt verify` shows 
 
 `--launch-mode REFLECT` matters. In the fork mode the RuneLite launcher starts a second JVM with its own `-Xmx768m` and drops every flag above.
 
-`bolt_jdk::Tuning::flags(feature)` is pure. The caller gives the feature number, so a machine with one JDK can still test every gate. `bolt_core::plan` builds the command that `bolt_core::launch` runs, so a dry run and a real launch never differ.
+`rustybolt_jdk::Tuning::flags(feature)` is pure. The caller gives the feature number, so a machine with one JDK can still test every gate. `rustybolt_core::plan` builds the command that `rustybolt_core::launch` runs, so a dry run and a real launch never differ.
 
 ## Faults of Bolt that this project corrects
 
