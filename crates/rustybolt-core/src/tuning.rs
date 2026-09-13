@@ -63,19 +63,26 @@ pub enum HwAccel {
     Off,
     /// Use the OpenGL renderer.
     Opengl,
-    /// Use the Metal renderer. This is the default on macOS.
+    /// Use the DirectDraw renderer. Windows only.
+    Directdraw,
+    /// Use the Metal renderer. This is the default, and it applies on macOS
+    /// only; elsewhere the client chooses.
     #[default]
     Metal,
 }
 
 impl HwAccel {
-    /// The command value. `Auto` gives `None`, so the launcher adds no argument.
+    /// The command value. `Auto` gives `None`, so the launcher adds no
+    /// argument. A renderer that this platform lacks gives `None` too: the
+    /// client refuses to start with `--hw-accel METAL` off macOS.
     pub fn as_arg(self) -> Option<&'static str> {
         match self {
             HwAccel::Auto => None,
             HwAccel::Off => Some("OFF"),
             HwAccel::Opengl => Some("OPENGL"),
-            HwAccel::Metal => Some("METAL"),
+            HwAccel::Directdraw if cfg!(windows) => Some("DIRECTDRAW"),
+            HwAccel::Metal if cfg!(target_os = "macos") => Some("METAL"),
+            HwAccel::Directdraw | HwAccel::Metal => None,
         }
     }
 }
@@ -223,7 +230,13 @@ impl TuningConfig {
             compact_object_headers: self.compact_object_headers,
             string_deduplication: self.string_deduplication,
             native_access: self.native_access,
-            add_opens: self.add_opens.clone(),
+            // `com.apple.eawt` exists in the macOS JDK only.
+            add_opens: self
+                .add_opens
+                .iter()
+                .filter(|name| cfg!(target_os = "macos") || !name.contains("com.apple"))
+                .cloned()
+                .collect(),
             aot_cache,
             gc_log: if self.gc_log {
                 Some(log_dir.to_path_buf())
@@ -265,7 +278,7 @@ impl TuningConfig {
                 "system".to_string(),
             ));
         }
-        if let Some(name) = &self.application_name {
+        if let (Some(name), true) = (&self.application_name, cfg!(target_os = "macos")) {
             properties.push(("apple.awt.application.name".to_string(), name.clone()));
         }
         if self.launcher_nojvm {
