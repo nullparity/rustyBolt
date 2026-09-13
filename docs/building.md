@@ -24,7 +24,7 @@ A tag that starts with `v` starts the release workflow. The workflow builds `rus
 | --- | --- | --- |
 | macOS | `.tar.gz` with `rustyBolt.app` | `macos/build-app.sh` |
 | Windows | `.msi`, `.zip` | WiX 3 from `windows/rustybolt.wxs` |
-| Linux | `.deb`, `.AppImage`, `.tar.gz` | `linux/build-deb.sh`, `linux/build-appimage.sh` (appimagetool) |
+| Linux | `.deb`, `.rpm`, `.AppImage`, `.tar.gz` | `linux/build-deb.sh`, `linux/build-rpm.sh` (rpmbuild, soname requires), `linux/build-appimage.sh` (appimagetool) |
 
 The Linux packages bundle no libraries. GTK and WebKitGTK come from the host: WebKitGTK starts its helper processes from a path compiled into the library, so a bundled copy only runs on a host with the build machine's layout. The Linux runners are Ubuntu 22.04, so the binaries run on any glibc 2.35 or newer (Debian 12, Ubuntu 22.04, Fedora 42 and later). Every release asset carries a Sigstore provenance attestation; `gh attestation verify <file> --repo nullparity/rustyBolt` checks one.
 

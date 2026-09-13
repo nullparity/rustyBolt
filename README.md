@@ -25,6 +25,7 @@ Download from [Releases](https://github.com/nullparity/rustyBolt/releases).
 | macOS | `.tar.gz` | Unzip. Drag `rustyBolt.app` to `/Applications`. |
 | Windows | `.msi` | Double-click. |
 | Debian, Ubuntu | `.deb` | `sudo apt install ./rustybolt_*.deb` |
+| Fedora, openSUSE | `.rpm` | `sudo dnf install ./rustybolt_*.rpm` (or `zypper`) |
 | Other Linux | `.AppImage` | `chmod +x`, then double-click. Needs the distribution's `webkit2gtk-4.1` and GTK 3 (Fedora: `sudo dnf install webkit2gtk4.1`; for a tray icon also `libayatana-appindicator-gtk3`). |
 
 ## Use
