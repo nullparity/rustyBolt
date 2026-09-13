@@ -44,7 +44,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libxdo-dev libdbus-1-dev patchelf librsvg2-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libdbus-1-dev patchelf librsvg2-dev
           # linuxdeploy builds the AppImage. The gtk plugin bundles GTK and WebKitGTK.
           base=https://github.com/linuxdeploy
           sudo curl -fsSL -o /usr/local/bin/linuxdeploy "$base/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.appimage }}.AppImage"
