@@ -93,7 +93,7 @@
 
         <div class="card">
           <div class="section-label" data-i18n="client.target">Target Game Client</div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-3" id="client-grid">
             <div class="client-option active" id="client-opt-runelite" onclick="selectClient('runelite')">
               <div class="flex flex-col gap-0.5">
                 <div class="text-[0.92rem] font-semibold text-text">RuneLite</div>
@@ -368,6 +368,14 @@
         updateStatusTag('hdos-status', hdosFound, state.clients.hdos_detected);
         if (!rlFound && hdosFound) {
           selectedClient = 'hdos';
+        }
+        // A client that is not installed stays out of the way, unless neither
+        // is: then both show, with their status, so the user knows what to add.
+        if (rlFound !== hdosFound) {
+          const missing = document.getElementById(rlFound ? 'client-opt-hdos' : 'client-opt-runelite');
+          const grid = document.getElementById('client-grid');
+          if (missing) missing.classList.add('hidden');
+          if (grid) grid.classList.replace('grid-cols-2', 'grid-cols-1');
         }
       }
 
