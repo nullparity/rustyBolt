@@ -67,7 +67,6 @@
   "settings.close_after_desc": "Automatically terminates the rustyBolt process once the client starts",
   "settings.isolate_home": "Isolate RuneLite Home Directory",
   "settings.isolate_home_desc": "Keep rustyBolt RuneLite settings in a dedicated folder separate from ~/.runelite",
-  "settings.language_auto": "System default",
   "settings.preview": "Execution Command Preview",
   "settings.preview_loading": "Loading preview...",
   "settings.preview_none": "No preview available",

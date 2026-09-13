@@ -138,25 +138,28 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       align-items: center;
       gap: 10px;
     }
-    .lang-select {
-      appearance: none;
-      -webkit-appearance: none;
-      padding: 6px 28px 6px 12px;
+    .lang-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.04)
-        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='3'><polyline points='6 9 12 15 18 9'/></svg>")
-        no-repeat right 11px center;
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--input-border);
       color: var(--text);
       font-size: 0.82rem;
       font-weight: 500;
       font-family: inherit;
       cursor: pointer;
-      width: auto;
       transition: all 0.15s ease;
     }
-    .lang-select:hover {
-      background-color: rgba(255, 255, 255, 0.08);
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .lang-btn svg {
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
     }
     .account-wrapper {
       position: relative;
@@ -936,7 +939,10 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     
     <div class="header-right">
-      <select id="lang-select" class="lang-select" onchange="changeLanguage(this.value)" aria-label="Language"></select>
+      <button class="lang-btn" id="lang-btn" onclick="nextLanguage()" aria-label="Language">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        <span id="lang-name"></span>
+      </button>
     <div class="account-wrapper" id="account-wrapper">
       <button class="account-btn" id="account-toggle-btn" onclick="toggleAccountDropdown()">
         <span class="account-avatar" id="account-avatar">J</span>
@@ -1262,7 +1268,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     function init() {
       applyI18n();
-      renderLanguageSelect();
+      renderLanguageButton();
       if (state.clients) {
         const rlFound = !!state.clients.runelite_detected;
         const hdosFound = !!state.clients.hdos_detected;
@@ -1753,18 +1759,20 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     }
 
-    function renderLanguageSelect() {
-      const select = document.getElementById('lang-select');
-      if (!select) return;
-      const cfg = state.config || {};
-      const options = [{ tag: '', name: t('settings.language_auto') }].concat(window.RUSTYBOLT_LANGUAGES || []);
-      select.innerHTML = options.map(o => `<option value="${escapeHtml(o.tag)}">${escapeHtml(o.name)}</option>`).join('');
-      select.value = cfg.language || '';
+    // The button shows the language in use and cycles to the next one.
+    function renderLanguageButton() {
+      const name = document.getElementById('lang-name');
+      const current = (window.RUSTYBOLT_LANGUAGES || []).find(l => l.tag === window.RUSTYBOLT_LANG);
+      if (name && current) name.textContent = current.name;
     }
 
-    async function changeLanguage(tag) {
+    async function nextLanguage() {
+      const languages = window.RUSTYBOLT_LANGUAGES || [];
+      const index = languages.findIndex(l => l.tag === window.RUSTYBOLT_LANG);
+      const next = languages[(index + 1) % languages.length];
+      if (!next) return;
       const cfg = state.config || {};
-      cfg.language = tag || null;
+      cfg.language = next.tag;
       try {
         const res = await fetch('/api/save', {
           method: 'POST',

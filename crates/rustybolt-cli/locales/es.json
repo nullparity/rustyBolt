@@ -67,7 +67,6 @@
   "settings.close_after_desc": "Termina el proceso de rustyBolt en cuanto arranca el cliente",
   "settings.isolate_home": "Aislar el directorio de RuneLite",
   "settings.isolate_home_desc": "Guarda los ajustes de RuneLite de rustyBolt en una carpeta separada de ~/.runelite",
-  "settings.language_auto": "Predeterminado del sistema",
   "settings.preview": "Vista previa del comando",
   "settings.preview_loading": "Cargando vista previa...",
   "settings.preview_none": "No hay vista previa disponible",
