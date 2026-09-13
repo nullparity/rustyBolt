@@ -54,6 +54,9 @@ pub struct Config {
     pub usage_recent_window_secs: u64,
     /// Where the launcher keeps the RuneLite client home.
     pub runelite_home_kind: RuneLiteHome,
+    /// The language of the dashboard, as a BCP 47 tag. `None` follows the
+    /// operating system.
+    pub language: Option<String>,
 }
 
 impl Default for Config {
@@ -74,6 +77,7 @@ impl Default for Config {
             credential_source: crate::credentials::CredentialSource::default(),
             usage_recent_window_secs: DEFAULT_RECENT_WINDOW,
             runelite_home_kind: RuneLiteHome::default(),
+            language: None,
         }
     }
 }

@@ -1,5 +1,5 @@
 pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
-<html lang="en">
+<html lang="<!--LANG-->">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -898,11 +898,11 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       </a>
 
       <nav class="nav-tabs">
-        <button class="nav-tab active" id="tab-play" onclick="switchTab('play')">
+        <button class="nav-tab active" id="tab-play" onclick="switchTab('play')" data-i18n="nav.play">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
           Play
         </button>
-        <button class="nav-tab" id="tab-settings" onclick="switchTab('settings')">
+        <button class="nav-tab" id="tab-settings" onclick="switchTab('settings')" data-i18n="nav.settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Settings
         </button>
@@ -913,20 +913,20 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     <div class="account-wrapper" id="account-wrapper">
       <button class="account-btn" id="account-toggle-btn" onclick="toggleAccountDropdown()">
         <span class="account-avatar" id="account-avatar">J</span>
-        <span id="account-name-display">Log In</span>
+        <span id="account-name-display" data-i18n="account.login">Log In</span>
         <span class="account-suffix" id="account-suffix-display"></span>
         <svg class="account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </button>
 
       <div class="account-dropdown" id="account-dropdown">
-        <div class="dropdown-section-title">Jagex Accounts</div>
+        <div class="dropdown-section-title" data-i18n="account.section">Jagex Accounts</div>
         <div id="accounts-list"></div>
         <div class="dropdown-divider"></div>
-        <button class="dropdown-action-btn" onclick="addAccount()">
+        <button class="dropdown-action-btn" onclick="addAccount()" data-i18n="account.add">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Add Jagex Account
         </button>
-        <button class="dropdown-action-btn danger" id="remove-account-btn" onclick="removeActiveAccount()">
+        <button class="dropdown-action-btn danger" id="remove-account-btn" onclick="removeActiveAccount()" data-i18n="account.signout">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           Sign Out of Account
         </button>
@@ -941,11 +941,11 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
         
         <div class="card login-hero-card" id="empty-state-card" style="display: none;">
-          <div class="login-hero-title">Connect Your Jagex Account</div>
-          <div class="login-hero-desc">
+          <div class="login-hero-title" data-i18n="hero.title">Connect Your Jagex Account</div>
+          <div class="login-hero-desc" data-i18n="hero.desc">
             Sign in with Jagex to load your RuneScape characters, manage accounts, and launch with one click.
           </div>
-          <button class="btn-jagex-login" onclick="openLoginModal()">
+          <button class="btn-jagex-login" onclick="openLoginModal()" data-i18n="hero.login">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
             Log In with Jagex Account
           </button>
@@ -954,7 +954,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         
         <div class="card" id="characters-card">
           <div class="section-label">
-            <span>Select Account (Character)</span>
+            <span data-i18n="chars.select">Select Account (Character)</span>
             <span id="char-count-badge" style="color: var(--text-subtle); font-weight: 500;">0 characters</span>
           </div>
           <div class="characters-grid" id="characters-grid">
@@ -964,7 +964,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
         
         <div class="card">
-          <div class="section-label">Target Game Client</div>
+          <div class="section-label" data-i18n="client.target">Target Game Client</div>
           <div class="client-selector">
             <div class="client-option active" id="client-opt-runelite" onclick="selectClient('runelite')">
               <div class="client-info-group">
@@ -988,22 +988,22 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         <div class="card wifi-card">
           <div class="wifi-row">
             <button class="wifi-btn" id="wifi-mode-btn" onclick="toggleWifiMode()"
-                    title="Sends a small &quot;u up?&quot; to your wifi router and reduces gmae lag due to wifi">
+                    data-i18n-title="wifi.tooltip" title="Sends a small &quot;u up?&quot; to your wifi router and reduces game lag due to wifi">
               <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
                 <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
                 <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
                 <line x1="12" y1="20" x2="12.01" y2="20"></line>
               </svg>
-              <span>Wifi mode</span>
-              <span class="wifi-pill" id="wifi-pill">OFF</span>
+              <span data-i18n="wifi.mode">Wifi mode</span>
+              <span class="wifi-pill" id="wifi-pill" data-i18n="wifi.off">OFF</span>
             </button>
             <div class="wifi-details">
-              <span class="wifi-desc" id="wifi-desc">Sends a UDP keepalive to the default gateway every 10ms to prevent 802.11 sleep jitter</span>
+              <span class="wifi-desc" id="wifi-desc" data-i18n="wifi.desc_off">Sends a UDP keepalive to the default gateway every 10ms to prevent 802.11 sleep jitter</span>
               <span class="wifi-stat" id="wifi-stat"></span>
             </div>
           </div>
-          <div class="wifi-tooltip-tip">Sends a small "u up?" to your wifi router and reduces gmae lag due to wifi</div>
+          <div class="wifi-tooltip-tip" data-i18n="wifi.tooltip">Sends a small "u up?" to your wifi router and reduces game lag due to wifi</div>
         </div>
 
         <div class="play-section">
@@ -1012,7 +1012,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
             <span id="play-btn-text">PLAY RUNELITE</span>
           </button>
           <div class="play-subtitle" id="play-subtitle">
-            Playing as <strong id="play-char-name">—</strong>
+            <span data-i18n="play.playing_as">Playing as</span> <strong id="play-char-name">—</strong>
           </div>
         </div>
 
@@ -1023,39 +1023,39 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     <div class="view-panel" id="view-settings">
       <div class="settings-view">
         <div class="settings-header">
-          <div class="settings-title">Launcher Configuration</div>
-          <button class="btn-secondary" onclick="switchTab('play')">
+          <div class="settings-title" data-i18n="settings.title">Launcher Configuration</div>
+          <button class="btn-secondary" onclick="switchTab('play')" data-i18n="settings.back">
             ← Return to Play
           </button>
         </div>
 
         
         <div class="card">
-          <div class="card-title">Game Client Installations</div>
+          <div class="card-title" data-i18n="settings.clients">Game Client Installations</div>
           <div class="form-grid">
             <div class="field-group form-col-full">
-              <label for="cfg-runelite-custom-jar">Custom RuneLite JAR Path (optional)</label>
-              <input type="text" id="cfg-runelite-custom-jar" placeholder="Leave empty to use automatically detected RuneLite">
+              <label for="cfg-runelite-custom-jar" data-i18n="settings.runelite_jar">Custom RuneLite JAR Path (optional)</label>
+              <input type="text" id="cfg-runelite-custom-jar" data-i18n-placeholder="settings.runelite_jar_ph" placeholder="Leave empty to use automatically detected RuneLite">
             </div>
             <div class="field-group form-col-full">
-              <label for="cfg-hdos-jar">Custom HDOS JAR Path (optional)</label>
-              <input type="text" id="cfg-hdos-jar" placeholder="Leave empty to use automatically detected HDOS">
+              <label for="cfg-hdos-jar" data-i18n="settings.hdos_jar">Custom HDOS JAR Path (optional)</label>
+              <input type="text" id="cfg-hdos-jar" data-i18n-placeholder="settings.hdos_jar_ph" placeholder="Leave empty to use automatically detected HDOS">
             </div>
           </div>
         </div>
 
         
         <div class="card">
-          <div class="card-title">Java Runtime</div>
+          <div class="card-title" data-i18n="settings.java">Java Runtime</div>
           <div class="form-grid">
             <div class="field-group form-col-full">
-              <label for="cfg-java-select">Select Discovered Java Runtime</label>
+              <label for="cfg-java-select" data-i18n="settings.java_select">Select Discovered Java Runtime</label>
               <select id="cfg-java-select" onchange="onJavaSelectChange()">
-                <option value="">Automatic selection (highest feature version)</option>
+                <option value="" data-i18n="settings.java_auto">Automatic selection (highest feature version)</option>
               </select>
             </div>
             <div class="field-group form-col-full">
-              <label for="cfg-java-path">Custom Java Binary Path</label>
+              <label for="cfg-java-path" data-i18n="settings.java_path">Custom Java Binary Path</label>
               <input type="text" id="cfg-java-path" placeholder="/path/to/java">
             </div>
           </div>
@@ -1063,26 +1063,26 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
         
         <div class="card">
-          <div class="card-title">JVM Performance Tuning</div>
+          <div class="card-title" data-i18n="settings.jvm">JVM Performance Tuning</div>
           <div class="form-grid">
             <div class="field-group">
-              <label for="cfg-gc">Garbage Collector</label>
+              <label for="cfg-gc" data-i18n="settings.gc">Garbage Collector</label>
               <select id="cfg-gc">
-                <option value="generational_zgc">Generational ZGC (Java 21+ Recommended)</option>
+                <option value="generational_zgc" data-i18n="settings.gc_zgc">Generational ZGC (Java 21+ Recommended)</option>
                 <option value="g1">G1 GC</option>
-                <option value="default">JVM Default</option>
+                <option value="default" data-i18n="settings.gc_default">JVM Default</option>
               </select>
             </div>
             <div class="field-group">
-              <label for="cfg-max-heap">Max Heap Size (-Xmx)</label>
+              <label for="cfg-max-heap" data-i18n="settings.max_heap">Max Heap Size (-Xmx)</label>
               <input type="text" id="cfg-max-heap" placeholder="2048m">
             </div>
             <div class="field-group">
-              <label for="cfg-initial-heap">Initial Heap Size (-Xms)</label>
+              <label for="cfg-initial-heap" data-i18n="settings.initial_heap">Initial Heap Size (-Xms)</label>
               <input type="text" id="cfg-initial-heap" placeholder="512m">
             </div>
             <div class="field-group form-col-full">
-              <label for="cfg-extra-flags">Additional JVM Arguments</label>
+              <label for="cfg-extra-flags" data-i18n="settings.extra_flags">Additional JVM Arguments</label>
               <textarea id="cfg-extra-flags" placeholder="-Dsun.java2d.opengl=true"></textarea>
             </div>
           </div>
@@ -1090,11 +1090,11 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
         
         <div class="card">
-          <div class="card-title">Behavior</div>
+          <div class="card-title" data-i18n="settings.behavior">Behavior</div>
           <div class="toggle-row">
             <div class="toggle-label-group">
-              <div class="toggle-title">Close Launcher After Starting Client</div>
-              <div class="toggle-desc">Automatically terminates the rustyBolt process once the client starts</div>
+              <div class="toggle-title" data-i18n="settings.close_after">Close Launcher After Starting Client</div>
+              <div class="toggle-desc" data-i18n="settings.close_after_desc">Automatically terminates the rustyBolt process once the client starts</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="cfg-close-after-launch">
@@ -1103,25 +1103,31 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           </div>
           <div class="toggle-row">
             <div class="toggle-label-group">
-              <div class="toggle-title">Isolate RuneLite Home Directory</div>
-              <div class="toggle-desc">Keep rustyBolt RuneLite settings in a dedicated folder separate from ~/.runelite</div>
+              <div class="toggle-title" data-i18n="settings.isolate_home">Isolate RuneLite Home Directory</div>
+              <div class="toggle-desc" data-i18n="settings.isolate_home_desc">Keep rustyBolt RuneLite settings in a dedicated folder separate from ~/.runelite</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="cfg-isolated-home">
               <span class="slider"></span>
             </label>
           </div>
+          <div class="form-grid" style="margin-top: 14px;">
+            <div class="field-group">
+              <label for="cfg-language" data-i18n="settings.language">Language</label>
+              <select id="cfg-language"></select>
+            </div>
+          </div>
         </div>
 
         
         <div class="card">
-          <div class="card-title">Execution Command Preview</div>
-          <div class="code-preview" id="command-preview">Loading preview...</div>
+          <div class="card-title" data-i18n="settings.preview">Execution Command Preview</div>
+          <div class="code-preview" id="command-preview" data-i18n="settings.preview_loading">Loading preview...</div>
         </div>
 
         
         <div class="settings-dock">
-          <button class="btn-primary" id="save-settings-btn" onclick="saveSettings()">
+          <button class="btn-primary" id="save-settings-btn" onclick="saveSettings()" data-i18n="settings.save">
             Save Settings
           </button>
         </div>
@@ -1134,17 +1140,17 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
   <div class="modal-overlay" id="login-setup-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">One-time login setup</div>
+        <div class="modal-title" data-i18n="setup.title">One-time login setup</div>
         <button class="modal-close" onclick="closeLoginSetup()">&times;</button>
       </div>
       <div class="modal-step">
         <div class="step-content">
-          <div class="step-desc">Logging in through your browser lets you use your password manager. To receive the last step of the Jagex login, rustyBolt needs one privileged change:</div>
+          <div class="step-desc" data-i18n="setup.desc">Logging in through your browser lets you use your password manager. To receive the last step of the Jagex login, rustyBolt needs one privileged change:</div>
           <div class="step-desc" id="login-setup-reason" style="margin-top: 8px;"></div>
-          <div class="step-desc" style="margin-top: 8px;">Your system will ask for your password once. Nothing runs with elevated rights afterwards.</div>
+          <div class="step-desc" style="margin-top: 8px;" data-i18n="setup.password_note">Your system will ask for your password once. Nothing runs with elevated rights afterwards.</div>
           <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
-            <button class="btn-primary" id="login-setup-btn" onclick="runLoginSetup()">Set up and log in</button>
-            <button class="btn-secondary" onclick="addAccount('window')">Log in inside rustyBolt instead</button>
+            <button class="btn-primary" id="login-setup-btn" onclick="runLoginSetup()" data-i18n="setup.run">Set up and log in</button>
+            <button class="btn-secondary" onclick="addAccount('window')" data-i18n="setup.in_window">Log in inside rustyBolt instead</button>
           </div>
           <div id="login-setup-error" style="color: var(--red); font-size: 0.78rem; display: none; margin-top: 8px;"></div>
         </div>
@@ -1155,28 +1161,28 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
   <div class="modal-overlay" id="login-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Connect Jagex Account</div>
+        <div class="modal-title" data-i18n="login.title">Connect Jagex Account</div>
         <button class="modal-close" onclick="closeLoginModal()">&times;</button>
       </div>
 
       <div class="modal-step">
         <div class="step-number">1</div>
         <div class="step-content">
-          <div class="step-desc">Open the official Jagex authorization portal in your browser:</div>
-          <button class="btn-secondary" id="open-auth-btn" onclick="startAuthFlow()">
+          <div class="step-desc" data-i18n="login.step1">Open the official Jagex authorization portal in your browser:</div>
+          <button class="btn-secondary" id="open-auth-btn" onclick="startAuthFlow()" data-i18n="login.open">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             Open Jagex Login
           </button>
-          <a id="auth-fallback-link" href="#" target="_blank" style="display: none; font-size: 0.8rem; color: var(--amber); margin-top: 6px; text-decoration: underline;">Browser didn't open? Click here</a>
+          <a id="auth-fallback-link" href="#" target="_blank" style="display: none; font-size: 0.8rem; color: var(--amber); margin-top: 6px; text-decoration: underline;" data-i18n="login.fallback">Browser didn't open? Click here</a>
         </div>
       </div>
 
       <div class="modal-step">
         <div class="step-number">2</div>
         <div class="step-content">
-          <div class="step-desc">After logging in, your browser redirects to a confirmation page. Copy the address bar URL and paste it here:</div>
+          <div class="step-desc" data-i18n="login.step2">After logging in, your browser redirects to a confirmation page. Copy the address bar URL and paste it here:</div>
           <input type="text" id="auth-redirect-url" placeholder="https://secure.runescape.com/m=weblogin/launcher-redirect?code=...">
-          <button class="btn-primary" id="complete-auth-btn" onclick="completeAuthFlow()" style="align-self: flex-start; margin-top: 4px;">
+          <button class="btn-primary" id="complete-auth-btn" onclick="completeAuthFlow()" style="align-self: flex-start; margin-top: 4px;" data-i18n="login.complete">
             Complete Login
           </button>
           <div id="auth-error" style="color: var(--red); font-size: 0.78rem; display: none;"></div>
@@ -1196,6 +1202,27 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     let state = window.INITIAL_STATE || {};
 
+    // Strings come from the locale table the server put on the page.
+    const I18N = window.RUSTYBOLT_I18N || {};
+    function t(key, vars) {
+      let text = I18N[key];
+      if (text == null) return key;
+      if (vars) for (const k in vars) text = text.split(`{${k}}`).join(vars[k]);
+      return text;
+    }
+    // Replaces only the text of an element, so an icon inside a button stays.
+    function setText(el, text) {
+      const nodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+      if (nodes.length === 0) { el.textContent = text; return; }
+      nodes[0].textContent = el.children.length ? ' ' + text + ' ' : text;
+      nodes.slice(1).forEach(n => n.remove());
+    }
+    function applyI18n() {
+      document.querySelectorAll('[data-i18n]').forEach(el => setText(el, t(el.dataset.i18n)));
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+    }
+
     // Every API call carries the per-launch token; the server refuses
     // requests without it, so a stray web page cannot drive the launcher.
     {
@@ -1212,6 +1239,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     let isLaunching = false;
 
     function init() {
+      applyI18n();
       if (state.clients) {
         const rlFound = !!state.clients.runelite_detected;
         const hdosFound = !!state.clients.hdos_detected;
@@ -1287,10 +1315,10 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
       const sessions = state.sessions || [];
       if (sessions.length === 0) {
-        nameDisp.textContent = 'Log In';
+        nameDisp.textContent = t('account.login');
         suffixDisp.textContent = '';
         avatarDisp.textContent = '+';
-        accountsList.innerHTML = '<div style="padding: 6px 10px; font-size: 0.78rem; color: var(--text-subtle);">No accounts connected</div>';
+        accountsList.innerHTML = `<div style="padding: 6px 10px; font-size: 0.78rem; color: var(--text-subtle);">${escapeHtml(t('account.none'))}</div>`;
         if (removeBtn) removeBtn.style.display = 'none';
         if (emptyState) emptyState.style.display = 'flex';
         if (charsCard) charsCard.style.display = 'none';
@@ -1323,7 +1351,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       activeSub = sub;
       closeAccountDropdown();
       renderAccountMenu();
-      showToast('Switching account...');
+      showToast(t('account.switching'));
 
       try {
         const res = await fetch(`/api/characters?sub=${encodeURIComponent(sub)}`);
@@ -1344,7 +1372,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       removeArmedFor = null;
       clearTimeout(removeArmTimer);
       const btn = document.getElementById('remove-account-btn');
-      if (btn) btn.lastChild.textContent = ' Sign Out of Account';
+      if (btn) setText(btn, t('account.signout'));
     }
 
     async function removeActiveAccount() {
@@ -1352,7 +1380,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       if (removeArmedFor !== activeSub) {
         removeArmedFor = activeSub;
         const btn = document.getElementById('remove-account-btn');
-        if (btn) btn.lastChild.textContent = ' Click again to sign out';
+        if (btn) setText(btn, t('account.signout_confirm'));
         clearTimeout(removeArmTimer);
         removeArmTimer = setTimeout(disarmRemove, 4000);
         return;
@@ -1375,9 +1403,9 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           renderAccountMenu();
           renderCharacters();
         }
-        showToast('Signed out of account');
+        showToast(t('account.signed_out'));
       } catch (e) {
-        showToast('Failed to remove account');
+        showToast(t('account.remove_failed'));
       }
     }
 
@@ -1386,12 +1414,12 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       const countBadge = document.getElementById('char-count-badge');
       const chars = state.characters || [];
 
-      countBadge.textContent = `${chars.length} character${chars.length === 1 ? '' : 's'}`;
+      countBadge.textContent = chars.length === 1 ? t('chars.count_one') : t('chars.count', { count: chars.length });
 
       if (chars.length === 0) {
         grid.innerHTML = `
           <div style="grid-column: 1/-1; padding: 18px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-            No characters found for this account.
+            ${escapeHtml(t('chars.none'))}
           </div>
         `;
         selectedCharId = null;
@@ -1411,7 +1439,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
             <div class="char-avatar">${escapeHtml(initials)}</div>
             <div class="char-info">
               <div class="char-name">${escapeHtml(c.display_name)}</div>
-              <div class="char-badge">${i === 0 ? 'Last Played' : 'Ready'}</div>
+              <div class="char-badge">${escapeHtml(i === 0 ? t('chars.last_played') : t('chars.ready'))}</div>
             </div>
           </div>
         `;
@@ -1444,7 +1472,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       const subTitle = document.getElementById('play-char-name');
 
       const clientLabel = selectedClient === 'hdos' ? 'HDOS' : 'RUNELITE';
-      btnText.textContent = isLaunching ? 'STARTING...' : `PLAY ${clientLabel}`;
+      btnText.textContent = isLaunching ? t('play.starting') : t('play.button', { client: clientLabel });
 
       const chars = state.characters || [];
       const currentChar = chars.find(c => c.account_id === selectedCharId);
@@ -1452,9 +1480,9 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       if (currentChar) {
         subTitle.textContent = currentChar.display_name;
       } else if (state.sessions && state.sessions.length > 0) {
-        subTitle.textContent = 'Active Account';
+        subTitle.textContent = t('play.active_account');
       } else {
-        subTitle.textContent = 'Unlinked Client';
+        subTitle.textContent = t('play.unlinked');
       }
     }
 
@@ -1464,7 +1492,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       updatePlayButton();
 
       const clientName = selectedClient === 'hdos' ? 'HDOS' : 'RuneLite';
-      showToast(`Launching ${clientName}...`);
+      showToast(t('play.launching', { client: clientName }));
 
       try {
         const res = await fetch('/api/launch', {
@@ -1478,18 +1506,18 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         });
         const data = await res.json();
         if (data.ok) {
-          showToast(`Started ${clientName} (PID: ${data.pid})`);
+          showToast(t('play.started', { client: clientName, pid: data.pid }));
           if (data.close) {
             setTimeout(() => {
-              showToast('Closing launcher...');
+              showToast(t('play.closing'));
               setTimeout(() => window.close(), 1200);
             }, 1000);
           }
         } else {
-          showToast(`Failed to launch ${clientName}: ${data.error || 'Unknown error'}`);
+          showToast(t('play.failed', { client: clientName, error: data.error || t('error.unknown') }));
         }
       } catch (err) {
-        showToast(`Connection error: ${err.message}`);
+        showToast(t('play.connection_error', { error: err.message }));
       } finally {
         isLaunching = false;
         updatePlayButton();
@@ -1520,15 +1548,13 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         }
         if (data.ok && data.native) {
           if (data.note) showToast(data.note);
-          showToast(data.mode === 'browser'
-            ? 'Sign in to Jagex in your browser'
-            : 'Sign in to Jagex in the window that opened');
+          showToast(data.mode === 'browser' ? t('login.in_browser') : t('login.in_window'));
           return;
         }
         nativeLoginPending = false;
         openLoginModal();
         const btn = document.getElementById('open-auth-btn');
-        if (btn) btn.textContent = 'Opened in Browser ✓';
+        if (btn) btn.textContent = t('login.opened');
         const fallback = document.getElementById('auth-fallback-link');
         if (fallback && data.url) {
           fallback.href = data.url;
@@ -1536,7 +1562,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         }
       } catch (e) {
         nativeLoginPending = false;
-        showToast('Failed to start login: ' + e.message);
+        showToast(t('login.start_failed', { error: e.message }));
       }
     }
 
@@ -1557,7 +1583,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
     async function runLoginSetup() {
       const btn = document.getElementById('login-setup-btn');
       const err = document.getElementById('login-setup-error');
-      if (btn) { btn.disabled = true; btn.textContent = 'Waiting for your password...'; }
+      if (btn) { btn.disabled = true; btn.textContent = t('setup.waiting'); }
       if (err) err.style.display = 'none';
       try {
         const res = await fetch('/api/auth/setup', { method: 'POST' });
@@ -1566,20 +1592,20 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           closeLoginSetup();
           addAccount('browser');
         } else if (err) {
-          err.textContent = data.error || 'Setup failed';
+          err.textContent = data.error || t('setup.failed');
           err.style.display = 'block';
         }
       } catch (e) {
         if (err) { err.textContent = e.message; err.style.display = 'block'; }
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Set up and log in'; }
+        if (btn) { btn.disabled = false; btn.textContent = t('setup.run'); }
       }
     }
 
     function onNativeLogin(data) {
       nativeLoginPending = false;
       if (!data || !data.session) return;
-      showToast(`Logged in as ${data.session.display_name}!`);
+      showToast(t('login.success', { name: data.session.display_name }));
       state.sessions = state.sessions || [];
       state.sessions = state.sessions.filter(s => s.sub !== data.session.sub);
       state.sessions.push(data.session);
@@ -1591,7 +1617,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     function onNativeLoginError(message) {
       nativeLoginPending = false;
-      if (message) showToast('Login failed: ' + message);
+      if (message) showToast(t('login.failed_reason', { error: message }));
     }
 
     function openLoginModal() {
@@ -1609,12 +1635,12 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     async function startAuthFlow() {
       const btn = document.getElementById('open-auth-btn');
-      btn.textContent = 'Opening browser...';
+      btn.textContent = t('login.opening');
       try {
         const res = await fetch('/api/auth/start', { method: 'POST' });
         const data = await res.json();
         if (data.ok) {
-          btn.textContent = 'Opened in Browser ✓';
+          btn.textContent = t('login.opened');
           const fallback = document.getElementById('auth-fallback-link');
           if (fallback && data.url) {
             fallback.href = data.url;
@@ -1622,8 +1648,8 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           }
         }
       } catch (e) {
-        showToast('Failed to start login flow: ' + e.message);
-        btn.textContent = 'Open Jagex Login';
+        showToast(t('login.start_failed', { error: e.message }));
+        btn.textContent = t('login.open');
       }
     }
 
@@ -1634,11 +1660,11 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       const val = input ? input.value.trim() : '';
 
       if (!val) {
-        if (err) { err.textContent = 'Please paste the redirect URL.'; err.style.display = 'block'; }
+        if (err) { err.textContent = t('login.paste_url'); err.style.display = 'block'; }
         return;
       }
 
-      btn.textContent = 'Verifying...';
+      btn.textContent = t('login.verifying');
       try {
         const res = await fetch('/api/auth/complete', {
           method: 'POST',
@@ -1648,7 +1674,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         const data = await res.json();
         if (data.ok) {
           closeLoginModal();
-          showToast(`Logged in as ${data.session.display_name}!`);
+          showToast(t('login.success', { name: data.session.display_name }));
           state.sessions = state.sessions || [];
           state.sessions.push(data.session);
           activeSub = data.session.sub;
@@ -1667,12 +1693,12 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           }
           if (err) { err.textContent = data.error; err.style.color = 'var(--amber)'; err.style.display = 'block'; }
         } else {
-          if (err) { err.textContent = data.error || 'Login failed'; err.style.color = 'var(--red)'; err.style.display = 'block'; }
+          if (err) { err.textContent = data.error || t('login.failed'); err.style.color = 'var(--red)'; err.style.display = 'block'; }
         }
       } catch (e) {
         if (err) { err.textContent = e.message; err.style.display = 'block'; }
       } finally {
-        btn.textContent = 'Complete Login';
+        btn.textContent = t('login.complete');
       }
     }
 
@@ -1694,13 +1720,20 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
       const javaSelect = document.getElementById('cfg-java-select');
       if (javaSelect && state.runtimes) {
-        javaSelect.innerHTML = '<option value="">Automatic selection</option>' +
+        javaSelect.innerHTML = `<option value="">${escapeHtml(t('settings.java_auto'))}</option>` +
           state.runtimes.map(r => `<option value="${escapeHtml(r.path)}">${escapeHtml(r.version)} (${escapeHtml(r.source)} - ${escapeHtml(r.path)})</option>`).join('');
         if (cfg.java_path) javaSelect.value = cfg.java_path;
       }
 
       const preview = document.getElementById('command-preview');
-      if (preview) preview.textContent = state.runelite_plan || 'No preview available';
+      if (preview) preview.textContent = state.runelite_plan || t('settings.preview_none');
+
+      const langSelect = document.getElementById('cfg-language');
+      if (langSelect) {
+        const options = [{ tag: '', name: t('settings.language_auto') }].concat(window.RUSTYBOLT_LANGUAGES || []);
+        langSelect.innerHTML = options.map(o => `<option value="${escapeHtml(o.tag)}">${escapeHtml(o.name)}</option>`).join('');
+        langSelect.value = cfg.language || '';
+      }
     }
 
     function onJavaSelectChange() {
@@ -1713,7 +1746,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
     async function saveSettings() {
       const btn = document.getElementById('save-settings-btn');
-      btn.textContent = 'Saving...';
+      btn.textContent = t('settings.saving');
 
       const cfg = state.config || {};
       const tuning = cfg.runelite_tuning || {};
@@ -1724,6 +1757,8 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       cfg.java_path = getValue('cfg-java-path') || null;
       cfg.close_after_launch = isChecked('cfg-close-after-launch');
       cfg.runelite_home_kind = isChecked('cfg-isolated-home') ? 'isolated' : 'default';
+      const previousLanguage = cfg.language || '';
+      cfg.language = getValue('cfg-language') || null;
 
       tuning.gc_choice = getValue('cfg-gc');
       tuning.max_heap_size = getValue('cfg-max-heap');
@@ -1740,16 +1775,20 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         });
         const data = await res.json();
         if (data.ok) {
-          showToast('Settings saved successfully');
+          showToast(t('settings.saved'));
           if (data.plan) {
             const preview = document.getElementById('command-preview');
             if (preview) preview.textContent = data.plan;
           }
+          if ((cfg.language || '') !== previousLanguage) {
+            // The server picks the language when it serves the page.
+            setTimeout(() => window.location.reload(), 600);
+          }
         }
       } catch (e) {
-        showToast('Failed to save settings: ' + e.message);
+        showToast(t('settings.save_failed', { error: e.message }));
       } finally {
-        btn.textContent = 'Save Settings';
+        btn.textContent = t('settings.save');
       }
     }
 
@@ -1758,9 +1797,9 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       const el = document.getElementById(elemId);
       if (!el) return;
       if (detected) {
-        el.innerHTML = '<span class="status-dot"></span> Installed';
+        el.innerHTML = '<span class="status-dot"></span> ' + escapeHtml(t('client.installed'));
       } else {
-        el.innerHTML = '<span class="status-dot missing"></span> Not Detected';
+        el.innerHTML = '<span class="status-dot missing"></span> ' + escapeHtml(t('client.not_detected'));
       }
     }
 
@@ -1812,18 +1851,18 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
 
       if (wifiState.enabled) {
         btn.classList.add('active');
-        if (pill) pill.textContent = 'ACTIVE';
+        if (pill) pill.textContent = t('wifi.active');
         if (stat) {
-          const latText = wifiState.latency_ms != null ? `${wifiState.latency_ms.toFixed(1)}ms` : 'Active';
+          const latText = wifiState.latency_ms != null ? `${wifiState.latency_ms.toFixed(1)}ms` : t('wifi.active_short');
           const gwText = wifiState.gateway ? `${wifiState.gateway} • ` : '';
           stat.textContent = `${gwText}${latText}`;
         }
-        if (desc) desc.textContent = 'UDP keepalive to gateway every 10ms';
+        if (desc) desc.textContent = t('wifi.desc_on');
       } else {
         btn.classList.remove('active');
-        if (pill) pill.textContent = 'OFF';
+        if (pill) pill.textContent = t('wifi.off');
         if (stat) stat.textContent = '';
-        if (desc) desc.textContent = 'Sends a UDP keepalive to the default gateway every 10ms to prevent 802.11 sleep jitter';
+        if (desc) desc.textContent = t('wifi.desc_off');
       }
     }
 
@@ -1839,9 +1878,9 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
         wifiState = data;
         updateWifiUI();
         if (wifiState.enabled) {
-          showToast('Wi-Fi Mode active: keepalive ping running');
+          showToast(t('wifi.toast_on'));
         } else {
-          showToast('Wi-Fi Mode disabled');
+          showToast(t('wifi.toast_off'));
         }
       } catch (err) {
         console.error('Failed to toggle wifi mode:', err);

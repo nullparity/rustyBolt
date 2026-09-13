@@ -21,6 +21,7 @@ use tao::event_loop::EventLoopProxy;
 
 use crate::gui::AppEvent;
 use crate::httpd::{Connection, Request};
+use crate::i18n::Lang;
 use crate::web::HTML_PAGE;
 use crate::wifi::{WifiManager, WifiStatus};
 use crate::CliError;
@@ -189,6 +190,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
             wifi_manager,
             Arc::clone(&paths),
             Arc::clone(&flow_state),
+            Lang::detect(Config::load(&paths).language.as_deref()),
         ) {
             eprintln!("rustybolt: native window failed: {error}. Falling back to browser.");
             open_browser(&url);
@@ -439,16 +441,26 @@ fn respond(
     match (req.method, req.path) {
         ("GET", "/" | "/index.html") => {
             let config = Config::load(paths);
+            let lang = Lang::detect(config.language.as_deref());
+            let languages: Vec<_> = Lang::ALL
+                .iter()
+                .map(|l| serde_json::json!({ "tag": l.tag(), "name": l.tr("lang.name") }))
+                .collect();
             let state = build_state(paths, config, req.wifi.status());
             let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
             let html = HTML_PAGE
                 .replace("<!--LOGO_SVG-->", ICON_SVG)
                 .replace("<!--VERSION-->", env!("CARGO_PKG_VERSION"))
+                .replace("<!--LANG-->", lang.tag())
                 .replace(
                     "/*INITIAL_STATE*/",
                     &format!(
-                        "window.INITIAL_STATE = {state_json}; window.RUSTYBOLT_TOKEN = {};",
-                        serde_json::to_string(req.token).unwrap_or_default()
+                        "window.INITIAL_STATE = {state_json}; window.RUSTYBOLT_TOKEN = {}; \
+                         window.RUSTYBOLT_LANG = {}; window.RUSTYBOLT_LANGUAGES = {}; window.RUSTYBOLT_I18N = {};",
+                        serde_json::to_string(req.token).unwrap_or_default(),
+                        serde_json::to_string(lang.tag()).unwrap_or_default(),
+                        serde_json::Value::Array(languages),
+                        lang.json(),
                     ),
                 );
             let response = format!(

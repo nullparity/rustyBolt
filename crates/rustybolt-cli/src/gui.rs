@@ -10,13 +10,14 @@ use tao::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use tao::window::{Window, WindowBuilder};
 use tray_icon::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, TrayIconBuilder, TrayIconEvent};
-use wry::{NewWindowResponse, WebView, WebViewBuilder};
+use wry::{NewWindowResponse, WebContext, WebView, WebViewBuilder};
 
 use rustybolt_core::{LoginFlow, Paths};
 
 use crate::platform::claim_jagex_scheme;
 
 use crate::configure::{complete_login, LoginOutcome};
+use crate::i18n::Lang;
 use crate::wifi::WifiManager;
 
 #[derive(Debug)]
@@ -41,6 +42,18 @@ pub(crate) enum AppEvent {
 struct LoginWindow {
     window: Window,
     webview: WebView,
+    /// Must outlive the webview on Linux.
+    _context: WebContext,
+}
+
+/// The profile directory of a webview.
+///
+/// WebView2 puts its profile next to the executable unless told otherwise,
+/// and that fails with "Access is denied" under `Program Files`. The login
+/// window gets its own profile, so Jagex cookies stay apart from the
+/// dashboard.
+fn web_context(paths: &Paths, name: &str) -> WebContext {
+    WebContext::new(Some(paths.data_dir.join(name)))
 }
 
 /// Builds a webview inside `window` with the given attributes.
@@ -87,14 +100,17 @@ fn open_login_window(
     event_loop: &tao::event_loop::EventLoopWindowTarget<AppEvent>,
     proxy: EventLoopProxy<AppEvent>,
     url: &str,
+    lang: Lang,
+    paths: &Paths,
 ) -> Result<LoginWindow, Box<dyn std::error::Error>> {
     let window = WindowBuilder::new()
-        .with_title("Sign in to Jagex")
+        .with_title(lang.tr("native.login_title"))
         .with_inner_size(LogicalSize::new(520.0, 760.0))
         .with_min_inner_size(LogicalSize::new(420.0, 560.0))
         .build(event_loop)?;
 
-    let builder = WebViewBuilder::new()
+    let mut context = web_context(paths, "webview-login");
+    let builder = WebViewBuilder::new_with_web_context(&mut context)
         .with_url(url)
         // Cloudflare Turnstile stalls on the bare embedded-webview UA.
         .with_user_agent(LOGIN_USER_AGENT)
@@ -112,7 +128,11 @@ fn open_login_window(
         .with_new_window_req_handler(|_url, _features| NewWindowResponse::Deny);
 
     let webview = attach_webview(builder, &window)?;
-    Ok(LoginWindow { window, webview })
+    Ok(LoginWindow {
+        window,
+        webview,
+        _context: context,
+    })
 }
 
 /// Escapes a JSON document so it can sit inside a JS double-quoted string.
@@ -173,6 +193,7 @@ pub(crate) fn run_window(
     wifi_manager: WifiManager,
     paths: Arc<Paths>,
     flow_state: Arc<Mutex<Option<LoginFlow>>>,
+    lang: Lang,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
@@ -181,7 +202,8 @@ pub(crate) fn run_window(
         .with_min_inner_size(LogicalSize::new(640.0, 520.0))
         .build(&event_loop)?;
 
-    let builder = WebViewBuilder::new()
+    let mut context = web_context(&paths, "webview");
+    let builder = WebViewBuilder::new_with_web_context(&mut context)
         .with_url(url)
         .with_navigation_handler(|nav_url| {
             if rustybolt_security::is_allowed_navigation(&nav_url) {
@@ -205,10 +227,15 @@ pub(crate) fn run_window(
     let webview = attach_webview(builder, &window)?;
 
     let tray_menu = Menu::new();
-    let open_item = MenuItem::new("Open rustyBolt", true, None);
-    let wifi_item = CheckMenuItem::new("Wifi Mode", true, wifi_manager.is_enabled(), None);
+    let open_item = MenuItem::new(lang.tr("native.tray_open"), true, None);
+    let wifi_item = CheckMenuItem::new(
+        lang.tr("native.tray_wifi"),
+        true,
+        wifi_manager.is_enabled(),
+        None,
+    );
     let sep = PredefinedMenuItem::separator();
-    let quit_item = MenuItem::new("Quit rustyBolt", true, None);
+    let quit_item = MenuItem::new(lang.tr("native.tray_quit"), true, None);
     tray_menu.append_items(&[&open_item, &wifi_item, &sep, &quit_item])?;
 
     let tray_icon = create_tray_icon().ok();
@@ -289,7 +316,7 @@ pub(crate) fn run_window(
                 login = None;
                 consent.take();
                 browser_flow = false;
-                match open_login_window(target, proxy.clone(), &url) {
+                match open_login_window(target, proxy.clone(), &url, lang, &paths) {
                     Ok(win) => {
                         win.window.set_focus();
                         login = Some(win);

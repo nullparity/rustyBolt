@@ -18,6 +18,7 @@ rustybolt-core.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 httparse.workspace = true
+sys-locale = "0.3"
 rand.workspace = true
 wry = "0.56.1"
 tao = "0.36.0"

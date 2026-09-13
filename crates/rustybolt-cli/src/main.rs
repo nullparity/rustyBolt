@@ -8,6 +8,7 @@ mod configure;
 mod consent;
 mod gui;
 mod httpd;
+mod i18n;
 mod launch;
 mod platform;
 mod verify;
