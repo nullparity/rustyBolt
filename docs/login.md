@@ -11,11 +11,15 @@ If another program already uses port 80, the launcher says so and logs in inside
 
 Set `RUSTYBOLT_LOGIN=window` or `RUSTYBOLT_LOGIN=browser` to force one mode.
 
+## The local API
+
+The dashboard talks to the launcher over a loopback HTTP server on a random port. The server refuses any request whose `Host` is not that address, any browser request from another origin, and any `/api/` request without the per-launch token that only the served page and the port file (`launcher.port` in the runtime directory, mode 0600) hold. A web page in your browser therefore cannot read your accounts, launch the game or sign you out.
+
 ## Session storage
 
 The launcher keeps one session per Jagex account in the system keychain: the macOS Keychain, the Windows Credential Manager, or the Secret Service on Linux (GNOME Keyring, KDE Wallet, KeePassXC). One entry named `rustybolt` / `sessions` holds every session. No token is ever printed, and no session sits in a plain file.
 
-Without a keychain the launcher refuses to run. On Linux, start a Secret Service provider first. A session file from a version before the keychain moves into the keychain on the first start, and the file goes away.
+Without a keychain the launcher runs, shows a warning, and cannot save a login; a login whose session cannot be saved reports that. On Linux, start a Secret Service provider first. A session file from a version before the keychain moves into the keychain on the first start, and the file goes away.
 
 Config, cache and other data:
 

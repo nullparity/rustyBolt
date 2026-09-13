@@ -93,9 +93,10 @@ Rules:
 
 ```rust
 pub struct JavaVersion { pub feature: u32, pub raw: String }
-pub enum Source { Explicit, JavaHome, Path, SystemLocation }
+pub enum Source { Explicit, JavaHome, Path, SystemLocation, ClientBundle }
 pub struct JavaRuntime { pub path: PathBuf, pub home: Option<PathBuf>,
-                         pub version: Option<JavaVersion>, pub source: Source }
+                         pub version: Option<JavaVersion>, pub source: Source,
+                         pub headless: bool }  // Linux: no lib/libawt_xawt.so; select() skips it
 
 pub fn discover() -> Vec<JavaRuntime>;             // ordered by Source, deduplicated by real path
 pub fn select(min_feature: u32) -> Option<JavaRuntime>;
@@ -116,7 +117,9 @@ pub fn apply_template(template: &str, default: &Invocation) -> Result<Invocation
 
 Discovery order per OS: `JAVA_HOME`, then `PATH`, then system locations
 (`/usr/libexec/java_home` and `/Library/Java/JavaVirtualMachines` on macOS,
-`/usr/lib/jvm` and `/opt` on Linux, `Program Files` JDK vendors on Windows).
+`/usr/lib/jvm` and `/opt` on Linux, `Program Files` JDK vendors on Windows),
+then the runtime that the RuneLite installer ships (`%LOCALAPPDATA%\RuneLite\jre`,
+`/Applications/RuneLite.app/Contents/Resources/jre`, `~/.local/share/RuneLite/jre`).
 The Windows executable name is `javaw.exe`, other systems use `java`.
 
 ### The tuning layer
@@ -143,8 +146,8 @@ pub fn branded_java(java: &Path, dir: &Path, name: &str) -> PathBuf;
 That rule keeps the flag gates testable with no JDK on the machine.
 
 Gate rules:
-- `Gc::Z` adds `-XX:+ZGenerational` only below feature 24. Feature 24 and newer are
-  generational only and print `Ignoring option ZGenerational`.
+- `Gc::Z` gives `-XX:+UseG1GC` below feature 15, where ZGC is experimental; adds
+  `-XX:+ZGenerational` on features 21 to 23; feature 24 and newer are generational only.
 - Compact object headers, native access, string deduplication and the AOT cache need
   feature 24 or newer.
 
@@ -170,7 +173,7 @@ impl Config { pub fn load(p: &Paths) -> Config; pub fn save(&self, p: &Paths) ->
 // macOS Keychain, Windows Credential Manager, Linux Secret Service.
 pub trait Vault: Send { fn read(&self) -> Result<Option<String>, KeychainError>; fn write(&self, s: &str) -> Result<(), KeychainError>; }
 pub struct KeychainError(pub String);
-pub fn keychain_available() -> Result<(), KeychainError>; // the CLI refuses to run on Err
+pub fn keychain_available() -> Result<(), KeychainError>; // the dashboard shows the Err; only saving a login needs Ok
 
 pub struct SessionStore { /* Vec<Session> plus Box<dyn Vault> */ }
 impl SessionStore {
@@ -246,6 +249,15 @@ impl PropertyOverrides { pub fn gpu_defaults() -> PropertyOverrides;
 pub fn apply_to_profiles(dir: &Path, overrides: &PropertyOverrides) -> Result<usize, CoreError>;
 
 pub struct HttpAuth<'a> { /* drives rustybolt-auth over ureq */ }
+
+pub mod memory {  // the heap that fits the machine
+    pub fn total_bytes() -> Option<u64>;
+    pub fn heap_cap(total_bytes: u64) -> String;             // half, rounded to 256 MB, never below 512 MB
+    pub fn fit_heap(min: Option<String>, max: Option<String>, total: Option<u64>) -> (Option<String>, Option<String>);
+}
+pub mod desktop {  // Linux: a hidden desktop entry that names the RuneLite window for GNOME
+    pub fn ensure_runelite_entry(jar: &Path) -> io::Result<()>;
+}
 impl<'a> HttpAuth<'a> {
     pub fn new(config: &'a AuthConfig) -> HttpAuth<'a>;
     /// Runs every network step that the flow asks for until the next UI step.
