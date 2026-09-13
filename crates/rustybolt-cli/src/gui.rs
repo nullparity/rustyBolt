@@ -251,12 +251,16 @@ pub(crate) fn run_window(
     }
     // libappindicator-sys panics, rather than errors, when no indicator
     // library is installed. The launcher runs without a tray in that case.
-    let _tray =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| tray_builder.build().ok()))
-            .unwrap_or_else(|_| {
-                eprintln!("rustybolt: no system tray (libayatana-appindicator3 is missing)");
-                None
-            });
+    // The default hook would print a backtrace for that expected panic.
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let built =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| tray_builder.build().ok()));
+    std::panic::set_hook(hook);
+    let _tray = built.unwrap_or_else(|_| {
+        eprintln!("rustybolt: no system tray (libayatana-appindicator3 is missing)");
+        None
+    });
 
     let mut login: Option<LoginWindow> = None;
     let mut consent: Option<crate::consent::ConsentListener> = None;
