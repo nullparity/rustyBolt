@@ -894,7 +894,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       <a href="#play" class="brand" onclick="switchTab('play')">
         <!--LOGO_SVG-->
         <h1>rustyBolt</h1>
-        <span class="brand-version">v0.1.0</span>
+        <span class="brand-version">v<!--VERSION--></span>
       </a>
 
       <nav class="nav-tabs">
@@ -1251,12 +1251,14 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       const dd = document.getElementById('account-dropdown');
       const btn = document.getElementById('account-toggle-btn');
       if (dd) {
+        disarmRemove();
         dd.classList.toggle('show');
         if (btn) btn.classList.toggle('open');
       }
     }
 
     function closeAccountDropdown() {
+      disarmRemove();
       const dd = document.getElementById('account-dropdown');
       const btn = document.getElementById('account-toggle-btn');
       if (dd) dd.classList.remove('show');
@@ -1323,9 +1325,28 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
       }
     }
 
+    // window.confirm/alert are no-ops inside the native webview (wry does
+    // not implement JS dialogs), so confirmation is a second click.
+    let removeArmedFor = null;
+    let removeArmTimer = null;
+    function disarmRemove() {
+      removeArmedFor = null;
+      clearTimeout(removeArmTimer);
+      const btn = document.getElementById('remove-account-btn');
+      if (btn) btn.lastChild.textContent = ' Sign Out of Account';
+    }
+
     async function removeActiveAccount() {
       if (!activeSub) return;
-      if (!confirm('Sign out of this Jagex account from rustyBolt?')) return;
+      if (removeArmedFor !== activeSub) {
+        removeArmedFor = activeSub;
+        const btn = document.getElementById('remove-account-btn');
+        if (btn) btn.lastChild.textContent = ' Click again to sign out';
+        clearTimeout(removeArmTimer);
+        removeArmTimer = setTimeout(disarmRemove, 4000);
+        return;
+      }
+      disarmRemove();
       closeAccountDropdown();
 
       try {
@@ -1454,10 +1475,10 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
             }, 1000);
           }
         } else {
-          alert(`Failed to launch ${clientName}: ${data.error || 'Unknown error'}`);
+          showToast(`Failed to launch ${clientName}: ${data.error || 'Unknown error'}`);
         }
       } catch (err) {
-        alert(`Connection error: ${err.message}`);
+        showToast(`Connection error: ${err.message}`);
       } finally {
         isLaunching = false;
         updatePlayButton();
@@ -1590,7 +1611,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           }
         }
       } catch (e) {
-        alert('Failed to start login flow: ' + e.message);
+        showToast('Failed to start login flow: ' + e.message);
         btn.textContent = 'Open Jagex Login';
       }
     }

@@ -389,10 +389,13 @@ fn respond(
             let config = Config::load(paths);
             let state = build_state(paths, config, req.wifi.status());
             let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
-            let html = HTML_PAGE.replace("<!--LOGO_SVG-->", ICON_SVG).replace(
-                "/*INITIAL_STATE*/",
-                &format!("window.INITIAL_STATE = {state_json};"),
-            );
+            let html = HTML_PAGE
+                .replace("<!--LOGO_SVG-->", ICON_SVG)
+                .replace("<!--VERSION-->", env!("CARGO_PKG_VERSION"))
+                .replace(
+                    "/*INITIAL_STATE*/",
+                    &format!("window.INITIAL_STATE = {state_json};"),
+                );
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n{sec_hdrs}\r\n{html}",
                 html.len()

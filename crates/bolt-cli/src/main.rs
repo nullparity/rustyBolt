@@ -29,6 +29,7 @@ Usage:
   rustybolt login
   rustybolt verify [runelite|hdos] [--sub <sub>] [--character <id>] [--jar <path>]
   rustybolt help
+  rustybolt version
 
 A default launch opens the native desktop application window.
 Use `--browser` to open the interface in your default browser.
@@ -101,7 +102,17 @@ impl From<bolt_auth::AuthError> for CliError {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    if let Err(error) = require_keychain().and_then(|()| dispatch(&args)) {
+    // help and version print static text; they must not need a keychain.
+    let informational = matches!(
+        args.first().map(String::as_str),
+        Some("help" | "--help" | "-h" | "version" | "--version" | "-V")
+    );
+    let gate = if informational {
+        Ok(())
+    } else {
+        require_keychain()
+    };
+    if let Err(error) = gate.and_then(|()| dispatch(&args)) {
         error.report();
         std::process::exit(i32::from(error.exit_code()));
     }
@@ -137,6 +148,10 @@ fn dispatch(args: &[String]) -> Result<(), CliError> {
     match command {
         "help" | "--help" | "-h" => {
             print!("{USAGE}");
+            Ok(())
+        }
+        "version" | "--version" | "-V" => {
+            println!("rustybolt {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
         "login" => auth::login(rest),
