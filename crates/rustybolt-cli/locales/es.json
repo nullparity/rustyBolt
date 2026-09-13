@@ -116,8 +116,8 @@
   "profile.enable_desc": "Desactivado no toca ningún archivo de perfil.",
   "profile.strip": "Quitar los ajustes que empiecen por (uno por línea)",
   "profile.force": "Forzar estos valores (clave=valor por línea)",
-  "profile.preset_gpu": "Cargar el preajuste de GPU",
   "profile.clear": "Vaciar",
   "profile.save": "Guardar ajustes de perfil",
-  "profile.saved": "Ajustes de perfil guardados"
+  "profile.saved": "Ajustes de perfil guardados",
+  "profile.example_gpu": "Cargar el ejemplo de GPU"
 }

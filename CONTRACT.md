@@ -244,7 +244,7 @@ impl CommandCredentials {
 
 // Forced RuneLite profile properties.
 pub struct PropertyOverrides { pub strip_prefixes: Vec<String>, pub force: Vec<(String, String)> }
-impl PropertyOverrides { pub fn gpu_preset() -> PropertyOverrides;  // a starting point for the editor, never applied by itself
+impl PropertyOverrides { pub fn gpu_example() -> PropertyOverrides;  // an example for the editor, never applied by itself
                          pub fn apply_to_text(&self, text: &str) -> String; }
 pub fn apply_to_profiles(dir: &Path, overrides: &PropertyOverrides) -> Result<usize, CoreError>;  // launch() runs it for RuneLite when Config::runelite_profile_overrides is Some
 

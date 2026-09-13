@@ -74,12 +74,11 @@ struct ServerState {
     keychain_error: Option<String>,
     /// Where the profile overrides apply.
     profile_dir: String,
-    /// Starting points for the profile editor.
-    profile_presets: Vec<ProfilePreset>,
+    profile_examples: Vec<ProfileExample>,
 }
 
 #[derive(Serialize)]
-struct ProfilePreset {
+struct ProfileExample {
     id: &'static str,
     overrides: rustybolt_core::PropertyOverrides,
 }
@@ -1054,9 +1053,9 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
             .err()
             .map(|error| error.to_string()),
         profile_dir,
-        profile_presets: vec![ProfilePreset {
+        profile_examples: vec![ProfileExample {
             id: "gpu",
-            overrides: rustybolt_core::PropertyOverrides::gpu_preset(),
+            overrides: rustybolt_core::PropertyOverrides::gpu_example(),
         }],
     }
 }

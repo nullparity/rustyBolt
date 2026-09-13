@@ -116,8 +116,8 @@
   "profile.enable_desc": "Off leaves every profile file alone.",
   "profile.strip": "Remove settings that start with (one per line)",
   "profile.force": "Force these values (key=value per line)",
-  "profile.preset_gpu": "Load GPU preset",
   "profile.clear": "Clear",
   "profile.save": "Save overrides",
-  "profile.saved": "Profile overrides saved"
+  "profile.saved": "Profile overrides saved",
+  "profile.example_gpu": "Load GPU example"
 }

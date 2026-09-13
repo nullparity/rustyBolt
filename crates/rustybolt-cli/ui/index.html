@@ -298,7 +298,7 @@
             </div>
           </div>
           <div class="mt-3 flex flex-wrap gap-2.5">
-            <button class="btn-secondary" onclick="loadProfilePreset('gpu')" data-i18n="profile.preset_gpu">Load GPU preset</button>
+            <button class="btn-secondary" onclick="loadProfileExample('gpu')" data-i18n="profile.example_gpu">Load GPU example</button>
             <button class="btn-secondary" onclick="clearProfileEditor()" data-i18n="profile.clear">Clear</button>
           </div>
         </div>
@@ -1001,11 +1001,11 @@
       return { strip_prefixes: lines('prof-strip'), force };
     }
 
-    function loadProfilePreset(id) {
-      const preset = (state.profile_presets || []).find(p => p.id === id);
-      if (!preset) return;
-      setValue('prof-strip', preset.overrides.strip_prefixes.join('\n'));
-      setValue('prof-force', preset.overrides.force.map(([k, v]) => `${k}=${v}`).join('\n'));
+    function loadProfileExample(id) {
+      const example = (state.profile_examples || []).find(p => p.id === id);
+      if (!example) return;
+      setValue('prof-strip', example.overrides.strip_prefixes.join('\n'));
+      setValue('prof-force', example.overrides.force.map(([k, v]) => `${k}=${v}`).join('\n'));
       setChecked('prof-enabled', true);
     }
 

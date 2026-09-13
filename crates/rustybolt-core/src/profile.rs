@@ -13,11 +13,11 @@ const PROFILE_EXTENSION: &str = "properties";
 /// The extension of the backup copy.
 const BACKUP_EXTENSION: &str = "bak";
 
-/// The property prefixes that the GPU preset removes.
+/// The property prefixes that the GPU example removes.
 const GPU_PREFIXES: [&str; 2] = ["gpu.", "region-locker-gpu."];
 
-/// The forced pairs of the GPU preset, in order: a fixed, modest GPU plugin
-/// setup that a laptop can hold at 60 fps. A preset, not a default.
+/// The forced pairs of the GPU example, in order: one laptop's fixed, modest GPU
+/// plugin setup. An example of the form, not a recommendation and not a default.
 const GPU_FORCED: [(&str, &str); 15] = [
     ("gpu.expandedMapLoadingChunks", "0"),
     ("gpu.vsyncMode", "OFF"),
@@ -47,9 +47,9 @@ pub struct PropertyOverrides {
 }
 
 impl PropertyOverrides {
-    /// The GPU preset. The launcher applies nothing unless the user turns
+    /// The GPU example. The launcher applies nothing unless the user turns
     /// overrides on; this is one starting point for the editor.
-    pub fn gpu_preset() -> PropertyOverrides {
+    pub fn gpu_example() -> PropertyOverrides {
         PropertyOverrides {
             strip_prefixes: GPU_PREFIXES
                 .iter()
@@ -135,8 +135,8 @@ mod tests {
     use crate::test_support::TempDir;
 
     #[test]
-    fn gpu_preset_gives_the_exact_forced_pairs() {
-        let overrides = PropertyOverrides::gpu_preset();
+    fn gpu_example_gives_the_exact_forced_pairs() {
+        let overrides = PropertyOverrides::gpu_example();
         assert_eq!(overrides.strip_prefixes, vec!["gpu.", "region-locker-gpu."]);
         let expected: Vec<(String, String)> = GPU_FORCED
             .iter()
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn apply_to_text_removes_both_prefixes_keeps_other_lines_and_appends_the_forced_pairs() {
-        let overrides = PropertyOverrides::gpu_preset();
+        let overrides = PropertyOverrides::gpu_example();
         let text = "gpu.vsyncMode=ON\nregion-locker-gpu.drawDistance=10\nother=1\nanother=2\n";
         let output = overrides.apply_to_text(text);
         let lines: Vec<&str> = output.lines().collect();
@@ -173,7 +173,7 @@ mod tests {
         let file = dir.join("settings.properties");
         let original = "gpu.fpsTarget=30\nother.value=1\n";
         fs::write(&file, original).unwrap();
-        let overrides = PropertyOverrides::gpu_preset();
+        let overrides = PropertyOverrides::gpu_example();
 
         assert_eq!(apply_to_profiles(&dir, &overrides).unwrap(), 1);
         assert_eq!(fs::read_to_string(backup_path(&file)).unwrap(), original);
@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn apply_to_profiles_ignores_an_absent_directory_and_other_files() {
         let temp = TempDir::new("profile-absent");
-        let overrides = PropertyOverrides::gpu_preset();
+        let overrides = PropertyOverrides::gpu_example();
         let absent = temp.path().join("missing");
         assert_eq!(apply_to_profiles(&absent, &overrides).unwrap(), 0);
 
