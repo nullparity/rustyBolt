@@ -100,5 +100,8 @@
   "native.login_title": "Sign in to Jagex",
   "native.tray_open": "Open rustyBolt",
   "native.tray_wifi": "Wifi Mode",
-  "native.tray_quit": "Quit rustyBolt"
+  "native.tray_quit": "Quit rustyBolt",
+  "keychain.title": "Keychain unavailable",
+  "keychain.desc": "Logins cannot be saved until the system keychain works. On Linux, a Secret Service such as GNOME Keyring or KDE Wallet must be running and unlocked.",
+  "keychain.toast": "The system keychain is unavailable; a login could not be saved."
 }

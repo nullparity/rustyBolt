@@ -65,6 +65,12 @@
     <div class="view-panel active hidden is-active:block is-active:animate-fade-in" id="view-play">
       <div class="flex flex-col gap-6">
 
+        <div class="card hidden gap-3 border-copper/40 px-5 py-4 text-[0.84rem]" id="keychain-card">
+          <div class="font-semibold text-copper" data-i18n="keychain.title">Keychain unavailable</div>
+          <div class="text-muted" data-i18n="keychain.desc">Logins cannot be saved until the system keychain works. On Linux, a Secret Service such as GNOME Keyring or KDE Wallet must be running and unlocked.</div>
+          <div class="font-mono text-[0.76rem] text-subtle" id="keychain-error"></div>
+        </div>
+
         <div class="card hidden flex-col items-center gap-4 px-5 py-9 text-center" id="empty-state-card">
           <div class="text-[1.25rem] font-bold text-text" data-i18n="hero.title">Connect Your Jagex Account</div>
           <div class="max-w-[440px] text-[0.88rem] leading-relaxed text-muted" data-i18n="hero.desc">
@@ -348,6 +354,13 @@
     function init() {
       applyI18n();
       renderLanguageButton();
+      if (state.keychain_error) {
+        const card = document.getElementById('keychain-card');
+        const text = document.getElementById('keychain-error');
+        if (card) card.classList.replace('hidden', 'flex');
+        if (card) card.classList.add('flex-col');
+        if (text) text.textContent = state.keychain_error;
+      }
       if (state.clients) {
         const rlFound = !!state.clients.runelite_detected;
         const hdosFound = !!state.clients.hdos_detected;
@@ -640,6 +653,10 @@
     async function addAccount(mode) {
       closeAccountDropdown();
       closeLoginSetup();
+      if (state.keychain_error) {
+        showToast(t('keychain.toast'));
+        return;
+      }
       if (nativeLoginPending) return;
       nativeLoginPending = true;
       try {

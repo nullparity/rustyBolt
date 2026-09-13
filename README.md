@@ -12,7 +12,7 @@ I play OSRS on a MacBook Pro, so there is also a **Wi-Fi mode** that reduces Wi-
 
 - One client from the approved list, installed and started once: [RuneLite](https://oldschool.runescape.wiki/w/RuneLite) or [HDOS](https://oldschool.runescape.wiki/w/HDOS).
 - Java 11 or newer.
-- A system keychain. macOS and Windows have one. On Linux you need GNOME Keyring, KDE Wallet or KeePassXC; rustyBolt refuses to run without one. If GNOME asks for a keyring password that your login password does not unlock, the login keyring was made with an older password: change it in Passwords and Keys, or remove `~/.local/share/keyrings/login.keyring` and log in again.
+- A system keychain, to save a Jagex login. macOS and Windows have one. On Linux you need a Secret Service such as GNOME Keyring, KDE Wallet or KeePassXC; without one the launcher still runs, but cannot keep you signed in. If GNOME asks for a keyring password that your login password does not unlock, the login keyring was made with an older password: change it in Passwords and Keys.
 
 ## Install
 

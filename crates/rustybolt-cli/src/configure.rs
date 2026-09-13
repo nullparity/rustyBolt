@@ -69,6 +69,9 @@ struct ServerState {
     characters: Vec<CharacterView>,
     has_session: bool,
     wifi: WifiStatus,
+    /// Why the keychain cannot hold a session, when it cannot. The launcher
+    /// still runs; only saving a login needs the keychain.
+    keychain_error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -911,7 +914,11 @@ pub(crate) fn complete_login(
         Ok(Action::Done(session)) => {
             let mut store = SessionStore::load(paths);
             store.upsert(session.clone());
-            let _ = store.save();
+            if let Err(error) = store.save() {
+                return LoginOutcome::Error(format!(
+                    "Logged in, but the session could not be saved: {error}"
+                ));
+            }
             let config = Config::load(paths);
             let chars = fetch_characters(paths, &config, &session.session_id);
             let view = SessionView {
@@ -1017,6 +1024,9 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
         characters,
         has_session,
         wifi,
+        keychain_error: rustybolt_core::keychain_available()
+            .err()
+            .map(|error| error.to_string()),
     }
 }
 
