@@ -5,7 +5,7 @@
 //! next action. A native shell, a web view and a command line tool can all drive
 //! the same flow.
 //!
-//! The upstream Bolt launcher puts this logic inside a CEF window class. That design ties the protocol
+//! The original Bolt launcher puts this logic inside a CEF window class. That design ties the protocol
 //! to one user interface toolkit. This crate keeps the two apart.
 
 use base64::Engine as _;
@@ -85,7 +85,7 @@ pub struct Pkce {
 impl Pkce {
     /// Makes a pair from 43 random characters.
     ///
-    /// The random source is the operating system generator. the upstream Bolt launcher uses `std::rand`,
+    /// The random source is the operating system generator. The original Bolt launcher uses `std::rand`,
     /// which an attacker can predict.
     pub fn generate() -> Self {
         Self::from_verifier(&random_string(VERIFIER_LEN, VERIFIER_CHARS))
@@ -297,7 +297,7 @@ impl LoginFlow {
             return Err(AuthError::StateMismatch);
         }
 
-        // The code arrives encoded. the upstream Bolt launcher forwards the raw value, so no second
+        // The code arrives encoded. The original Bolt launcher forwards the raw value, so no second
         // encode takes place here.
         let body = format!(
             "grant_type=authorization_code&client_id={}&code={}&code_verifier={}&redirect_uri={}",

@@ -1,6 +1,6 @@
 //! Java runtime discovery and Java process argument building.
 //!
-//! Upstream Bolt probes `JAVA_HOME` and then `PATH`. This crate does the same, and it also
+//! The original Bolt probes `JAVA_HOME` and then `PATH`. This crate does the same, and it also
 //! reads the standard install locations of each system. The crate touches the file
 //! system only. It does not start a game and it does not know the user interface.
 
@@ -12,7 +12,7 @@ use thiserror::Error;
 pub mod tuning;
 pub use tuning::*;
 
-/// Largest number of arguments of a user template. Upstream Bolt uses the same limit.
+/// Largest number of arguments of a user template. The original Bolt uses the same limit.
 const MAX_ARG_COUNT: usize = 256;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

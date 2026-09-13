@@ -1,6 +1,6 @@
 //! Paths, configuration, session storage, client install and client launch.
 //!
-//! This crate holds the logic that upstream Bolt keeps inside the launcher window:
+//! This crate holds the logic that the original Bolt keeps inside the launcher window:
 //! the platform directories, the launcher config, the saved sessions, the
 //! RuneLite and HDOS installers, and the child process launch.
 //! The crate uses `rustybolt-auth` for the OAuth2 flow and `rustybolt-jdk` for Java.

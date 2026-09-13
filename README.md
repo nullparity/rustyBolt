@@ -4,7 +4,7 @@ A free, portable, cross-platform launcher for RuneLite and HDOS. It logs you in 
 
 ## Why did I make this?
 
-Upstream Bolt is great, but it is a little difficult to use on macOS. The goal here is to remain OS agnostic, securely handle Jagex account information, and separate the concerns.
+The original Bolt is great, but it is a little difficult to use on macOS. The goal here is to remain OS agnostic, securely handle Jagex account information, and separate the concerns.
 
 I play OSRS on a MacBook Pro, so there is also a **Wi-Fi mode** that reduces Wi-Fi network latency.
 

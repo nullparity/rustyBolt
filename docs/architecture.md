@@ -23,7 +23,7 @@ graph TD
 
 ### Why the split helps a port
 
-In upstream Bolt, `Browser::LoginWindow` is at the same time the window, the HTTP interceptor and the OAuth client. Java discovery and the process launch sit in two platform files of the launcher window class. A port to a new system touches all three concerns.
+In the original Bolt, `Browser::LoginWindow` is at the same time the window, the HTTP interceptor and the OAuth client. Java discovery and the process launch sit in two platform files of the launcher window class. A port to a new system touches all three concerns.
 
 In rustyBolt a new shell implements the user interface only. It gives each URL that its browser view reaches to `LoginFlow::on_navigation`, and it runs the action that comes back. The protocol, the Java rules and the file layout do not change.
 
@@ -47,7 +47,7 @@ In rustyBolt a new shell implements the user interface only. It gives each URL t
 - Write a GC log per client, and remove the log when that client ends.
 - Use the native desktop application or the command line tool. Both do the same work.
 
-Out of scope for now: the official RS3 and OSRS native clients, the plugin library and the Lua overlay. Those parts of upstream Bolt do not touch the three seams that this project divides.
+Out of scope for now: the official RS3 and OSRS native clients, the plugin library and the Lua overlay. Those parts of the original Bolt do not touch the three seams that this project divides.
 
 ## The tuned launch profile
 
@@ -68,9 +68,9 @@ The default RuneLite profile comes from `rl-launcher`. `rustybolt verify` shows 
 
 `rustybolt_jdk::Tuning::flags(feature)` is pure. The caller gives the feature number, so a machine with one JDK can still test every gate. `rustybolt_core::plan` builds the command that `rustybolt_core::launch` runs, so a dry run and a real launch never differ.
 
-## Faults of upstream Bolt that this project corrects
+## Faults of the original Bolt that this project corrects
 
-| upstream Bolt | rustyBolt |
+| original Bolt | rustyBolt |
 | --- | --- |
 | `std::rand` makes the state and the verifier | the operating system generator makes them |
 | the `id_token` goes to standard output | no token is printed |
