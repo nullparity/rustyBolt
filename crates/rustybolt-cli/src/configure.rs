@@ -1057,8 +1057,31 @@ pub(crate) fn open_browser(url: &str) {
     #[cfg(target_os = "linux")]
     let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 
+    // Not `cmd /C start`: cmd splits the command at every `&`, so the
+    // query string of the authorize URL would be cut after the first pair.
     #[cfg(target_os = "windows")]
-    let _ = std::process::Command::new("cmd")
-        .args(["/C", "start", "", url])
-        .spawn();
+    {
+        use std::os::windows::ffi::OsStrExt as _;
+        use windows_sys::Win32::UI::Shell::ShellExecuteW;
+        use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+        let wide = |s: &str| -> Vec<u16> {
+            std::ffi::OsStr::new(s)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect()
+        };
+        let verb = wide("open");
+        let target = wide(url);
+        // SAFETY: both strings are NUL-terminated and outlive the call.
+        unsafe {
+            ShellExecuteW(
+                std::ptr::null_mut(),
+                verb.as_ptr(),
+                target.as_ptr(),
+                std::ptr::null(),
+                std::ptr::null(),
+                SW_SHOWNORMAL,
+            );
+        }
+    }
 }
