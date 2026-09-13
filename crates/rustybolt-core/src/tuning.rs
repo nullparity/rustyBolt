@@ -477,6 +477,19 @@ mod tests {
     }
 
     #[test]
+    fn renderers_that_the_platform_lacks_add_no_argument() {
+        assert_eq!(
+            HwAccel::Metal.as_arg(),
+            cfg!(target_os = "macos").then_some("METAL")
+        );
+        assert_eq!(
+            HwAccel::Directdraw.as_arg(),
+            cfg!(windows).then_some("DIRECTDRAW")
+        );
+        assert_eq!(HwAccel::Opengl.as_arg(), Some("OPENGL"));
+    }
+
+    #[test]
     fn app_args_put_the_mode_arguments_first() {
         let config = TuningConfig {
             hw_accel: HwAccel::Off,

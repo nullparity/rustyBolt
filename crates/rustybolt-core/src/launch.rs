@@ -534,26 +534,38 @@ mod tests {
             "java.base/java.io",
             "java.base/java.lang",
             "java.base/java.lang.invoke",
-            "java.desktop/com.apple.eawt",
             "java.desktop/sun.awt",
             "java.desktop/java.awt.event",
         ] {
             assert!(args.contains(&format!("--add-opens={package}=ALL-UNNAMED")));
         }
+        // The macOS-only pieces stay off other platforms.
+        let mac = cfg!(target_os = "macos");
+        assert_eq!(
+            args.contains(&"--add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED".to_string()),
+            mac
+        );
         assert!(args.contains(&"-Duser.home=/home/ada/.local/share/rustybolt".to_string()));
         assert_eq!(
             args.contains(&"-Dsun.java2d.metal=true".to_string()),
             cfg!(target_os = "macos")
         );
-        assert!(args.contains(&"-Dapple.awt.application.name=RuneLite".to_string()));
+        assert_eq!(
+            args.contains(&"-Dapple.awt.application.name=RuneLite".to_string()),
+            mac
+        );
         assert!(args.contains(&"-Drunelite.launcher.nojvm=true".to_string()));
         assert!(args.contains(&"-jar".to_string()));
         assert!(args.contains(&"/data/runelite.jar".to_string()));
         #[cfg(target_os = "macos")]
         assert!(args.contains(&"-Xdock:name=RuneLite".to_string()));
-        assert!(
-            args.ends_with(&["--hw-accel", "METAL", "--launch-mode", "REFLECT"].map(String::from))
-        );
+        if mac {
+            assert!(args
+                .ends_with(&["--hw-accel", "METAL", "--launch-mode", "REFLECT"].map(String::from)));
+        } else {
+            assert!(args.ends_with(&["--launch-mode", "REFLECT"].map(String::from)));
+            assert!(!args.contains(&"--hw-accel".to_string()));
+        }
     }
 
     #[test]
