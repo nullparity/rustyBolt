@@ -48,3 +48,13 @@ rustyBolt is an unofficial project. It is not affiliated with Jagex, RuneLite or
 rustyBolt is not a game client. It runs the unmodified clients that the user installed. It cannot modify or automate gameplay. The launcher uses only the public login endpoints, and it never reads or alters game data.
 
 RuneScape, Old School RuneScape and Jagex are trademarks of Jagex Limited.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+Release assets carry Sigstore build provenance. To check a download:
+
+```
+gh attestation verify rustybolt_<version>_<platform>.tar.gz --repo nullparity/rustyBolt
+```

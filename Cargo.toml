@@ -12,7 +12,7 @@ members = [
 version = "0.2.1"
 edition = "2021"
 rust-version = "1.82"
-license = "AGPL-3.0-or-later"
+license = "MIT"
 
 [workspace.dependencies]
 bolt-auth = { path = "crates/bolt-auth" }
