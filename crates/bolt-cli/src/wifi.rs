@@ -1,12 +1,20 @@
 //! Wi-Fi keepalive manager for game tick latency stability.
 
 use std::io::{BufRead, BufReader};
-use std::net::IpAddr;
-use std::process::{Child, Command, Stdio};
+use std::net::{IpAddr, SocketAddr, UdpSocket};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use pinger::{get_pinger, run_ping, PingOptions, PingResult};
+
+/// UDP discard port; nothing listens, but the frame still wakes the radio.
+const KEEPALIVE_PORT: u16 = 9;
+const KEEPALIVE_INTERVAL: Duration = Duration::from_millis(100);
+const LATENCY_INTERVAL: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct WifiStatus {
@@ -72,30 +80,6 @@ pub(crate) fn detect_gateway() -> Option<IpAddr> {
         }
     }
 
-    None
-}
-
-pub(crate) fn parse_ping_latency(line: &str) -> Option<f64> {
-    if let Some(pos) = line.find("time=") {
-        let remainder = &line[pos + 5..];
-        let num_str: String = remainder
-            .chars()
-            .take_while(|c| c.is_ascii_digit() || *c == '.')
-            .collect();
-        if let Ok(val) = num_str.parse::<f64>() {
-            return Some(val);
-        }
-    }
-    if let Some(pos) = line.find("time<") {
-        let remainder = &line[pos + 5..];
-        let num_str: String = remainder
-            .chars()
-            .take_while(|c| c.is_ascii_digit() || *c == '.')
-            .collect();
-        if let Ok(val) = num_str.parse::<f64>() {
-            return Some(val);
-        }
-    }
     None
 }
 
@@ -180,106 +164,48 @@ fn run_wifi_worker(enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
     let gw_str = gw_ip.to_string();
     if let Ok(mut st) = status.lock() {
         st.enabled = true;
-        st.gateway = Some(gw_str.clone());
+        st.gateway = Some(gw_str);
         st.error = None;
     }
 
-    let mut streaming_child: Option<Child> = None;
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(child) = Command::new("ping")
-            .args(["-i", "0.1", &gw_str])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-        {
-            streaming_child = Some(child);
+    // Send a tiny UDP datagram to the gateway's discard port every 100ms.
+    // The payload is irrelevant; the point is to keep the radio out of
+    // 802.11 power-save so game ticks do not see wake-up jitter.
+    // Unlike ICMP this needs no privileges and no external binary.
+    let bind_addr: SocketAddr = match gw_ip {
+        IpAddr::V4(_) => "0.0.0.0:0".parse().unwrap(),
+        IpAddr::V6(_) => "[::]:0".parse().unwrap(),
+    };
+    let sock = match UdpSocket::bind(bind_addr) {
+        Ok(s) => s,
+        Err(e) => {
+            if let Ok(mut st) = status.lock() {
+                st.enabled = false;
+                st.error = Some(format!("UDP bind failed: {e}"));
+            }
+            enabled.store(false, Ordering::SeqCst);
+            return;
         }
+    };
+    let target = SocketAddr::new(gw_ip, KEEPALIVE_PORT);
+
+    // Separate slow ICMP probe for the latency readout in the UI. Uses the
+    // system ping binary via `pinger` (locale-pinned, cross-platform parsing).
+    {
+        let enabled = Arc::clone(&enabled);
+        let status = Arc::clone(&status);
+        let gw_str = gw_ip.to_string();
+        thread::spawn(move || run_latency_probe(gw_str, enabled, status));
     }
 
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(child) = Command::new("ping")
-            .args(["-i", "0.1", &gw_str])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-        {
-            streaming_child = Some(child);
-        }
-    }
-
-    if let Some(mut child) = streaming_child {
-        if let Some(stdout) = child.stdout.take() {
-            let mut reader = BufReader::new(stdout);
-            let mut line = String::new();
-
-            while enabled.load(Ordering::SeqCst) {
-                line.clear();
-                match reader.read_line(&mut line) {
-                    Ok(0) => break,
-                    Ok(_) => {
-                        if let Some(lat) = parse_ping_latency(&line) {
-                            if let Ok(mut st) = status.lock() {
-                                st.latency_ms = Some(lat);
-                            }
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-        }
-        let _ = child.kill();
-        let _ = child.wait();
-    } else {
-        while enabled.load(Ordering::SeqCst) {
-            let start = Instant::now();
-            let mut success = false;
-
-            #[cfg(windows)]
-            {
-                let res = Command::new("ping")
-                    .args(["-n", "1", "-w", "80", &gw_str])
-                    .output();
-                if let Ok(out) = res {
-                    let text = String::from_utf8_lossy(&out.stdout);
-                    if let Some(lat) = parse_ping_latency(&text) {
-                        if let Ok(mut st) = status.lock() {
-                            st.latency_ms = Some(lat);
-                        }
-                        success = true;
-                    }
-                }
-            }
-
-            #[cfg(not(windows))]
-            {
-                let res = Command::new("ping")
-                    .args(["-c", "1", "-W", "1", &gw_str])
-                    .output();
-                if let Ok(out) = res {
-                    let text = String::from_utf8_lossy(&out.stdout);
-                    if let Some(lat) = parse_ping_latency(&text) {
-                        if let Ok(mut st) = status.lock() {
-                            st.latency_ms = Some(lat);
-                        }
-                        success = true;
-                    }
-                }
-            }
-
-            if !success {
-                let elapsed = start.elapsed().as_secs_f64() * 1000.0;
-                if let Ok(mut st) = status.lock() {
-                    st.latency_ms = Some(elapsed);
-                }
-            }
-
-            let elapsed = start.elapsed();
-            if elapsed < Duration::from_millis(100) {
-                thread::sleep(Duration::from_millis(100) - elapsed);
-            }
+    while enabled.load(Ordering::SeqCst) {
+        let start = Instant::now();
+        // Errors (e.g. ICMP port-unreachable surfacing on the socket) are
+        // expected and harmless; the frame still went over the air.
+        let _ = sock.send_to(&[0u8], target);
+        let elapsed = start.elapsed();
+        if elapsed < KEEPALIVE_INTERVAL {
+            thread::sleep(KEEPALIVE_INTERVAL - elapsed);
         }
     }
 
@@ -287,6 +213,68 @@ fn run_wifi_worker(enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
         st.enabled = false;
         st.latency_ms = None;
     }
+}
+
+fn run_latency_probe(target: String, enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
+    // Drive the ping child ourselves rather than via `pinger::ping` so we can
+    // kill it on toggle-off; pinger's own reader would block in
+    // `wait_with_output` forever on an interval ping that never exits.
+    let opts = PingOptions::new(target, LATENCY_INTERVAL, None);
+    let pinger = match get_pinger(opts) {
+        Ok(p) => p,
+        Err(e) => {
+            if let Ok(mut st) = status.lock() {
+                st.error = Some(format!("latency probe unavailable: {e}"));
+            }
+            return;
+        }
+    };
+    let (cmd, args) = pinger.ping_args();
+    let mut child = match run_ping(cmd, args) {
+        Ok(c) => c,
+        Err(e) => {
+            if let Ok(mut st) = status.lock() {
+                st.error = Some(format!("latency probe unavailable: {e}"));
+            }
+            return;
+        }
+    };
+    let parse = pinger.parse_fn();
+
+    let (tx, rx) = mpsc::channel();
+    if let Some(stdout) = child.stdout.take() {
+        thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                let Ok(line) = line else { break };
+                if let Some(r) = parse(line) {
+                    if tx.send(r).is_err() {
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    while enabled.load(Ordering::SeqCst) {
+        // Poll so we notice `enabled` flipping without waiting a full interval.
+        match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(PingResult::Pong(rtt, _)) => {
+                if let Ok(mut st) = status.lock() {
+                    st.latency_ms = Some(rtt.as_secs_f64() * 1000.0);
+                }
+            }
+            Ok(PingResult::Timeout(_)) => {
+                if let Ok(mut st) = status.lock() {
+                    st.latency_ms = None;
+                }
+            }
+            Ok(PingResult::Unknown(_)) | Err(RecvTimeoutError::Timeout) => {}
+            Ok(PingResult::PingExited(..)) | Err(RecvTimeoutError::Disconnected) => break,
+        }
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 #[cfg(test)]
@@ -300,14 +288,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_ping_latency() {
-        let line = "64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=3.576 ms";
-        assert_eq!(parse_ping_latency(line), Some(3.576));
-        let win_line = "Reply from 192.168.1.1: bytes=32 time<1ms TTL=64";
-        assert_eq!(parse_ping_latency(win_line), Some(1.0));
-    }
-
-    #[test]
     fn test_wifi_manager_lifecycle() {
         let manager = WifiManager::new(false);
         assert!(!manager.is_enabled());
@@ -315,10 +295,19 @@ mod tests {
         manager.set_enabled(true);
         assert!(manager.is_enabled());
 
-        thread::sleep(Duration::from_millis(400));
+        // First ICMP reply lands well within a couple of seconds on a LAN.
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while manager.status().latency_ms.is_none() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(50));
+        }
         let status = manager.status();
         assert!(status.enabled);
         assert!(status.gateway.is_some());
+        assert!(
+            status.latency_ms.is_some(),
+            "no latency sample: {:?}",
+            status.error
+        );
 
         manager.set_enabled(false);
         assert!(!manager.is_enabled());
