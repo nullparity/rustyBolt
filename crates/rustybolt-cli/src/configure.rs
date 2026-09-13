@@ -72,6 +72,16 @@ struct ServerState {
     /// Why the keychain cannot hold a session, when it cannot. The launcher
     /// still runs; only saving a login needs the keychain.
     keychain_error: Option<String>,
+    /// Where the profile overrides apply.
+    profile_dir: String,
+    /// Starting points for the profile editor.
+    profile_presets: Vec<ProfilePreset>,
+}
+
+#[derive(Serialize)]
+struct ProfilePreset {
+    id: &'static str,
+    overrides: rustybolt_core::PropertyOverrides,
 }
 
 #[derive(Serialize)]
@@ -1029,6 +1039,7 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
     };
     let has_session = !sessions.is_empty();
 
+    let profile_dir = config.profile_dir(paths).display().to_string();
     ServerState {
         config,
         runtimes,
@@ -1042,6 +1053,11 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
         keychain_error: rustybolt_core::keychain_available()
             .err()
             .map(|error| error.to_string()),
+        profile_dir,
+        profile_presets: vec![ProfilePreset {
+            id: "gpu",
+            overrides: rustybolt_core::PropertyOverrides::gpu_preset(),
+        }],
     }
 }
 

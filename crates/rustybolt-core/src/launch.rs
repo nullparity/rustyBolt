@@ -62,6 +62,17 @@ pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> 
         let _ = crate::desktop::ensure_runelite_entry(request.jar);
     }
 
+    // The global profile overrides go into every profile file before the
+    // client reads them. A failure here is reported, not fatal.
+    if request.kind == ClientKind::RuneLite {
+        let config = Config::load(paths);
+        if let Some(overrides) = &config.runelite_profile_overrides {
+            if let Err(error) = crate::apply_to_profiles(&config.profile_dir(paths), overrides) {
+                eprintln!("rustybolt: profile overrides not applied: {error}");
+            }
+        }
+    }
+
     let mut command = Command::new(&plan.program);
     command.args(&plan.args);
     command.current_dir(&plan.working_dir);

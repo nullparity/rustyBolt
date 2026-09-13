@@ -27,6 +27,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Settings
         </button>
+        <button class="nav-tab flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[0.85rem] font-semibold text-muted transition-all hover:text-text is-active:bg-card is-active:text-text is-active:shadow-[0_2px_6px_rgba(0,0,0,0.4)] [&>svg]:size-[15px]" id="tab-profile" onclick="switchTab('profile')" data-i18n="nav.profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+          Profile
+        </button>
       </nav>
     </div>
 
@@ -256,6 +260,54 @@
 
       </div>
     </div>
+
+    <div class="view-panel hidden is-active:block is-active:animate-fade-in" id="view-profile">
+      <div class="flex flex-col gap-5">
+        <div class="mb-1.5 flex items-center justify-between">
+          <div class="text-[1.15rem] font-bold text-text" data-i18n="profile.title">Global profile overrides</div>
+          <button class="btn-secondary" onclick="switchTab('play')" data-i18n="settings.back">← Return to Play</button>
+        </div>
+
+        <div class="card">
+          <div class="mb-3 text-[0.84rem] leading-relaxed text-muted" data-i18n="profile.desc">Key and value pairs written into every RuneLite profile before each launch, so every profile on this machine gets the same values. Any RuneLite setting works: the key is the plugin name, a dot and the setting name, as in RuneLite's own profile files. A backup of each changed file sits next to it with a .bak suffix.</div>
+          <div class="font-mono text-[0.76rem] text-subtle" id="profile-dir"></div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div class="flex flex-col gap-0.5">
+              <div class="text-[0.85rem] font-medium text-text" data-i18n="profile.enable">Apply overrides before each launch</div>
+              <div class="text-[0.74rem] text-subtle" data-i18n="profile.enable_desc">Off leaves every profile file alone.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="prof-enabled">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label for="prof-strip" data-i18n="profile.strip">Remove settings that start with (one per line)</label>
+              <textarea id="prof-strip" class="min-h-[160px]" placeholder="gpu.&#10;region-locker-gpu."></textarea>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label for="prof-force" data-i18n="profile.force">Force these values (key=value per line)</label>
+              <textarea id="prof-force" class="min-h-[160px]" placeholder="gpu.fpsTarget=60&#10;gpu.vsyncMode=OFF"></textarea>
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2.5">
+            <button class="btn-secondary" onclick="loadProfilePreset('gpu')" data-i18n="profile.preset_gpu">Load GPU preset</button>
+            <button class="btn-secondary" onclick="clearProfileEditor()" data-i18n="profile.clear">Clear</button>
+          </div>
+        </div>
+
+        <div class="mt-2 flex justify-end gap-3">
+          <button class="btn-primary" id="save-profile-btn" onclick="saveProfile()" data-i18n="profile.save">Save overrides</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <div class="modal-overlay" id="login-setup-modal">
@@ -390,6 +442,7 @@
       renderCharacters();
       renderClientChoice();
       renderSettingsFields();
+      renderProfileFields();
 
       if (state.wifi) {
         wifiState = state.wifi;
@@ -399,6 +452,8 @@
 
       if (window.location.hash === '#settings') {
         switchTab('settings');
+      } else if (window.location.hash === '#profile') {
+        switchTab('profile');
       } else {
         switchTab('play');
       }
@@ -924,6 +979,58 @@
         showToast(t('diag.failed', { error: e.message }));
       } finally {
         if (btn) btn.disabled = false;
+      }
+    }
+
+    function renderProfileFields() {
+      const cfg = state.config || {};
+      const o = cfg.runelite_profile_overrides;
+      setChecked('prof-enabled', !!o);
+      setValue('prof-strip', o ? (o.strip_prefixes || []).join('\n') : '');
+      setValue('prof-force', o ? (o.force || []).map(([k, v]) => `${k}=${v}`).join('\n') : '');
+      const dir = document.getElementById('profile-dir');
+      if (dir) dir.textContent = state.profile_dir || '';
+    }
+
+    function readProfileEditor() {
+      const lines = id => getValue(id).split('\n').map(s => s.trim()).filter(Boolean);
+      const force = lines('prof-force').map(line => {
+        const at = line.indexOf('=');
+        return at < 0 ? [line, ''] : [line.slice(0, at).trim(), line.slice(at + 1).trim()];
+      });
+      return { strip_prefixes: lines('prof-strip'), force };
+    }
+
+    function loadProfilePreset(id) {
+      const preset = (state.profile_presets || []).find(p => p.id === id);
+      if (!preset) return;
+      setValue('prof-strip', preset.overrides.strip_prefixes.join('\n'));
+      setValue('prof-force', preset.overrides.force.map(([k, v]) => `${k}=${v}`).join('\n'));
+      setChecked('prof-enabled', true);
+    }
+
+    function clearProfileEditor() {
+      setValue('prof-strip', '');
+      setValue('prof-force', '');
+      setChecked('prof-enabled', false);
+    }
+
+    async function saveProfile() {
+      const btn = document.getElementById('save-profile-btn');
+      if (btn) btn.textContent = t('settings.saving');
+      const cfg = state.config || {};
+      cfg.runelite_profile_overrides = isChecked('prof-enabled') ? readProfileEditor() : null;
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+        if ((await res.json()).ok) showToast(t('profile.saved'));
+      } catch (e) {
+        showToast(t('settings.save_failed', { error: e.message }));
+      } finally {
+        if (btn) btn.textContent = t('profile.save');
       }
     }
 

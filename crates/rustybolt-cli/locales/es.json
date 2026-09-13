@@ -108,5 +108,16 @@
   "diag.desc": "Guarda un zip con el informe del lanzador y los registros del cliente para un informe de error. Antes se eliminan los nombres de cuenta, personaje y usuario, los identificadores, las direcciones y los correos.",
   "diag.save": "Guardar diagnóstico",
   "diag.saved": "Diagnóstico guardado",
-  "diag.failed": "No se pudo guardar el diagnóstico: {error}"
+  "diag.failed": "No se pudo guardar el diagnóstico: {error}",
+  "nav.profile": "Perfil",
+  "profile.title": "Ajustes globales de perfil",
+  "profile.desc": "Pares de clave y valor que se escriben en todos los perfiles de RuneLite antes de cada inicio, de modo que todos los perfiles de este equipo reciben los mismos valores. Sirve cualquier ajuste de RuneLite: la clave es el nombre del plugin, un punto y el nombre del ajuste, como en los propios archivos de perfil de RuneLite. Junto a cada archivo modificado queda una copia con el sufijo .bak.",
+  "profile.enable": "Aplicar los ajustes antes de cada inicio",
+  "profile.enable_desc": "Desactivado no toca ningún archivo de perfil.",
+  "profile.strip": "Quitar los ajustes que empiecen por (uno por línea)",
+  "profile.force": "Forzar estos valores (clave=valor por línea)",
+  "profile.preset_gpu": "Cargar el preajuste de GPU",
+  "profile.clear": "Vaciar",
+  "profile.save": "Guardar ajustes de perfil",
+  "profile.saved": "Ajustes de perfil guardados"
 }

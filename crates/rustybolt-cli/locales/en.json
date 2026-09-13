@@ -108,5 +108,16 @@
   "diag.desc": "Saves a zip with the launcher report and the client logs for a bug report. Account, character and user names, ids, addresses and emails are removed first.",
   "diag.save": "Save diagnostics",
   "diag.saved": "Diagnostics saved",
-  "diag.failed": "Could not save diagnostics: {error}"
+  "diag.failed": "Could not save diagnostics: {error}",
+  "nav.profile": "Profile",
+  "profile.title": "Global profile overrides",
+  "profile.desc": "Key and value pairs written into every RuneLite profile before each launch, so every profile on this machine gets the same values. Any RuneLite setting works: the key is the plugin name, a dot and the setting name, as in RuneLite's own profile files. A backup of each changed file sits next to it with a .bak suffix.",
+  "profile.enable": "Apply overrides before each launch",
+  "profile.enable_desc": "Off leaves every profile file alone.",
+  "profile.strip": "Remove settings that start with (one per line)",
+  "profile.force": "Force these values (key=value per line)",
+  "profile.preset_gpu": "Load GPU preset",
+  "profile.clear": "Clear",
+  "profile.save": "Save overrides",
+  "profile.saved": "Profile overrides saved"
 }

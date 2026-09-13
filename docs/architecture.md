@@ -41,7 +41,7 @@ In rustyBolt a new shell implements the user interface only. It gives each URL t
 - Start faster from the second run on, through a startup cache that the launcher rebuilds when the client updates.
 - Show the client under its own name in the Dock, the process list and the GNOME top bar, not as `java`.
 - Keep RuneLite settings in a home of its own, so the launcher never touches `~/.runelite`. One command copies your existing settings in.
-- Force RuneLite profile settings, for example a fixed graphics block.
+- Force RuneLite profile settings on every profile, from the **Profile** tab: remove keys by prefix and write key=value pairs before each launch. A GPU preset is one starting point; nothing applies unless turned on.
 - Wrap the launch in your own command, for example a wrapper script or a sandbox.
 - Read login values from a secret manager, such as the 1Password command line tool.
 - Write a GC log per client, and remove the log when that client ends.
