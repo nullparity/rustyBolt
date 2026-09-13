@@ -238,6 +238,21 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="toggle-row">
+            <div class="flex flex-col gap-0.5">
+              <div class="text-[0.85rem] font-medium text-text" data-i18n="settings.auto_signout">Sign Out of Jagex Accounts Automatically</div>
+              <div class="text-[0.74rem] text-subtle" data-i18n="settings.auto_signout_desc">Removes a saved login this long after you signed in. Leave the number empty to keep logins until you sign out.</div>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              <input type="number" id="cfg-signout-count" min="1" max="999" step="1" class="!w-[72px]" placeholder="—">
+              <select id="cfg-signout-unit" class="!w-auto">
+                <option value="hours" data-i18n="unit.hours">hours</option>
+                <option value="days" data-i18n="unit.days">days</option>
+                <option value="weeks" data-i18n="unit.weeks">weeks</option>
+                <option value="months" data-i18n="unit.months">months</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -916,6 +931,9 @@
       setValue('cfg-java-path', cfg.java_path || '');
       setChecked('cfg-close-after-launch', !!cfg.close_after_launch);
       setChecked('cfg-isolated-home', cfg.runelite_home_kind === 'isolated');
+      const maxAge = cfg.session_max_age;
+      setValue('cfg-signout-count', maxAge ? String(maxAge.count) : '');
+      setValue('cfg-signout-unit', maxAge ? maxAge.unit : 'days');
 
       setValue('cfg-gc', tuning.gc_choice || 'generational_zgc');
       setValue('cfg-max-heap', tuning.max_heap_size || '2048m');
@@ -1055,6 +1073,10 @@
       cfg.java_path = getValue('cfg-java-path') || null;
       cfg.close_after_launch = isChecked('cfg-close-after-launch');
       cfg.runelite_home_kind = isChecked('cfg-isolated-home') ? 'isolated' : 'default';
+      const signoutCount = parseInt(getValue('cfg-signout-count'), 10);
+      cfg.session_max_age = signoutCount > 0
+        ? { count: signoutCount, unit: getValue('cfg-signout-unit') }
+        : null;
 
       tuning.gc_choice = getValue('cfg-gc');
       tuning.max_heap_size = getValue('cfg-max-heap');

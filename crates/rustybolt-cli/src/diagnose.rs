@@ -12,7 +12,7 @@ use crate::CliError;
 /// unknown.
 pub(crate) fn write_bundle(paths: &Paths, dir: &Path) -> std::io::Result<PathBuf> {
     let config = Config::load(paths);
-    let store = SessionStore::load(paths);
+    let store = SessionStore::load_active(paths, &config);
     let auth = AuthConfig::default();
     let http = HttpAuth::new(&auth);
 

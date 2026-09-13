@@ -5,13 +5,16 @@
 //! holds every session as a JSON array. A session file from an older version
 //! moves into the keychain on the first load.
 
+use std::collections::HashMap;
 use std::fs;
 use std::io;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use keyring::Entry;
 use rustybolt_auth::Session;
+use serde::{Deserialize, Serialize};
 
-use crate::Paths;
+use crate::{Config, Paths};
 
 /// The keychain service name of the entry.
 const SERVICE: &str = "rustybolt";
@@ -71,10 +74,70 @@ pub fn keychain_available() -> Result<(), KeychainError> {
     Keychain.read().map(|_| ())
 }
 
+/// The unit of a [`SessionMaxAge`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AgeUnit {
+    Hours,
+    Days,
+    Weeks,
+    /// Thirty days.
+    Months,
+}
+
+impl AgeUnit {
+    fn seconds(self) -> u64 {
+        match self {
+            AgeUnit::Hours => 3600,
+            AgeUnit::Days => 86_400,
+            AgeUnit::Weeks => 7 * 86_400,
+            AgeUnit::Months => 30 * 86_400,
+        }
+    }
+}
+
+/// How long a saved login stays before the launcher signs it out.
+///
+/// The user picks a count and a unit, as in "3 days". The pair keeps the
+/// dashboard free of duration syntax and lets each language order the words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionMaxAge {
+    pub count: u32,
+    pub unit: AgeUnit,
+}
+
+impl SessionMaxAge {
+    /// The age in seconds.
+    pub fn seconds(self) -> u64 {
+        u64::from(self.count) * self.unit.seconds()
+    }
+}
+
+/// One vault entry: the session and when the user signed in.
+#[derive(Serialize, Deserialize)]
+struct Held {
+    #[serde(flatten)]
+    session: Session,
+    /// Unix seconds. Absent in entries that an older version wrote.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    signed_in_at: Option<u64>,
+}
+
+/// The current Unix time in seconds.
+fn now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
 /// The sessions of the user, and the vault that holds them.
 pub struct SessionStore {
     vault: Box<dyn Vault>,
     sessions: Vec<Session>,
+    /// When the user signed in, by `sub`. A session without an entry came
+    /// from an older version.
+    signed_in_at: HashMap<String, u64>,
 }
 
 impl SessionStore {
@@ -98,27 +161,63 @@ impl SessionStore {
         store
     }
 
+    /// Reads the sessions and signs out the ones older than
+    /// `config.session_max_age`. A sign-out goes into the keychain at once.
+    pub fn load_active(paths: &Paths, config: &Config) -> SessionStore {
+        let mut store = SessionStore::load(paths);
+        if store.expire(config.session_max_age, now()) {
+            let _ = store.save();
+        }
+        store
+    }
+
     /// Reads the sessions from this vault.
     pub fn with_vault(vault: Box<dyn Vault>) -> SessionStore {
-        let sessions = vault
+        let held = vault
             .read()
             .ok()
             .flatten()
-            .and_then(|text| serde_json::from_str::<Vec<Session>>(&text).ok())
+            .and_then(|text| serde_json::from_str::<Vec<Held>>(&text).ok())
             .unwrap_or_default();
-        SessionStore { vault, sessions }
+        let mut store = SessionStore {
+            vault,
+            sessions: Vec::with_capacity(held.len()),
+            signed_in_at: HashMap::new(),
+        };
+        for entry in held {
+            if let Some(at) = entry.signed_in_at {
+                store.signed_in_at.insert(entry.session.sub.clone(), at);
+            }
+            store.sessions.push(entry.session);
+        }
+        store
     }
 
     /// Writes the sessions as JSON into the vault.
     pub fn save(&self) -> io::Result<()> {
-        let text = serde_json::to_string(&self.sessions)
+        let held: Vec<Held> = self
+            .sessions
+            .iter()
+            .map(|session| Held {
+                session: session.clone(),
+                signed_in_at: self.signed_in_at.get(&session.sub).copied(),
+            })
+            .collect();
+        let text = serde_json::to_string(&held)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
         self.vault.write(&text)?;
         Ok(())
     }
 
     /// Adds a session, or replaces the session with the same `sub` value.
+    /// The sign-in time is now.
     pub fn upsert(&mut self, session: Session) {
+        self.upsert_at(session, now());
+    }
+
+    /// [`SessionStore::upsert`] with an explicit sign-in time, in Unix seconds.
+    pub fn upsert_at(&mut self, session: Session, signed_in_at: u64) {
+        self.signed_in_at.insert(session.sub.clone(), signed_in_at);
         match self
             .sessions
             .iter_mut()
@@ -131,7 +230,39 @@ impl SessionStore {
 
     /// Removes the session with this `sub` value. An absent value is not an error.
     pub fn remove(&mut self, sub: &str) {
+        self.signed_in_at.remove(sub);
         self.sessions.retain(|held| held.sub != sub);
+    }
+
+    /// Removes every session that the user signed into more than `max_age`
+    /// before `now`. `None` keeps every session. Returns true when the
+    /// store changed and needs a save.
+    ///
+    /// A session from an older version has no sign-in time. The call stamps
+    /// it with `now`, so it lasts one more `max_age` and the vault gets the
+    /// stamp on the next save.
+    pub fn expire(&mut self, max_age: Option<SessionMaxAge>, now: u64) -> bool {
+        let Some(max_age) = max_age else {
+            return false;
+        };
+        let mut changed = false;
+        for session in &self.sessions {
+            if !self.signed_in_at.contains_key(&session.sub) {
+                self.signed_in_at.insert(session.sub.clone(), now);
+                changed = true;
+            }
+        }
+        let limit = max_age.seconds();
+        let signed_in_at = &self.signed_in_at;
+        let before = self.sessions.len();
+        self.sessions
+            .retain(|held| now.saturating_sub(signed_in_at[&held.sub]) < limit);
+        if self.sessions.len() != before {
+            self.signed_in_at
+                .retain(|sub, _| self.sessions.iter().any(|held| &held.sub == sub));
+            changed = true;
+        }
+        changed
     }
 
     /// The sessions, in vault order.
@@ -238,6 +369,63 @@ mod tests {
         assert!(SessionStore::with_vault(Box::new(vault))
             .sessions()
             .is_empty());
+    }
+
+    #[test]
+    fn expire_signs_out_the_old_sessions() {
+        let vault = Memory::default();
+        let mut store = SessionStore::with_vault(Box::new(vault.clone()));
+        store.upsert_at(session("old", "Ada"), 1_000);
+        store.upsert_at(session("new", "Bea"), 5_000);
+        let max_age = Some(SessionMaxAge {
+            count: 1,
+            unit: AgeUnit::Hours,
+        });
+
+        assert!(!store.expire(max_age, 4_599));
+        assert_eq!(subs(&store), vec!["old".to_string(), "new".to_string()]);
+        assert!(store.expire(max_age, 4_600));
+        assert_eq!(subs(&store), vec!["new".to_string()]);
+        assert!(!store.expire(None, u64::MAX));
+
+        store.save().unwrap();
+        let loaded = SessionStore::with_vault(Box::new(vault));
+        assert_eq!(loaded.signed_in_at.get("new"), Some(&5_000));
+    }
+
+    #[test]
+    fn expire_stamps_a_session_from_an_older_version() {
+        let vault = Memory::default();
+        vault
+            .write(r#"[{"session_id":"id-a","display_name":"Ada","suffix":"1","sub":"a"}]"#)
+            .unwrap();
+        let mut store = SessionStore::with_vault(Box::new(vault));
+        let max_age = Some(SessionMaxAge {
+            count: 2,
+            unit: AgeUnit::Days,
+        });
+
+        assert!(store.expire(max_age, 100));
+        assert_eq!(subs(&store), vec!["a".to_string()]);
+        assert_eq!(store.signed_in_at.get("a"), Some(&100));
+        assert!(!store.expire(max_age, 100 + 2 * 86_400 - 1));
+        assert!(store.expire(max_age, 100 + 2 * 86_400));
+        assert!(store.sessions().is_empty());
+    }
+
+    #[test]
+    fn the_age_units_give_seconds() {
+        let age = |count, unit| SessionMaxAge { count, unit }.seconds();
+        assert_eq!(age(3, AgeUnit::Hours), 3 * 3600);
+        assert_eq!(age(3, AgeUnit::Days), 3 * 86_400);
+        assert_eq!(age(2, AgeUnit::Weeks), 14 * 86_400);
+        assert_eq!(age(19, AgeUnit::Months), 19 * 30 * 86_400);
+        let json = serde_json::to_string(&SessionMaxAge {
+            count: 3,
+            unit: AgeUnit::Days,
+        })
+        .unwrap();
+        assert_eq!(json, r#"{"count":3,"unit":"days"}"#);
     }
 
     #[test]

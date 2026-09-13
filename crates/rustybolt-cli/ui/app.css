@@ -45,7 +45,7 @@
   }
   button { @apply cursor-pointer font-[inherit]; }
   label { @apply text-[0.78rem] font-medium text-muted; }
-  input[type="text"], select, textarea {
+  input[type="text"], input[type="number"], select, textarea {
     @apply w-full rounded-md border border-input-border bg-input px-3 py-2 text-[0.85rem] text-text outline-none transition-colors focus:border-copper;
   }
   textarea { @apply min-h-[70px] resize-y font-mono text-[0.8rem]; }

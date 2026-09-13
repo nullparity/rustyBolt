@@ -35,7 +35,7 @@ pub use launch::{
 pub use paths::Paths;
 pub use profile::{apply_to_profiles, PropertyOverrides};
 pub use rustybolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};
-pub use session::{keychain_available, KeychainError, SessionStore, Vault};
+pub use session::{keychain_available, AgeUnit, KeychainError, SessionMaxAge, SessionStore, Vault};
 pub use tuning::{GcChoice, HwAccel, LaunchMode, TuningConfig};
 pub use usage::UsageStore;
 

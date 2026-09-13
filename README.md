@@ -22,7 +22,7 @@ Download from [Releases](https://github.com/nullparity/rustyBolt/releases).
 
 | system | file | steps |
 | --- | --- | --- |
-| macOS | `.tar.gz` | Unzip. Drag `rustyBolt.app` to `/Applications`. |
+| macOS | `.dmg` | Open. Drag `rustyBolt.app` to `Applications`. |
 | Windows | `.msi` | Double-click. |
 | Debian, Ubuntu | `.deb` | `sudo apt install ./rustybolt_*.deb` |
 | Fedora, openSUSE | `.rpm` | `sudo dnf install ./rustybolt_*.rpm` (or `zypper`) |
@@ -59,5 +59,5 @@ MIT. See [LICENSE](LICENSE).
 Release assets carry Sigstore build provenance. To check a download:
 
 ```
-gh attestation verify rustybolt_<version>_<platform>.tar.gz --repo nullparity/rustyBolt
+gh attestation verify rustybolt_<version>_<platform>.dmg --repo nullparity/rustyBolt
 ```

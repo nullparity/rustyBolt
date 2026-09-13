@@ -542,12 +542,12 @@ fn respond(
                     None
                 }
             });
-            let store = SessionStore::load(paths);
+            let config = Config::load(paths);
+            let store = SessionStore::load_active(paths, &config);
             let session = match sub {
                 Some(wanted) => store.sessions().iter().find(|s| s.sub == wanted),
                 None => store.sessions().first(),
             };
-            let config = Config::load(paths);
             let chars = match session {
                 Some(s) => fetch_characters(paths, &config, &s.session_id),
                 None => Vec::new(),
@@ -1018,7 +1018,7 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
     };
 
     let runelite_plan = compute_preview(paths, &config, ClientKind::RuneLite);
-    let store = SessionStore::load(paths);
+    let store = SessionStore::load_active(paths, &config);
     let sessions: Vec<SessionView> = store
         .sessions()
         .iter()

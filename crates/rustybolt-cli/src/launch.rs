@@ -216,7 +216,7 @@ pub(crate) fn resolve_credentials(
     config: &Config,
     options: &Options,
 ) -> Result<Option<GameCredentials>, CliError> {
-    let store = SessionStore::load(paths);
+    let store = SessionStore::load_active(paths, config);
     let session = match pick_session(&store, options.sub.as_deref()) {
         Ok(session) => session,
         Err(error) => {

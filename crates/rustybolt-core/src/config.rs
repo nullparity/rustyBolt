@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::import::RuneLiteHome;
 use crate::profile::PropertyOverrides;
+use crate::session::SessionMaxAge;
 use crate::tuning::TuningConfig;
 use crate::Paths;
 
@@ -57,6 +58,9 @@ pub struct Config {
     /// The language of the dashboard, as a BCP 47 tag. `None` follows the
     /// operating system.
     pub language: Option<String>,
+    /// Sign out of a Jagex account this long after the login. `None` keeps
+    /// a login until the user signs out.
+    pub session_max_age: Option<SessionMaxAge>,
 }
 
 impl Default for Config {
@@ -78,6 +82,7 @@ impl Default for Config {
             usage_recent_window_secs: DEFAULT_RECENT_WINDOW,
             runelite_home_kind: RuneLiteHome::default(),
             language: None,
+            session_max_age: None,
         }
     }
 }

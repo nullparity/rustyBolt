@@ -22,7 +22,7 @@ A tag that starts with `v` starts the release workflow. The workflow builds `rus
 
 | system | packages | built by |
 | --- | --- | --- |
-| macOS | `.tar.gz` with `rustyBolt.app` | `macos/build-app.sh` |
+| macOS | `.dmg` with `rustyBolt.app` | `macos/build-app.sh`, `macos/build-dmg.sh` (hdiutil) |
 | Windows | `.msi`, `.zip` | WiX 3 from `windows/rustybolt.wxs` |
 | Linux | `.deb`, `.rpm`, `.AppImage`, `.tar.gz` | `linux/build-deb.sh`, `linux/build-rpm.sh` (rpmbuild, soname requires), `linux/build-appimage.sh` (appimagetool) |
 
