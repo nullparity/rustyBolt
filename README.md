@@ -1,3 +1,5 @@
+[English](README.md) | [Español](README.es.md)
+
 # rustyBolt
 
 A free, portable, cross-platform launcher for RuneLite and HDOS. It logs you in to your Jagex account and launches your client.
@@ -10,7 +12,7 @@ I play OSRS on a MacBook Pro, so there is also a **Wi-Fi mode** that reduces Wi-
 
 ## Prerequisites
 
-- One client from the approved list, installed and started once: [RuneLite](https://oldschool.runescape.wiki/w/RuneLite) or [HDOS](https://oldschool.runescape.wiki/w/HDOS).
+- One client from the approved list, installed and started once: [RuneLite](https://oldschool.runescape.wiki/w/RuneLite) or [HDOS](https://oldschool.runescape.wiki/w/HDOS). The Java that the RuneLite installer ships is enough.
 - Java 11 or newer.
 - A system keychain, to save a Jagex login. macOS and Windows have one. On Linux you need a Secret Service such as GNOME Keyring, KDE Wallet or KeePassXC; without one the launcher still runs, but cannot keep you signed in. If GNOME asks for a keyring password that your login password does not unlock, the login keyring was made with an older password: change it in Passwords and Keys.
 
@@ -31,7 +33,7 @@ Download from [Releases](https://github.com/nullparity/rustyBolt/releases).
 2. **Add Jagex Account** and log in.
 3. Pick a character, pick a client, click **PLAY**.
 
-Settings, Wi-Fi mode and JVM tuning live under **Settings**. The command line is in [docs/cli.md](docs/cli.md).
+The language switch is in the header. Settings, Wi-Fi mode and JVM tuning live under **Settings**. The command line is in [docs/cli.md](docs/cli.md).
 
 ## Docs
 
