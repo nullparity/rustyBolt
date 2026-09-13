@@ -219,8 +219,9 @@ impl TuningConfig {
     pub fn system_properties(&self) -> Vec<(String, String)>;
     pub fn dock_args(&self) -> Vec<String>;
 }
+pub struct Host<'a> { pub feature: u32, pub log_dir: &'a Path, pub total_memory: Option<u64> }  // None keeps the stored heap
 pub fn tuned_client_options(kind: ClientKind, jar: &Path, data_dir: &Path, configure: bool,
-                            config: &Config, feature: u32, log_dir: &Path) -> JvmOptions;
+                            config: &Config, host: &Host<'_>) -> JvmOptions;
 
 // Which character the user wants next.
 pub struct Usage { pub count: u64, pub last_used: u64 }

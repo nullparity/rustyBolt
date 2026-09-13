@@ -154,8 +154,11 @@ pub fn plan(paths: &Paths, request: &LaunchRequest) -> Result<LaunchPlan, CoreEr
         data_dir,
         request.configure,
         &config,
-        feature,
-        &log_dir,
+        &Host {
+            feature,
+            log_dir: &log_dir,
+            total_memory: crate::memory::total_bytes(),
+        },
     );
     let default = options.invocation(&java);
     let invocation = match request.template {
@@ -332,22 +335,36 @@ pub fn client_options(
 /// The tuning applies to the RuneLite client only, and only when the user turns
 /// it on. Every other case gives the plain options. `log_dir` holds the gc log
 /// and the AOT cache.
+/// What the tuning needs to know about the machine and the runtime.
+pub struct Host<'a> {
+    /// The Java feature number the client runs on.
+    pub feature: u32,
+    /// Where the GC log and the AOT cache go.
+    pub log_dir: &'a Path,
+    /// The physical memory in bytes; `None` leaves the heap as stored.
+    pub total_memory: Option<u64>,
+}
+
 pub fn tuned_client_options(
     kind: ClientKind,
     jar: &Path,
     data_dir: &Path,
     configure: bool,
     config: &Config,
-    feature: u32,
-    log_dir: &Path,
+    host: &Host<'_>,
 ) -> JvmOptions {
     let mut options = client_options(kind, jar, data_dir, configure);
+    let Host {
+        feature,
+        log_dir,
+        total_memory,
+    } = *host;
     let tuning_config = &config.runelite_tuning;
     if kind != ClientKind::RuneLite || !tuning_config.enabled {
         return options;
     }
 
-    let tuning = tuning_config.to_tuning(log_dir, client_repository().as_deref());
+    let tuning = tuning_config.to_tuning(log_dir, client_repository().as_deref(), total_memory);
     options
         .system_properties
         .extend(tuning_config.system_properties());
@@ -516,8 +533,11 @@ mod tests {
             Path::new("/home/ada/.local/share/rustybolt"),
             false,
             config,
-            feature,
-            log_dir,
+            &Host {
+                feature,
+                log_dir,
+                total_memory: None,
+            },
         )
         .invocation(Path::new("/usr/bin/java"))
         .args

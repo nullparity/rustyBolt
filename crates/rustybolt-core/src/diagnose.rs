@@ -292,7 +292,9 @@ mod tests {
             ("BbVXZMd8R5Z6vYMdpo7lr".to_string(), "<account>"),
             ("abc123session".to_string(), "<session>"),
         ]);
-        let home = std::env::var("HOME").unwrap_or_default();
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_default();
         let text = format!(
             "Logged in as Tpain195 sub=BbVXZMd8R5Z6vYMdpo7lr JX_SESSION_ID=abc123session \
              home={home}/.runelite gateway 192.168.1.1: mail a@b.co account hash -498416345 done"

@@ -29,7 +29,7 @@ pub use import::{
     import_apply, import_plan, system_runelite_dir, ImportEntry, ImportPlan, RuneLiteHome,
 };
 pub use launch::{
-    client_invocation, client_options, launch, plan, tuned_client_options, GameCredentials,
+    client_invocation, client_options, launch, plan, tuned_client_options, GameCredentials, Host,
     LaunchPlan, LaunchRequest,
 };
 pub use paths::Paths;

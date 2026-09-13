@@ -203,10 +203,14 @@ impl Default for TuningConfig {
 impl TuningConfig {
     /// Builds the JVM tuning. `log_dir` holds the gc log and the AOT cache.
     /// `client_repository` is the RuneLite jar cache, normally `~/.runelite/repository2`.
+    /// `total_memory` is the physical memory in bytes; the heap comes down
+    /// to fit it. `None` keeps the stored heap, so a test never depends on
+    /// the machine it runs on.
     pub fn to_tuning(
         &self,
         log_dir: &Path,
         client_repository: Option<&Path>,
+        total_memory: Option<u64>,
     ) -> rustybolt_jdk::Tuning {
         let aot_cache = self.take_aot_cache(log_dir, client_repository);
         let mut extra = self.extra_jvm_args.clone();
@@ -222,11 +226,8 @@ impl TuningConfig {
         if let Some(nmt) = &self.native_memory_tracking {
             extra.push(format!("-XX:NativeMemoryTracking={nmt}"));
         }
-        let (heap_min, heap_max) = crate::memory::fit_heap(
-            self.heap_min.clone(),
-            self.heap_max.clone(),
-            crate::memory::total_bytes(),
-        );
+        let (heap_min, heap_max) =
+            crate::memory::fit_heap(self.heap_min.clone(), self.heap_max.clone(), total_memory);
         rustybolt_jdk::Tuning {
             heap_min,
             heap_max,
@@ -587,7 +588,7 @@ mod tests {
         let repository = temp.path().join("repository2");
         std::fs::create_dir_all(&repository).unwrap();
 
-        let tuning = TuningConfig::default().to_tuning(&log_dir, Some(&repository));
+        let tuning = TuningConfig::default().to_tuning(&log_dir, Some(&repository), None);
         let cache = tuning.aot_cache.expect("the default asks for an AOT cache");
         assert!(matches!(cache.mode, rustybolt_jdk::AotMode::Record));
         assert_eq!(cache.path, log_dir.join("client.aot"));
@@ -604,7 +605,7 @@ mod tests {
         std::fs::write(log_dir.join("client-1.10.0.aot"), b"cache").unwrap();
         std::fs::write(log_dir.join("client-1.9.0.aot"), b"stale").unwrap();
 
-        let tuning = TuningConfig::default().to_tuning(&log_dir, Some(&repository));
+        let tuning = TuningConfig::default().to_tuning(&log_dir, Some(&repository), None);
         let cache = tuning.aot_cache.expect("the default asks for an AOT cache");
         assert!(matches!(cache.mode, rustybolt_jdk::AotMode::Load));
         assert_eq!(cache.path, log_dir.join("client-1.10.0.aot"));
@@ -627,7 +628,7 @@ mod tests {
             ..Default::default()
         };
 
-        let tuning = config.to_tuning(&log_dir, None);
+        let tuning = config.to_tuning(&log_dir, None, None);
         assert!(matches!(tuning.gc, rustybolt_jdk::Gc::Parallel));
         assert_eq!(tuning.heap_max.as_deref(), Some("4g"));
         assert_eq!(tuning.gc_log, Some(log_dir));
