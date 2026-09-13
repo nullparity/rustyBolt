@@ -1,0 +1,102 @@
+/* Tailwind entry. build.rs compiles this with the standalone CLI. */
+@import "tailwindcss";
+@source "./index.html";
+
+@theme {
+  --color-bg: #0a0b0e;
+  --color-surface: #101217;
+  --color-card: #141720;
+  --color-card-border: #202430;
+  --color-card-hover: #181c27;
+  --color-input: #0c0d12;
+  --color-input-border: #282c3c;
+  --color-text: #f4f5f8;
+  --color-muted: #949baa;
+  --color-subtle: #62687a;
+  --color-copper: #e09460;
+  --color-copper-hover: #ea9f6c;
+  --color-copper-deep: #c77b47;
+  --color-copper-glow: rgba(224, 148, 96, 0.25);
+  --color-copper-dim: rgba(224, 148, 96, 0.12);
+  --color-patina: #28b896;
+  --color-mint: #34d399;
+  --color-danger: #f43f5e;
+  --color-ink: #0c0d12;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --animate-fade-in: fade-in 0.15s ease;
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* State classes that the script toggles. */
+@custom-variant is-active (&.active);
+@custom-variant is-selected (&.selected);
+@custom-variant is-show (&.show);
+@custom-variant is-open (&.open);
+@custom-variant is-missing (&.missing);
+@custom-variant is-danger (&.danger);
+
+@layer base {
+  body {
+    @apply flex min-h-screen flex-col bg-bg font-sans leading-normal text-text antialiased;
+  }
+  button { @apply cursor-pointer font-[inherit]; }
+  label { @apply text-[0.78rem] font-medium text-muted; }
+  input[type="text"], select, textarea {
+    @apply w-full rounded-md border border-input-border bg-input px-3 py-2 text-[0.85rem] text-text outline-none transition-colors focus:border-copper;
+  }
+  textarea { @apply min-h-[70px] resize-y font-mono text-[0.8rem]; }
+}
+
+/* Pieces the script builds from templates, or that repeat. */
+@layer components {
+  .card {
+    @apply rounded-[14px] border border-card-border bg-card p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04),0_4px_24px_-4px_rgba(0,0,0,0.5)];
+  }
+  .section-label {
+    @apply mb-3 flex items-center justify-between text-[0.72rem] font-bold uppercase tracking-[0.06em] text-subtle;
+  }
+  .btn-primary {
+    @apply rounded-md bg-copper px-5 py-2.5 text-[0.85rem] font-bold text-ink transition-all hover:bg-copper-hover;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-card-border bg-white/5 px-4 py-2 text-[0.84rem] font-semibold text-text transition-all hover:border-subtle hover:bg-white/10;
+  }
+  .pill-btn {
+    @apply flex items-center gap-2 rounded-full border border-input-border bg-white/[0.04] px-3 py-1.5 text-[0.82rem] font-medium text-text transition-all hover:bg-white/[0.08];
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[0.82rem] transition-all hover:bg-white/[0.06];
+  }
+  .char-card {
+    @apply relative flex cursor-pointer items-center gap-3 rounded-[10px] border-2 border-card-border bg-surface p-3.5 transition-all hover:-translate-y-px hover:border-subtle hover:bg-card-hover is-selected:border-copper is-selected:bg-copper-dim is-selected:shadow-[0_0_16px_var(--color-copper-glow)];
+  }
+  .char-avatar {
+    @apply flex size-[38px] shrink-0 items-center justify-center rounded-lg border border-card-border bg-white/5 text-copper;
+  }
+  .char-card.selected .char-avatar { @apply bg-copper text-white; }
+  .char-card.selected .char-badge { @apply font-medium text-copper; }
+  .client-option {
+    @apply flex cursor-pointer items-center justify-between rounded-[10px] border-2 border-card-border bg-surface px-[18px] py-3.5 transition-all hover:border-subtle is-active:border-copper is-active:bg-copper/[0.08];
+  }
+  .status-dot { @apply size-1.5 rounded-full bg-patina is-missing:bg-danger; }
+  .toggle-row { @apply flex items-center justify-between border-b border-card-border py-2.5 last:border-b-0; }
+  .switch { @apply relative inline-block h-5 w-9 shrink-0; }
+  .switch input { @apply size-0 opacity-0; }
+  .slider {
+    @apply absolute inset-0 cursor-pointer rounded-[20px] bg-card-border transition-all duration-200
+      before:absolute before:bottom-[3px] before:left-[3px] before:size-3.5 before:rounded-full before:bg-white before:transition-all before:duration-200 before:content-[''];
+  }
+  .switch input:checked + .slider { @apply bg-copper before:translate-x-4; }
+  .modal-overlay {
+    @apply fixed inset-0 z-[1000] hidden items-center justify-center bg-black/75 p-5 backdrop-blur-[8px] is-show:flex is-show:animate-fade-in;
+  }
+  .modal-card {
+    @apply flex w-full max-w-[480px] flex-col gap-[18px] rounded-[14px] border border-card-border bg-surface p-7 shadow-[0_16px_40px_rgba(0,0,0,0.8)];
+  }
+  .step-desc { @apply text-[0.84rem] leading-normal text-muted; }
+  .error-text { @apply hidden text-[0.78rem] text-danger; }
+}

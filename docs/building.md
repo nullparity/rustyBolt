@@ -2,6 +2,14 @@
 
 You need a Rust toolchain of version 1.82 or newer from [rustup](https://rustup.rs). On Linux you also need the WebKitGTK, GTK, Ayatana AppIndicator and D-Bus development packages.
 
+The dashboard stylesheet is compiled from `crates/rustybolt-cli/ui/app.css` by the Tailwind standalone CLI at build time; no Node.js. Install the pinned binary once:
+
+```sh
+scripts/install-tailwindcss.sh
+```
+
+It goes to `~/.local/bin`. Put that on `PATH`, or set `TAILWINDCSS` to the binary.
+
 ```sh
 cargo test --workspace
 cargo run -p rustybolt-cli -- help

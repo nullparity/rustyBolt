@@ -22,7 +22,7 @@ use tao::event_loop::EventLoopProxy;
 use crate::gui::AppEvent;
 use crate::httpd::{Connection, Request};
 use crate::i18n::Lang;
-use crate::web::HTML_PAGE;
+use crate::web::{HTML_PAGE, STYLESHEET};
 use crate::wifi::{WifiManager, WifiStatus};
 use crate::CliError;
 
@@ -449,6 +449,7 @@ fn respond(
             let state = build_state(paths, config, req.wifi.status());
             let state_json = serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
             let html = HTML_PAGE
+                .replace("<!--STYLES-->", &format!("<style>{STYLESHEET}</style>"))
                 .replace("<!--LOGO_SVG-->", ICON_SVG)
                 .replace("<!--VERSION-->", env!("CARGO_PKG_VERSION"))
                 .replace("<!--LANG-->", lang.tag())

@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="<!--LANG-->">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rustyBolt — Launcher</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none';">
+  <!--STYLES-->
+</head>
+<body>
+
+  <header class="sticky top-0 z-50 flex items-center justify-between border-b border-card-border bg-bg/85 px-7 py-3 backdrop-blur-[16px]">
+    <div class="flex items-center gap-6">
+      <a href="#play" class="flex items-center gap-2.5 text-inherit no-underline [&>svg]:block [&>svg]:size-7 [&>svg]:shrink-0 [&>svg]:rounded-[7px] [&>svg]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]" onclick="switchTab('play')">
+        <!--LOGO_SVG-->
+        <h1 class="text-[1.05rem] font-bold tracking-[-0.02em] text-text">rustyBolt</h1>
+        <span class="ml-0.5 rounded px-1.5 py-0.5 text-[0.7rem] font-medium text-subtle bg-white/5">v<!--VERSION--></span>
+      </a>
+
+      <nav class="flex items-center rounded-lg border border-card-border bg-black/35 p-[3px]">
+        <button class="nav-tab active flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[0.85rem] font-semibold text-muted transition-all hover:text-text is-active:bg-card is-active:text-text is-active:shadow-[0_2px_6px_rgba(0,0,0,0.4)] [&>svg]:size-[15px]" id="tab-play" onclick="switchTab('play')" data-i18n="nav.play">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Play
+        </button>
+        <button class="nav-tab flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[0.85rem] font-semibold text-muted transition-all hover:text-text is-active:bg-card is-active:text-text is-active:shadow-[0_2px_6px_rgba(0,0,0,0.4)] [&>svg]:size-[15px]" id="tab-settings" onclick="switchTab('settings')" data-i18n="nav.settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Settings
+        </button>
+      </nav>
+    </div>
+
+    <div class="flex items-center gap-2.5">
+      <button class="pill-btn [&>svg]:size-3.5 [&>svg]:text-muted" id="lang-btn" onclick="nextLanguage()" aria-label="Language">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        <span id="lang-name"></span>
+      </button>
+      <div class="relative" id="account-wrapper">
+        <button class="pill-btn gap-[9px] py-[5px] pl-2 pr-3 hover:border-subtle group" id="account-toggle-btn" onclick="toggleAccountDropdown()">
+          <span class="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-copper to-[#8a4820] text-[0.72rem] font-bold text-white" id="account-avatar">J</span>
+          <span id="account-name-display" data-i18n="account.login">Log In</span>
+          <span class="text-[0.78rem] text-subtle" id="account-suffix-display"></span>
+          <svg class="size-3 text-muted transition-transform group-[.open]:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+
+        <div class="absolute right-0 top-[calc(100%+8px)] z-[100] hidden min-w-[250px] flex-col rounded-[10px] border border-card-border bg-surface p-1.5 shadow-[0_12px_32px_-4px_rgba(0,0,0,0.65)] is-show:flex is-show:animate-fade-in" id="account-dropdown">
+          <div class="px-2.5 pb-1 pt-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.05em] text-subtle" data-i18n="account.section">Jagex Accounts</div>
+          <div id="accounts-list"></div>
+          <div class="my-1 h-px bg-card-border"></div>
+          <button class="menu-item text-muted hover:text-text" onclick="addAccount()" data-i18n="account.add">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add Jagex Account
+          </button>
+          <button class="menu-item text-muted hover:text-danger" id="remove-account-btn" onclick="removeActiveAccount()" data-i18n="account.signout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Sign Out of Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto w-full max-w-[860px] flex-1 px-6 pb-20 pt-8">
+
+    <div class="view-panel active hidden is-active:block is-active:animate-fade-in" id="view-play">
+      <div class="flex flex-col gap-6">
+
+        <div class="card hidden flex-col items-center gap-4 px-5 py-9 text-center" id="empty-state-card">
+          <div class="text-[1.25rem] font-bold text-text" data-i18n="hero.title">Connect Your Jagex Account</div>
+          <div class="max-w-[440px] text-[0.88rem] leading-relaxed text-muted" data-i18n="hero.desc">
+            Sign in with Jagex to load your RuneScape characters, manage accounts, and launch with one click.
+          </div>
+          <button class="flex items-center gap-2 rounded-lg bg-copper px-6 py-3 text-[0.95rem] font-bold text-ink transition-all hover:-translate-y-px hover:bg-copper-hover" onclick="openLoginModal()" data-i18n="hero.login">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+            Log In with Jagex Account
+          </button>
+        </div>
+
+        <div class="card" id="characters-card">
+          <div class="section-label">
+            <span data-i18n="chars.select">Select Account (Character)</span>
+            <span class="font-medium text-subtle" id="char-count-badge">0 characters</span>
+          </div>
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3" id="characters-grid">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-label" data-i18n="client.target">Target Game Client</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="client-option active" id="client-opt-runelite" onclick="selectClient('runelite')">
+              <div class="flex flex-col gap-0.5">
+                <div class="text-[0.92rem] font-semibold text-text">RuneLite</div>
+                <div class="flex items-center gap-[5px] text-[0.72rem] text-subtle" id="runelite-status">
+                  <span class="status-dot"></span> Detected
+                </div>
+              </div>
+            </div>
+            <div class="client-option" id="client-opt-hdos" onclick="selectClient('hdos')">
+              <div class="flex flex-col gap-0.5">
+                <div class="text-[0.92rem] font-semibold text-text">HDOS</div>
+                <div class="flex items-center gap-[5px] text-[0.72rem] text-subtle" id="hdos-status">
+                  <span class="status-dot"></span> Detected
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-6 px-5 py-4">
+          <div class="flex items-center justify-between gap-4">
+            <button class="wifi-btn group inline-flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.04] px-[18px] py-2.5 text-[0.95rem] font-semibold text-muted transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-text is-active:border-emerald-500/40 is-active:bg-emerald-500/[0.12] is-active:text-mint is-active:shadow-[0_0_16px_rgba(16,185,129,0.15)]" id="wifi-mode-btn" onclick="toggleWifiMode()"
+                    data-i18n-title="wifi.tooltip" title="Sends a small &quot;u up?&quot; to your wifi router and reduces game lag due to wifi">
+              <svg class="size-[18px] transition-transform group-[.active]:scale-110 group-[.active]:stroke-mint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+              <span data-i18n="wifi.mode">Wifi mode</span>
+              <span class="rounded-full bg-white/[0.08] px-[7px] py-0.5 text-[0.72rem] font-bold tracking-[0.04em] text-subtle group-[.active]:bg-emerald-500/25 group-[.active]:text-mint" id="wifi-pill" data-i18n="wifi.off">OFF</span>
+            </button>
+            <div class="flex flex-col items-end gap-[3px] text-right">
+              <span class="text-[0.8rem] text-subtle" id="wifi-desc" data-i18n="wifi.desc_off">Sends a UDP keepalive to the default gateway every 10ms to prevent 802.11 sleep jitter</span>
+              <span class="font-mono text-[0.82rem] font-semibold text-mint" id="wifi-stat"></span>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center gap-1.5 text-[0.76rem] text-copper opacity-85" data-i18n="wifi.tooltip">Sends a small "u up?" to your wifi router and reduces game lag due to wifi</div>
+        </div>
+
+        <div class="mt-2.5 flex flex-col items-center gap-3">
+          <button class="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-copper to-copper-deep px-6 py-[18px] text-[1.15rem] font-bold tracking-[0.04em] text-white shadow-[0_4px_20px_var(--color-copper-glow),0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] enabled:hover:-translate-y-0.5 enabled:hover:from-copper-hover enabled:hover:to-[#d68752] enabled:hover:shadow-[0_8px_30px_var(--color-copper-glow),0_4px_12px_rgba(0,0,0,0.5)] enabled:active:translate-y-0 enabled:active:shadow-[0_2px_10px_var(--color-copper-glow)] disabled:cursor-not-allowed disabled:bg-[#232733] disabled:bg-none disabled:text-subtle disabled:shadow-none [&>svg]:size-[22px] [&>svg]:fill-current" id="main-play-btn" onclick="triggerPlay()">
+            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span id="play-btn-text">PLAY RUNELITE</span>
+          </button>
+          <div class="text-[0.8rem] text-muted" id="play-subtitle">
+            <span data-i18n="play.playing_as">Playing as</span> <strong class="text-text" id="play-char-name">—</strong>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="view-panel hidden is-active:block is-active:animate-fade-in" id="view-settings">
+      <div class="flex flex-col gap-5">
+        <div class="mb-1.5 flex items-center justify-between">
+          <div class="text-[1.15rem] font-bold text-text" data-i18n="settings.title">Launcher Configuration</div>
+          <button class="btn-secondary" onclick="switchTab('play')" data-i18n="settings.back">
+            ← Return to Play
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="mb-3.5 text-[0.95rem] font-semibold text-text" data-i18n="settings.clients">Game Client Installations</div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-full flex flex-col gap-1.5">
+              <label for="cfg-runelite-custom-jar" data-i18n="settings.runelite_jar">Custom RuneLite JAR Path (optional)</label>
+              <input type="text" id="cfg-runelite-custom-jar" data-i18n-placeholder="settings.runelite_jar_ph" placeholder="Leave empty to use automatically detected RuneLite">
+            </div>
+            <div class="col-span-full flex flex-col gap-1.5">
+              <label for="cfg-hdos-jar" data-i18n="settings.hdos_jar">Custom HDOS JAR Path (optional)</label>
+              <input type="text" id="cfg-hdos-jar" data-i18n-placeholder="settings.hdos_jar_ph" placeholder="Leave empty to use automatically detected HDOS">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="mb-3.5 text-[0.95rem] font-semibold text-text" data-i18n="settings.java">Java Runtime</div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-full flex flex-col gap-1.5">
+              <label for="cfg-java-select" data-i18n="settings.java_select">Select Discovered Java Runtime</label>
+              <select id="cfg-java-select" onchange="onJavaSelectChange()">
+                <option value="" data-i18n="settings.java_auto">Automatic selection (highest feature version)</option>
+              </select>
+            </div>
+            <div class="col-span-full flex flex-col gap-1.5">
+              <label for="cfg-java-path" data-i18n="settings.java_path">Custom Java Binary Path</label>
+              <input type="text" id="cfg-java-path" placeholder="/path/to/java">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="mb-3.5 text-[0.95rem] font-semibold text-text" data-i18n="settings.jvm">JVM Performance Tuning</div>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label for="cfg-gc" data-i18n="settings.gc">Garbage Collector</label>
+              <select id="cfg-gc">
+                <option value="generational_zgc" data-i18n="settings.gc_zgc">Generational ZGC (Java 21+ Recommended)</option>
+                <option value="g1">G1 GC</option>
+                <option value="default" data-i18n="settings.gc_default">JVM Default</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label for="cfg-max-heap" data-i18n="settings.max_heap">Max Heap Size (-Xmx)</label>
+              <input type="text" id="cfg-max-heap" placeholder="2048m">
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label for="cfg-initial-heap" data-i18n="settings.initial_heap">Initial Heap Size (-Xms)</label>
+              <input type="text" id="cfg-initial-heap" placeholder="512m">
+            </div>
+            <div class="col-span-full flex flex-col gap-1.5">
+              <label for="cfg-extra-flags" data-i18n="settings.extra_flags">Additional JVM Arguments</label>
+              <textarea id="cfg-extra-flags" placeholder="-Dsun.java2d.opengl=true"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="mb-3.5 text-[0.95rem] font-semibold text-text" data-i18n="settings.behavior">Behavior</div>
+          <div class="toggle-row">
+            <div class="flex flex-col gap-0.5">
+              <div class="text-[0.85rem] font-medium text-text" data-i18n="settings.close_after">Close Launcher After Starting Client</div>
+              <div class="text-[0.74rem] text-subtle" data-i18n="settings.close_after_desc">Automatically terminates the rustyBolt process once the client starts</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cfg-close-after-launch">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div class="flex flex-col gap-0.5">
+              <div class="text-[0.85rem] font-medium text-text" data-i18n="settings.isolate_home">Isolate RuneLite Home Directory</div>
+              <div class="text-[0.74rem] text-subtle" data-i18n="settings.isolate_home_desc">Keep rustyBolt RuneLite settings in a dedicated folder separate from ~/.runelite</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cfg-isolated-home">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="mb-3.5 text-[0.95rem] font-semibold text-text" data-i18n="settings.preview">Execution Command Preview</div>
+          <div class="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-input-border bg-[#08090b] p-3 font-mono text-[0.78rem] text-muted" id="command-preview" data-i18n="settings.preview_loading">Loading preview...</div>
+        </div>
+
+        <div class="mt-2 flex justify-end gap-3">
+          <button class="btn-primary" id="save-settings-btn" onclick="saveSettings()" data-i18n="settings.save">
+            Save Settings
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="login-setup-modal">
+    <div class="modal-card">
+      <div class="flex items-center justify-between">
+        <div class="text-[1.1rem] font-bold text-text" data-i18n="setup.title">One-time login setup</div>
+        <button class="text-[1.2rem] leading-none text-subtle hover:text-text" onclick="closeLoginSetup()">&times;</button>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="flex flex-1 flex-col gap-2">
+          <div class="step-desc" data-i18n="setup.desc">Logging in through your browser lets you use your password manager. To receive the last step of the Jagex login, rustyBolt needs one privileged change:</div>
+          <div class="step-desc mt-2" id="login-setup-reason"></div>
+          <div class="step-desc mt-2" data-i18n="setup.password_note">Your system will ask for your password once. Nothing runs with elevated rights afterwards.</div>
+          <div class="mt-3.5 flex flex-wrap gap-2.5">
+            <button class="btn-primary" id="login-setup-btn" onclick="runLoginSetup()" data-i18n="setup.run">Set up and log in</button>
+            <button class="btn-secondary" onclick="addAccount('window')" data-i18n="setup.in_window">Log in inside rustyBolt instead</button>
+          </div>
+          <div class="error-text mt-2" id="login-setup-error"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="login-modal">
+    <div class="modal-card">
+      <div class="flex items-center justify-between">
+        <div class="text-[1.1rem] font-bold text-text" data-i18n="login.title">Connect Jagex Account</div>
+        <button class="text-[1.2rem] leading-none text-subtle hover:text-text" onclick="closeLoginModal()">&times;</button>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <div class="flex size-6 shrink-0 items-center justify-center rounded-full bg-copper-dim text-[0.78rem] font-bold text-copper">1</div>
+        <div class="flex flex-1 flex-col gap-2">
+          <div class="step-desc" data-i18n="login.step1">Open the official Jagex authorization portal in your browser:</div>
+          <button class="btn-secondary" id="open-auth-btn" onclick="startAuthFlow()" data-i18n="login.open">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            Open Jagex Login
+          </button>
+          <a id="auth-fallback-link" href="#" target="_blank" class="mt-1.5 hidden text-[0.8rem] text-copper underline" data-i18n="login.fallback">Browser didn't open? Click here</a>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <div class="flex size-6 shrink-0 items-center justify-center rounded-full bg-copper-dim text-[0.78rem] font-bold text-copper">2</div>
+        <div class="flex flex-1 flex-col gap-2">
+          <div class="step-desc" data-i18n="login.step2">After logging in, your browser redirects to a confirmation page. Copy the address bar URL and paste it here:</div>
+          <input type="text" id="auth-redirect-url" placeholder="https://secure.runescape.com/m=weblogin/launcher-redirect?code=...">
+          <button class="btn-primary mt-1 self-start" id="complete-auth-btn" onclick="completeAuthFlow()" data-i18n="login.complete">
+            Complete Login
+          </button>
+          <div class="error-text" id="auth-error"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fixed bottom-6 right-6 z-[2000] hidden items-center gap-2.5 rounded-lg border border-card-border bg-surface px-5 py-3 text-[0.85rem] text-text shadow-[0_10px_30px_rgba(0,0,0,0.6)] is-show:flex is-show:animate-fade-in" id="toast">
+    <span class="size-2 rounded-full bg-patina"></span>
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <script>
+    /*INITIAL_STATE*/
+
+    let state = window.INITIAL_STATE || {};
+
+    // Strings come from the locale table the server put on the page.
+    const I18N = window.RUSTYBOLT_I18N || {};
+    function t(key, vars) {
+      let text = I18N[key];
+      if (text == null) return key;
+      if (vars) for (const k in vars) text = text.split(`{${k}}`).join(vars[k]);
+      return text;
+    }
+    // Replaces only the text of an element, so an icon inside a button stays.
+    function setText(el, text) {
+      const nodes = Array.from(el.childNodes).filter(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+      if (nodes.length === 0) { el.textContent = text; return; }
+      nodes[0].textContent = el.children.length ? ' ' + text + ' ' : text;
+      nodes.slice(1).forEach(n => n.remove());
+    }
+    function applyI18n() {
+      document.querySelectorAll('[data-i18n]').forEach(el => setText(el, t(el.dataset.i18n)));
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+    }
+
+    // Every API call carries the per-launch token; the server refuses
+    // requests without it, so a stray web page cannot drive the launcher.
+    {
+      const rawFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        headers.set('X-RustyBolt-Token', window.RUSTYBOLT_TOKEN || '');
+        return rawFetch(input, { ...init, headers });
+      };
+    }
+    let activeSub = state.active_sub || (state.sessions && state.sessions[0] ? state.sessions[0].sub : null);
+    let selectedCharId = null;
+    let selectedClient = 'runelite';
+    let isLaunching = false;
+
+    function init() {
+      applyI18n();
+      renderLanguageButton();
+      if (state.clients) {
+        const rlFound = !!state.clients.runelite_detected;
+        const hdosFound = !!state.clients.hdos_detected;
+        updateStatusTag('runelite-status', rlFound, state.clients.runelite_detected);
+        updateStatusTag('hdos-status', hdosFound, state.clients.hdos_detected);
+        if (!rlFound && hdosFound) {
+          selectedClient = 'hdos';
+        }
+      }
+
+      renderAccountMenu();
+      renderCharacters();
+      renderClientChoice();
+      renderSettingsFields();
+
+      if (state.wifi) {
+        wifiState = state.wifi;
+      }
+      updateWifiUI();
+      setInterval(pollWifiStatus, 1500);
+
+      if (window.location.hash === '#settings') {
+        switchTab('settings');
+      } else {
+        switchTab('play');
+      }
+
+      document.addEventListener('click', (e) => {
+        const wrapper = document.getElementById('account-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+          closeAccountDropdown();
+        }
+      });
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+
+      const tabBtn = document.getElementById(`tab-${tab}`);
+      const panel = document.getElementById(`view-${tab}`);
+      if (tabBtn) tabBtn.classList.add('active');
+      if (panel) panel.classList.add('active');
+      window.location.hash = tab;
+    }
+
+    function toggleAccountDropdown() {
+      const dd = document.getElementById('account-dropdown');
+      const btn = document.getElementById('account-toggle-btn');
+      if (dd) {
+        disarmRemove();
+        dd.classList.toggle('show');
+        if (btn) btn.classList.toggle('open');
+      }
+    }
+
+    function closeAccountDropdown() {
+      disarmRemove();
+      const dd = document.getElementById('account-dropdown');
+      const btn = document.getElementById('account-toggle-btn');
+      if (dd) dd.classList.remove('show');
+      if (btn) btn.classList.remove('open');
+    }
+
+    function renderAccountMenu() {
+      const nameDisp = document.getElementById('account-name-display');
+      const suffixDisp = document.getElementById('account-suffix-display');
+      const avatarDisp = document.getElementById('account-avatar');
+      const accountsList = document.getElementById('accounts-list');
+      const removeBtn = document.getElementById('remove-account-btn');
+      const emptyState = document.getElementById('empty-state-card');
+      const charsCard = document.getElementById('characters-card');
+
+      const sessions = state.sessions || [];
+      if (sessions.length === 0) {
+        nameDisp.textContent = t('account.login');
+        suffixDisp.textContent = '';
+        avatarDisp.textContent = '+';
+        accountsList.innerHTML = `<div class="px-2.5 py-1.5 text-[0.78rem] text-subtle">${escapeHtml(t('account.none'))}</div>`;
+        if (removeBtn) removeBtn.classList.add('hidden');
+        if (emptyState) emptyState.classList.replace('hidden', 'flex');
+        if (charsCard) charsCard.classList.add('hidden');
+        return;
+      }
+
+      if (emptyState) emptyState.classList.replace('flex', 'hidden');
+      if (charsCard) charsCard.classList.remove('hidden');
+      if (removeBtn) removeBtn.classList.remove('hidden');
+
+      const current = sessions.find(s => s.sub === activeSub) || sessions[0];
+      activeSub = current.sub;
+
+      nameDisp.textContent = current.display_name;
+      suffixDisp.textContent = current.suffix ? `#${current.suffix}` : '';
+      avatarDisp.textContent = current.display_name.charAt(0).toUpperCase();
+
+      accountsList.innerHTML = sessions.map(s => {
+        const isActive = s.sub === activeSub;
+        return `
+          <button class="menu-item justify-between text-text ${isActive ? 'bg-copper-dim font-semibold text-copper' : ''}" onclick="switchAccount('${s.sub}')">
+            <span>${escapeHtml(s.display_name)} <span class="text-subtle">#${escapeHtml(s.suffix)}</span></span>
+            ${isActive ? '✓' : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    async function switchAccount(sub) {
+      activeSub = sub;
+      closeAccountDropdown();
+      renderAccountMenu();
+      showToast(t('account.switching'));
+
+      try {
+        const res = await fetch(`/api/characters?sub=${encodeURIComponent(sub)}`);
+        if (res.ok) {
+          state.characters = await res.json();
+          renderCharacters();
+        }
+      } catch (e) {
+        console.error('Failed to load characters:', e);
+      }
+    }
+
+    // window.confirm/alert are no-ops inside the native webview (wry does
+    // not implement JS dialogs), so confirmation is a second click.
+    let removeArmedFor = null;
+    let removeArmTimer = null;
+    function disarmRemove() {
+      removeArmedFor = null;
+      clearTimeout(removeArmTimer);
+      const btn = document.getElementById('remove-account-btn');
+      if (btn) setText(btn, t('account.signout'));
+    }
+
+    async function removeActiveAccount() {
+      if (!activeSub) return;
+      if (removeArmedFor !== activeSub) {
+        removeArmedFor = activeSub;
+        const btn = document.getElementById('remove-account-btn');
+        if (btn) setText(btn, t('account.signout_confirm'));
+        clearTimeout(removeArmTimer);
+        removeArmTimer = setTimeout(disarmRemove, 4000);
+        return;
+      }
+      disarmRemove();
+      closeAccountDropdown();
+
+      try {
+        await fetch('/api/auth/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sub: activeSub })
+        });
+        state.sessions = (state.sessions || []).filter(s => s.sub !== activeSub);
+        activeSub = state.sessions[0] ? state.sessions[0].sub : null;
+        if (activeSub) {
+          await switchAccount(activeSub);
+        } else {
+          state.characters = [];
+          renderAccountMenu();
+          renderCharacters();
+        }
+        showToast(t('account.signed_out'));
+      } catch (e) {
+        showToast(t('account.remove_failed'));
+      }
+    }
+
+    function renderCharacters() {
+      const grid = document.getElementById('characters-grid');
+      const countBadge = document.getElementById('char-count-badge');
+      const chars = state.characters || [];
+
+      countBadge.textContent = chars.length === 1 ? t('chars.count_one') : t('chars.count', { count: chars.length });
+
+      if (chars.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full p-[18px] text-center text-[0.85rem] text-muted">
+            ${escapeHtml(t('chars.none'))}
+          </div>
+        `;
+        selectedCharId = null;
+        updatePlayButton();
+        return;
+      }
+
+      if (!selectedCharId || !chars.some(c => c.account_id === selectedCharId)) {
+        selectedCharId = chars[0].account_id;
+      }
+
+      grid.innerHTML = chars.map((c, i) => {
+        const isSel = c.account_id === selectedCharId;
+        const initials = c.display_name.substring(0, 2).toUpperCase();
+        return `
+          <div class="char-card ${isSel ? 'selected' : ''}" onclick="selectCharacter('${c.account_id}')">
+            <div class="char-avatar">${escapeHtml(initials)}</div>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-[0.95rem] font-semibold text-text">${escapeHtml(c.display_name)}</div>
+              <div class="char-badge mt-0.5 flex items-center gap-1 text-[0.7rem] text-subtle">${escapeHtml(i === 0 ? t('chars.last_played') : t('chars.ready'))}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updatePlayButton();
+    }
+
+    function selectCharacter(id) {
+      selectedCharId = id;
+      renderCharacters();
+    }
+
+    function selectClient(kind) {
+      selectedClient = kind;
+      renderClientChoice();
+      updatePlayButton();
+    }
+
+    function renderClientChoice() {
+      const rlOpt = document.getElementById('client-opt-runelite');
+      const hdosOpt = document.getElementById('client-opt-hdos');
+      if (rlOpt) rlOpt.classList.toggle('active', selectedClient === 'runelite');
+      if (hdosOpt) hdosOpt.classList.toggle('active', selectedClient === 'hdos');
+    }
+
+    function updatePlayButton() {
+      const btn = document.getElementById('main-play-btn');
+      const btnText = document.getElementById('play-btn-text');
+      const subTitle = document.getElementById('play-char-name');
+
+      const clientLabel = selectedClient === 'hdos' ? 'HDOS' : 'RUNELITE';
+      btnText.textContent = isLaunching ? t('play.starting') : t('play.button', { client: clientLabel });
+
+      const chars = state.characters || [];
+      const currentChar = chars.find(c => c.account_id === selectedCharId);
+
+      if (currentChar) {
+        subTitle.textContent = currentChar.display_name;
+      } else if (state.sessions && state.sessions.length > 0) {
+        subTitle.textContent = t('play.active_account');
+      } else {
+        subTitle.textContent = t('play.unlinked');
+      }
+    }
+
+    async function triggerPlay() {
+      if (isLaunching) return;
+      isLaunching = true;
+      updatePlayButton();
+
+      const clientName = selectedClient === 'hdos' ? 'HDOS' : 'RuneLite';
+      showToast(t('play.launching', { client: clientName }));
+
+      try {
+        const res = await fetch('/api/launch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client: selectedClient,
+            sub: activeSub,
+            character_id: selectedCharId
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(t('play.started', { client: clientName, pid: data.pid }));
+          if (data.close) {
+            setTimeout(() => {
+              showToast(t('play.closing'));
+              setTimeout(() => window.close(), 1200);
+            }, 1000);
+          }
+        } else {
+          showToast(t('play.failed', { client: clientName, error: data.error || t('error.unknown') }));
+        }
+      } catch (err) {
+        showToast(t('play.connection_error', { error: err.message }));
+      } finally {
+        isLaunching = false;
+        updatePlayButton();
+      }
+    }
+
+    
+    // Native window: the login runs in a second webview and calls back into
+    // onNativeLogin / onNativeLoginError. Browser mode: fall back to the modal.
+    let nativeLoginPending = false;
+
+    async function addAccount(mode) {
+      closeAccountDropdown();
+      closeLoginSetup();
+      if (nativeLoginPending) return;
+      nativeLoginPending = true;
+      try {
+        const res = await fetch('/api/auth/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: mode || null })
+        });
+        const data = await res.json();
+        if (data.ok && data.native && data.setup) {
+          nativeLoginPending = false;
+          openLoginSetup(data.reason);
+          return;
+        }
+        if (data.ok && data.native) {
+          if (data.note) showToast(data.note);
+          showToast(data.mode === 'browser' ? t('login.in_browser') : t('login.in_window'));
+          return;
+        }
+        nativeLoginPending = false;
+        openLoginModal();
+        const btn = document.getElementById('open-auth-btn');
+        if (btn) btn.textContent = t('login.opened');
+        const fallback = document.getElementById('auth-fallback-link');
+        if (fallback && data.url) {
+          fallback.href = data.url;
+          fallback.classList.remove('hidden');
+        }
+      } catch (e) {
+        nativeLoginPending = false;
+        showToast(t('login.start_failed', { error: e.message }));
+      }
+    }
+
+    function openLoginSetup(reason) {
+      const modal = document.getElementById('login-setup-modal');
+      const text = document.getElementById('login-setup-reason');
+      const err = document.getElementById('login-setup-error');
+      if (text) text.textContent = reason || '';
+      if (err) err.classList.add('hidden');
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeLoginSetup() {
+      const modal = document.getElementById('login-setup-modal');
+      if (modal) modal.classList.remove('show');
+    }
+
+    async function runLoginSetup() {
+      const btn = document.getElementById('login-setup-btn');
+      const err = document.getElementById('login-setup-error');
+      if (btn) { btn.disabled = true; btn.textContent = t('setup.waiting'); }
+      if (err) err.classList.add('hidden');
+      try {
+        const res = await fetch('/api/auth/setup', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          closeLoginSetup();
+          addAccount('browser');
+        } else if (err) {
+          err.textContent = data.error || t('setup.failed');
+          err.classList.remove('hidden');
+        }
+      } catch (e) {
+        if (err) { err.textContent = e.message; err.classList.remove('hidden'); }
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = t('setup.run'); }
+      }
+    }
+
+    function onNativeLogin(data) {
+      nativeLoginPending = false;
+      if (!data || !data.session) return;
+      showToast(t('login.success', { name: data.session.display_name }));
+      state.sessions = state.sessions || [];
+      state.sessions = state.sessions.filter(s => s.sub !== data.session.sub);
+      state.sessions.push(data.session);
+      activeSub = data.session.sub;
+      state.characters = data.characters || [];
+      renderAccountMenu();
+      renderCharacters();
+    }
+
+    function onNativeLoginError(message) {
+      nativeLoginPending = false;
+      if (message) showToast(t('login.failed_reason', { error: message }));
+    }
+
+    function openLoginModal() {
+      closeAccountDropdown();
+      const modal = document.getElementById('login-modal');
+      const err = document.getElementById('auth-error');
+      if (err) err.classList.add('hidden');
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeLoginModal() {
+      const modal = document.getElementById('login-modal');
+      if (modal) modal.classList.remove('show');
+    }
+
+    async function startAuthFlow() {
+      const btn = document.getElementById('open-auth-btn');
+      btn.textContent = t('login.opening');
+      try {
+        const res = await fetch('/api/auth/start', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          btn.textContent = t('login.opened');
+          const fallback = document.getElementById('auth-fallback-link');
+          if (fallback && data.url) {
+            fallback.href = data.url;
+            fallback.classList.remove('hidden');
+          }
+        }
+      } catch (e) {
+        showToast(t('login.start_failed', { error: e.message }));
+        btn.textContent = t('login.open');
+      }
+    }
+
+    async function completeAuthFlow() {
+      const input = document.getElementById('auth-redirect-url');
+      const err = document.getElementById('auth-error');
+      const btn = document.getElementById('complete-auth-btn');
+      const val = input ? input.value.trim() : '';
+
+      if (!val) {
+        if (err) { err.textContent = t('login.paste_url'); err.classList.remove('hidden'); }
+        return;
+      }
+
+      btn.textContent = t('login.verifying');
+      try {
+        const res = await fetch('/api/auth/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: val })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          closeLoginModal();
+          showToast(t('login.success', { name: data.session.display_name }));
+          state.sessions = state.sessions || [];
+          state.sessions.push(data.session);
+          activeSub = data.session.sub;
+          state.characters = data.characters || [];
+          renderAccountMenu();
+          renderCharacters();
+        } else if (data.next) {
+          if (input) {
+            input.value = '';
+            input.placeholder = 'http://localhost/#code=...&id_token=...';
+          }
+          const fallback = document.getElementById('auth-fallback-link');
+          if (fallback && data.url) {
+            fallback.href = data.url;
+            fallback.classList.remove('hidden');
+          }
+          if (err) { err.textContent = data.error; err.classList.replace('text-danger', 'text-copper'); err.classList.remove('hidden'); }
+        } else {
+          if (err) { err.textContent = data.error || t('login.failed'); err.classList.replace('text-copper', 'text-danger'); err.classList.remove('hidden'); }
+        }
+      } catch (e) {
+        if (err) { err.textContent = e.message; err.classList.remove('hidden'); }
+      } finally {
+        btn.textContent = t('login.complete');
+      }
+    }
+
+    
+    function renderSettingsFields() {
+      const cfg = state.config || {};
+      const tuning = cfg.runelite_tuning || {};
+
+      setValue('cfg-runelite-custom-jar', cfg.runelite_custom_jar || '');
+      setValue('cfg-hdos-jar', cfg.hdos_jar || '');
+      setValue('cfg-java-path', cfg.java_path || '');
+      setChecked('cfg-close-after-launch', !!cfg.close_after_launch);
+      setChecked('cfg-isolated-home', cfg.runelite_home_kind === 'isolated');
+
+      setValue('cfg-gc', tuning.gc_choice || 'generational_zgc');
+      setValue('cfg-max-heap', tuning.max_heap_size || '2048m');
+      setValue('cfg-initial-heap', tuning.initial_heap_size || '512m');
+      setValue('cfg-extra-flags', (tuning.extra_vm_flags || []).join('\n'));
+
+      const javaSelect = document.getElementById('cfg-java-select');
+      if (javaSelect && state.runtimes) {
+        javaSelect.innerHTML = `<option value="">${escapeHtml(t('settings.java_auto'))}</option>` +
+          state.runtimes.map(r => `<option value="${escapeHtml(r.path)}">${escapeHtml(r.version)} (${escapeHtml(r.source)} - ${escapeHtml(r.path)})</option>`).join('');
+        if (cfg.java_path) javaSelect.value = cfg.java_path;
+      }
+
+      const preview = document.getElementById('command-preview');
+      if (preview) preview.textContent = state.runelite_plan || t('settings.preview_none');
+
+    }
+
+    // The button shows the language in use and cycles to the next one.
+    function renderLanguageButton() {
+      const name = document.getElementById('lang-name');
+      const current = (window.RUSTYBOLT_LANGUAGES || []).find(l => l.tag === window.RUSTYBOLT_LANG);
+      if (name && current) name.textContent = current.name;
+    }
+
+    async function nextLanguage() {
+      const languages = window.RUSTYBOLT_LANGUAGES || [];
+      const index = languages.findIndex(l => l.tag === window.RUSTYBOLT_LANG);
+      const next = languages[(index + 1) % languages.length];
+      if (!next) return;
+      const cfg = state.config || {};
+      cfg.language = next.tag;
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+        if ((await res.json()).ok) {
+          // The server picks the language when it serves the page.
+          window.location.reload();
+        }
+      } catch (e) {
+        showToast(t('settings.save_failed', { error: e.message }));
+      }
+    }
+
+    function onJavaSelectChange() {
+      const select = document.getElementById('cfg-java-select');
+      const input = document.getElementById('cfg-java-path');
+      if (select && input) {
+        input.value = select.value;
+      }
+    }
+
+    async function saveSettings() {
+      const btn = document.getElementById('save-settings-btn');
+      btn.textContent = t('settings.saving');
+
+      const cfg = state.config || {};
+      const tuning = cfg.runelite_tuning || {};
+
+      cfg.runelite_custom_jar = getValue('cfg-runelite-custom-jar') || null;
+      cfg.runelite_use_custom_jar = !!cfg.runelite_custom_jar;
+      cfg.hdos_jar = getValue('cfg-hdos-jar') || null;
+      cfg.java_path = getValue('cfg-java-path') || null;
+      cfg.close_after_launch = isChecked('cfg-close-after-launch');
+      cfg.runelite_home_kind = isChecked('cfg-isolated-home') ? 'isolated' : 'default';
+
+      tuning.gc_choice = getValue('cfg-gc');
+      tuning.max_heap_size = getValue('cfg-max-heap');
+      tuning.initial_heap_size = getValue('cfg-initial-heap');
+      const extra = getValue('cfg-extra-flags');
+      tuning.extra_vm_flags = extra ? extra.split('\n').map(s => s.trim()).filter(Boolean) : [];
+      cfg.runelite_tuning = tuning;
+
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(t('settings.saved'));
+          if (data.plan) {
+            const preview = document.getElementById('command-preview');
+            if (preview) preview.textContent = data.plan;
+          }
+        }
+      } catch (e) {
+        showToast(t('settings.save_failed', { error: e.message }));
+      } finally {
+        btn.textContent = t('settings.save');
+      }
+    }
+
+    
+    function updateStatusTag(elemId, detected, path) {
+      const el = document.getElementById(elemId);
+      if (!el) return;
+      if (detected) {
+        el.innerHTML = '<span class="status-dot"></span> ' + escapeHtml(t('client.installed'));
+      } else {
+        el.innerHTML = '<span class="status-dot missing"></span> ' + escapeHtml(t('client.not_detected'));
+      }
+    }
+
+    function setValue(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    }
+    function getValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    }
+    function setChecked(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.checked = val;
+    }
+    function isChecked(id) {
+      const el = document.getElementById(id);
+      return el ? el.checked : false;
+    }
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      if (toast && toastMsg) {
+        toastMsg.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+      }
+    }
+
+    let wifiState = {
+      enabled: false,
+      gateway: null,
+      latency_ms: null,
+      error: null
+    };
+
+    function updateWifiUI() {
+      const btn = document.getElementById('wifi-mode-btn');
+      const pill = document.getElementById('wifi-pill');
+      const stat = document.getElementById('wifi-stat');
+      const desc = document.getElementById('wifi-desc');
+
+      if (!btn) return;
+
+      if (wifiState.enabled) {
+        btn.classList.add('active');
+        if (pill) pill.textContent = t('wifi.active');
+        if (stat) {
+          const latText = wifiState.latency_ms != null ? `${wifiState.latency_ms.toFixed(1)}ms` : t('wifi.active_short');
+          const gwText = wifiState.gateway ? `${wifiState.gateway} • ` : '';
+          stat.textContent = `${gwText}${latText}`;
+        }
+        if (desc) desc.textContent = t('wifi.desc_on');
+      } else {
+        btn.classList.remove('active');
+        if (pill) pill.textContent = t('wifi.off');
+        if (stat) stat.textContent = '';
+        if (desc) desc.textContent = t('wifi.desc_off');
+      }
+    }
+
+    async function toggleWifiMode() {
+      const next = !wifiState.enabled;
+      try {
+        const res = await fetch('/api/wifi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: next })
+        });
+        const data = await res.json();
+        wifiState = data;
+        updateWifiUI();
+        if (wifiState.enabled) {
+          showToast(t('wifi.toast_on'));
+        } else {
+          showToast(t('wifi.toast_off'));
+        }
+      } catch (err) {
+        console.error('Failed to toggle wifi mode:', err);
+      }
+    }
+
+    async function pollWifiStatus() {
+      try {
+        const res = await fetch('/api/wifi');
+        if (res.ok) {
+          wifiState = await res.json();
+          updateWifiUI();
+        }
+      } catch (e) {
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

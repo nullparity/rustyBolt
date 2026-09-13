@@ -34,6 +34,12 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install Tailwind CLI
+        shell: bash
+        run: |
+          scripts/install-tailwindcss.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
