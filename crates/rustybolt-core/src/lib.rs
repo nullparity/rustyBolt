@@ -58,7 +58,7 @@ pub enum CoreError {
     /// The OAuth2 flow rejected a step.
     #[error("authentication error: {0}")]
     Auth(#[from] rustybolt_auth::AuthError),
-    #[error("no Java runtime of version 11 or newer exists")]
+    #[error("no Java runtime of version 11 or newer with a desktop toolkit exists (a -headless package cannot open a window)")]
     NoJava,
     /// The server rejected the session. The user must log in again.
     #[error("the session expired")]

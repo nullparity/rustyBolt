@@ -37,6 +37,9 @@ pub struct JavaRuntime {
     pub home: Option<PathBuf>,
     pub version: Option<JavaVersion>,
     pub source: Source,
+    /// The runtime has no AWT toolkit, so it cannot open a window. Linux
+    /// distributions ship such a `-headless` package as the default Java.
+    pub headless: bool,
 }
 
 #[derive(Debug, Error)]
@@ -70,12 +73,20 @@ pub fn probe(path: &Path) -> Option<JavaRuntime> {
     let home = property(&text, "java.home")
         .map(PathBuf::from)
         .or_else(|| determine_home(path));
+    let headless = home.as_deref().is_some_and(is_headless_home);
     Some(JavaRuntime {
         path: path.to_path_buf(),
         home,
         version: Some(version),
         source: Source::Explicit,
+        headless,
     })
+}
+
+/// A Linux runtime without `libawt_xawt.so` was built or packaged headless.
+/// Other platforms ship the toolkit with every runtime.
+fn is_headless_home(home: &Path) -> bool {
+    cfg!(target_os = "linux") && !home.join("lib").join("libawt_xawt.so").is_file()
 }
 
 /// Reads one `name = value` line of the settings output.
@@ -451,7 +462,7 @@ fn pick_highest(runtimes: &[JavaRuntime], min_feature: u32) -> Option<JavaRuntim
         let Some(version) = runtime.version.as_ref() else {
             continue;
         };
-        if version.feature < min_feature {
+        if version.feature < min_feature || runtime.headless {
             continue;
         }
         let better = match best {
@@ -772,7 +783,7 @@ mod tests {
 
     #[test]
     fn test_select_meets_the_minimum_feature() {
-        let runtimes = discover();
+        let runtimes: Vec<JavaRuntime> = discover().into_iter().filter(|r| !r.headless).collect();
         let Some(min) = runtimes
             .iter()
             .filter_map(|r| r.version.as_ref().map(|v| v.feature))
@@ -791,9 +802,20 @@ mod tests {
         assert_eq!(selected.version.as_ref().map(|v| v.feature), Some(highest));
     }
 
+    #[test]
+    fn a_headless_runtime_is_never_picked() {
+        let mut headless = runtime("headless-21", Some(21));
+        headless.headless = true;
+        let list = vec![headless, runtime("headful-17", Some(17))];
+        let picked = pick_highest(&list, 11).unwrap();
+        assert_eq!(picked.version.as_ref().map(|v| v.feature), Some(17));
+        assert!(pick_highest(&list[..1], 11).is_none());
+    }
+
     /// Builds a runtime for a fixed list. The label is only a name.
     fn runtime(label: &str, feature: Option<u32>) -> JavaRuntime {
         JavaRuntime {
+            headless: false,
             path: PathBuf::from(label),
             home: None,
             version: feature.map(|feature| JavaVersion {

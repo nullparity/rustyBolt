@@ -974,7 +974,8 @@ fn build_state(paths: &Paths, config: Config, wifi: WifiStatus) -> ServerState {
                 rustybolt_jdk::Source::SystemLocation => "System",
                 rustybolt_jdk::Source::ClientBundle => "Bundled with RuneLite",
             }
-            .to_string(),
+            .to_string()
+                + if rt.headless { ", headless" } else { "" },
         })
         .collect();
 
