@@ -5,6 +5,7 @@ members = [
     "crates/rustybolt-jdk",
     "crates/rustybolt-security",
     "crates/rustybolt-core",
+    "crates/rustybolt-update",
     "crates/rustybolt-cli",
 ]
 
@@ -13,12 +14,14 @@ version = "0.4.0"
 edition = "2021"
 rust-version = "1.82"
 license = "MIT"
+repository = "https://github.com/nullparity/rustyBolt"
 
 [workspace.dependencies]
 rustybolt-auth = { path = "crates/rustybolt-auth" }
 rustybolt-jdk = { path = "crates/rustybolt-jdk" }
 rustybolt-security = { path = "crates/rustybolt-security" }
 rustybolt-core = { path = "crates/rustybolt-core" }
+rustybolt-update = { path = "crates/rustybolt-update" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

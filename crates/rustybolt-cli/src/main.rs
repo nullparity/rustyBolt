@@ -12,6 +12,7 @@ mod httpd;
 mod i18n;
 mod launch;
 mod platform;
+mod update;
 mod verify;
 mod web;
 pub(crate) mod wifi;

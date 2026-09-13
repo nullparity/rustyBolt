@@ -61,6 +61,9 @@ pub struct Config {
     /// Sign out of a Jagex account this long after the login. `None` keeps
     /// a login until the user signs out.
     pub session_max_age: Option<SessionMaxAge>,
+    /// A GitHub token for the release check. Optional: it raises the rate
+    /// limit and reaches a private repository.
+    pub github_token: Option<String>,
 }
 
 impl Default for Config {
@@ -83,6 +86,7 @@ impl Default for Config {
             runelite_home_kind: RuneLiteHome::default(),
             language: None,
             session_max_age: None,
+            github_token: None,
         }
     }
 }

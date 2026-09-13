@@ -5,6 +5,14 @@ use thiserror::Error;
 pub const ALLOWED_JAGEX_HOST: &str = "account.jagex.com";
 pub const ALLOWED_AUTH_HOST: &str = "auth.jagex.com";
 pub const ALLOWED_REDIRECT_HOST: &str = "secure.runescape.com";
+/// The hosts of the release check and download: the GitHub API, the release
+/// page, and the two storage hosts that an asset download redirects to.
+pub const ALLOWED_UPDATE_HOSTS: [&str; 4] = [
+    "api.github.com",
+    "github.com",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+];
 pub const CSP_VALUE: &str = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none';";
 pub const CSP_META_TAG: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src http://127.0.0.1:* ws://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'; form-action 'none';\">";
 
@@ -28,7 +36,10 @@ pub enum SecurityError {
 
 pub fn is_allowed_remote_host(host: &str) -> bool {
     let lower = host.trim().to_ascii_lowercase();
-    lower == ALLOWED_JAGEX_HOST || lower == ALLOWED_AUTH_HOST || lower == ALLOWED_REDIRECT_HOST
+    lower == ALLOWED_JAGEX_HOST
+        || lower == ALLOWED_AUTH_HOST
+        || lower == ALLOWED_REDIRECT_HOST
+        || ALLOWED_UPDATE_HOSTS.contains(&lower.as_str())
 }
 
 pub fn is_allowed_host(host: &str) -> bool {
@@ -164,6 +175,24 @@ mod tests {
         assert!(validate_url("https://auth.jagex.com/game-session/v1/sessions").is_ok());
         assert!(validate_url("https://auth.jagex.com:443/game-session/v1/accounts").is_ok());
         assert!(validate_url("https://secure.runescape.com/m=weblogin/launcher-redirect").is_ok());
+    }
+
+    #[test]
+    fn test_update_hosts() {
+        assert!(
+            validate_url("https://api.github.com/repos/nullparity/rustyBolt/releases/latest")
+                .is_ok()
+        );
+        assert!(validate_url(
+            "https://github.com/nullparity/rustyBolt/releases/download/v1.0.0/a.tar.gz"
+        )
+        .is_ok());
+        assert!(validate_url("https://objects.githubusercontent.com/x").is_ok());
+        assert!(validate_url("http://api.github.com/x").is_err());
+        assert!(validate_url("https://raw.githubusercontent.com/x").is_err());
+        assert!(!is_allowed_external_url(
+            "https://github.com/nullparity/rustyBolt"
+        ));
     }
 
     #[test]

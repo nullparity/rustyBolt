@@ -1,0 +1,90 @@
+# The installer packages that dist does not make: dmg, msi, deb, rpm and
+# AppImage. The release workflow that dist generates calls this one, and
+# uploads what it puts under the `artifacts-*` names.
+name: Packages
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    name: package ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # GitHub retired the Intel macOS runner. The arm64 runner builds the Intel binary as a cross target.
+        include:
+          - { os: macos-14,         target: aarch64-apple-darwin,       name: darwin_arm64  }
+          - { os: macos-14,         target: x86_64-apple-darwin,        name: darwin_amd64  }
+          # Linux binaries run only on a glibc at least as new as the build
+          # host's. 22.04 (glibc 2.35) covers Debian 12 and everything newer.
+          - { os: ubuntu-22.04,     target: x86_64-unknown-linux-gnu,   name: linux_amd64,   deb: amd64, appimage: x86_64  }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu,  name: linux_arm64,   deb: arm64, appimage: aarch64 }
+          - { os: windows-latest,   target: x86_64-pc-windows-msvc,     name: windows_amd64, msi: x64   }
+          - { os: windows-11-arm,   target: aarch64-pc-windows-msvc,    name: windows_arm64, msi: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Tailwind CLI
+        shell: bash
+        run: |
+          scripts/install-tailwindcss.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libdbus-1-dev rpm
+          # appimagetool packs the AppImage; it bundles no libraries (see linux/build-appimage.sh).
+          sudo curl -fsSL -o /usr/local/bin/appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${{ matrix.appimage }}.AppImage"
+          sudo chmod +x /usr/local/bin/appimagetool
+
+      - name: Build
+        run: cargo build --release --locked -p rustybolt-cli --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        env:
+          TAG: ${{ fromJson(inputs.plan).announcement_tag }}
+        run: |
+          version="${TAG#v}"
+          stem="rustybolt_${version}_${{ matrix.name }}"
+          mkdir -p "$stem" out
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # WiX 3 ships on the Windows runner image.
+            candle -nologo -arch ${{ matrix.msi }} -dVersion="$version" \
+              -dBinary="target/${{ matrix.target }}/release/rustybolt.exe" \
+              -o rustybolt.wixobj windows/rustybolt.wxs
+            light -nologo -spdb -o "out/$stem.msi" rustybolt.wixobj
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            macos/build-app.sh "target/${{ matrix.target }}/release/rustybolt" "$version" "$stem/rustyBolt.app"
+            macos/build-dmg.sh "$stem/rustyBolt.app" "$version" "out/$stem.dmg"
+          else
+            linux/build-deb.sh "target/${{ matrix.target }}/release/rustybolt" "$version" ${{ matrix.deb }} "out/$stem.deb"
+            linux/build-appimage.sh "target/${{ matrix.target }}/release/rustybolt" "$version" ${{ matrix.appimage }} "$PWD/out/$stem.AppImage"
+            linux/build-rpm.sh "target/${{ matrix.target }}/release/rustybolt" "$version" ${{ matrix.appimage }} "out/$stem.rpm"
+          fi
+
+      - name: Attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: out/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-packages-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error

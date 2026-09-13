@@ -56,6 +56,8 @@ RuneScape, Old School RuneScape and Jagex are trademarks of Jagex Limited.
 
 MIT. See [LICENSE](LICENSE).
 
+The version pill in the top left glows when a newer release is out. Click it twice to update in place; a launcher installed from a package opens the download page instead. A GitHub token in **Settings** is optional: it raises the API rate limit and reaches a private repository. Note that the token sits in `launcher.json` in plain text.
+
 Release assets carry Sigstore build provenance. To check a download:
 
 ```

@@ -15,8 +15,8 @@
       <a href="#play" class="flex items-center gap-2.5 text-inherit no-underline [&>svg]:block [&>svg]:size-7 [&>svg]:shrink-0 [&>svg]:rounded-[7px] [&>svg]:shadow-[0_2px_8px_rgba(0,0,0,0.4)]" onclick="switchTab('play')">
         <!--LOGO_SVG-->
         <h1 class="text-[1.05rem] font-bold tracking-[-0.02em] text-text">rustyBolt</h1>
-        <span class="ml-0.5 rounded px-1.5 py-0.5 text-[0.7rem] font-medium text-subtle bg-white/5">v<!--VERSION--></span>
       </a>
+      <button class="rounded px-1.5 py-0.5 text-[0.7rem] font-medium text-subtle bg-white/5 transition-colors is-update:animate-glow is-update:bg-copper-dim is-update:text-copper is-update:hover:bg-copper is-update:hover:text-ink" id="version-pill" onclick="onVersionClick()" title="">v<!--VERSION--></button>
 
       <nav class="flex items-center rounded-lg border border-card-border bg-black/35 p-[3px]">
         <button class="nav-tab active flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[0.85rem] font-semibold text-muted transition-all hover:text-text is-active:bg-card is-active:text-text is-active:shadow-[0_2px_6px_rgba(0,0,0,0.4)] [&>svg]:size-[15px]" id="tab-play" onclick="switchTab('play')" data-i18n="nav.play">
@@ -253,6 +253,10 @@
               </select>
             </div>
           </div>
+          <div class="mt-3 flex flex-col gap-1.5">
+            <label for="cfg-github-token" data-i18n="settings.github_token">GitHub token for update checks (optional)</label>
+            <input type="password" id="cfg-github-token" autocomplete="off" data-i18n-placeholder="settings.github_token_ph" placeholder="Raises the rate limit; needed only for a private repository">
+          </div>
         </div>
 
         <div class="card">
@@ -464,6 +468,7 @@
       }
       updateWifiUI();
       setInterval(pollWifiStatus, 1500);
+      pollUpdate();
 
       if (window.location.hash === '#settings') {
         switchTab('settings');
@@ -934,6 +939,7 @@
       const maxAge = cfg.session_max_age;
       setValue('cfg-signout-count', maxAge ? String(maxAge.count) : '');
       setValue('cfg-signout-unit', maxAge ? maxAge.unit : 'days');
+      setValue('cfg-github-token', cfg.github_token || '');
 
       setValue('cfg-gc', tuning.gc_choice || 'generational_zgc');
       setValue('cfg-max-heap', tuning.max_heap_size || '2048m');
@@ -1077,6 +1083,7 @@
       cfg.session_max_age = signoutCount > 0
         ? { count: signoutCount, unit: getValue('cfg-signout-unit') }
         : null;
+      cfg.github_token = getValue('cfg-github-token').trim() || null;
 
       tuning.gc_choice = getValue('cfg-gc');
       tuning.max_heap_size = getValue('cfg-max-heap');
@@ -1146,6 +1153,89 @@
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
       }
+    }
+
+    // The version pill. It glows when a newer release exists; one click
+    // shows the version, a second click within four seconds installs it.
+    let updateState = null;
+    let updateArmed = false;
+    let updateArmTimer = null;
+    let updateBusy = false;
+
+    async function pollUpdate() {
+      try {
+        const res = await fetch('/api/update');
+        if (!res.ok) return;
+        updateState = await res.json();
+      } catch (e) {
+        return;
+      }
+      if (!updateState.checked) {
+        setTimeout(pollUpdate, 2000);
+        return;
+      }
+      renderVersionPill();
+    }
+
+    function renderVersionPill() {
+      const pill = document.getElementById('version-pill');
+      if (!pill || !updateState) return;
+      const release = updateState.release;
+      pill.classList.toggle('update', !!release);
+      if (!release) {
+        pill.textContent = `v${updateState.current}`;
+        pill.title = updateState.error ? t('update.check_failed', { error: updateState.error }) : '';
+        return;
+      }
+      const managed = updateState.install && updateState.install.kind === 'managed';
+      if (updateBusy) {
+        pill.textContent = t('update.installing');
+      } else if (updateArmed) {
+        pill.textContent = managed ? t('update.open_page') : t('update.confirm', { version: release.version });
+      } else {
+        pill.textContent = t('update.available', { version: release.version });
+      }
+      pill.title = managed ? t('update.managed', { version: release.version }) : t('update.tooltip', { version: release.version });
+    }
+
+    function disarmUpdate() {
+      updateArmed = false;
+      clearTimeout(updateArmTimer);
+      renderVersionPill();
+    }
+
+    async function onVersionClick() {
+      if (!updateState || !updateState.release || updateBusy) return;
+      if (!updateArmed) {
+        updateArmed = true;
+        clearTimeout(updateArmTimer);
+        updateArmTimer = setTimeout(disarmUpdate, 4000);
+        renderVersionPill();
+        return;
+      }
+      clearTimeout(updateArmTimer);
+      updateArmed = false;
+      const managed = updateState.install && updateState.install.kind === 'managed';
+      if (managed) {
+        await fetch('/api/update/open', { method: 'POST' });
+        renderVersionPill();
+        return;
+      }
+      updateBusy = true;
+      renderVersionPill();
+      try {
+        const res = await fetch('/api/update/install', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok && data.restarted) {
+          showToast(t('update.restarting'));
+          return;
+        }
+        showToast(data.error || t('error.unknown'));
+      } catch (e) {
+        showToast(t('update.failed', { error: e.message || String(e) }));
+      }
+      updateBusy = false;
+      renderVersionPill();
     }
 
     let wifiState = {

@@ -58,6 +58,8 @@ RuneScape, Old School RuneScape y Jagex son marcas registradas de Jagex Limited.
 
 MIT. Consulta [LICENSE](LICENSE).
 
+La etiqueta de versión, arriba a la izquierda, brilla cuando hay una versión nueva. Púlsala dos veces para actualizar en el sitio; un lanzador instalado desde un paquete abre la página de descarga en su lugar. El token de GitHub en **Ajustes** es opcional: sube el límite de peticiones de la API y permite acceder a un repositorio privado. Ten en cuenta que el token se guarda en `launcher.json` en texto plano.
+
 Los archivos de cada versión llevan una atestación de procedencia de Sigstore. Para comprobar una descarga:
 
 ```

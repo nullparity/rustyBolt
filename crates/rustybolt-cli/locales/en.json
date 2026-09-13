@@ -125,5 +125,16 @@
   "profile.clear": "Clear",
   "profile.save": "Save overrides",
   "profile.saved": "Profile overrides saved",
-  "profile.example_gpu": "Load example: GPU plugin on modern macOS"
+  "profile.example_gpu": "Load example: GPU plugin on modern macOS",
+  "update.available": "v{version} available",
+  "update.confirm": "Click again to update to v{version}",
+  "update.open_page": "Click again to open the download page",
+  "update.installing": "Updating…",
+  "update.restarting": "Update installed. Restarting rustyBolt…",
+  "update.tooltip": "rustyBolt {version} is out. Click to update.",
+  "update.managed": "rustyBolt {version} is out. This install updates through its package, so the click opens the download page.",
+  "update.check_failed": "Could not check for updates: {error}",
+  "update.failed": "Update failed: {error}",
+  "settings.github_token": "GitHub token for update checks (optional)",
+  "settings.github_token_ph": "Raises the rate limit; needed only for a private repository"
 }

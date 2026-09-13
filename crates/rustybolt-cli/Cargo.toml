@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
 description = "Headless driver for the rustyBolt core"
 
 [[bin]]
@@ -15,6 +16,7 @@ rustybolt-auth.workspace = true
 rustybolt-jdk.workspace = true
 rustybolt-security.workspace = true
 rustybolt-core.workspace = true
+rustybolt-update.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 httparse.workspace = true

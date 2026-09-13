@@ -125,5 +125,16 @@
   "profile.clear": "Vaciar",
   "profile.save": "Guardar ajustes de perfil",
   "profile.saved": "Ajustes de perfil guardados",
-  "profile.example_gpu": "Cargar ejemplo: plugin GPU en macOS moderno"
+  "profile.example_gpu": "Cargar ejemplo: plugin GPU en macOS moderno",
+  "update.available": "v{version} disponible",
+  "update.confirm": "Pulsa otra vez para actualizar a v{version}",
+  "update.open_page": "Pulsa otra vez para abrir la página de descarga",
+  "update.installing": "Actualizando…",
+  "update.restarting": "Actualización instalada. Reiniciando rustyBolt…",
+  "update.tooltip": "Ha salido rustyBolt {version}. Pulsa para actualizar.",
+  "update.managed": "Ha salido rustyBolt {version}. Esta instalación se actualiza con su paquete, así que el clic abre la página de descarga.",
+  "update.check_failed": "No se pudo comprobar si hay actualizaciones: {error}",
+  "update.failed": "La actualización falló: {error}",
+  "settings.github_token": "Token de GitHub para comprobar actualizaciones (opcional)",
+  "settings.github_token_ph": "Sube el límite de peticiones; solo hace falta para un repositorio privado"
 }

@@ -144,6 +144,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let running = Arc::new(AtomicBool::new(true));
     let flow_state = Arc::new(Mutex::new(None));
     let wifi_manager = WifiManager::new(false);
+    let update_state = crate::update::start(&Config::load(&paths));
 
     let (event_loop_opt, proxy_opt) = if !use_browser && crate::gui::has_display() {
         let (event_loop, proxy) = crate::gui::create_event_loop();
@@ -158,6 +159,7 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
     let s_proxy = proxy_opt.clone();
     let s_wifi = wifi_manager.clone();
     let s_guard = guard.clone();
+    let s_update = Arc::clone(&update_state);
 
     let server_thread = thread::spawn(move || {
         for stream in listener.incoming() {
@@ -172,13 +174,18 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
                     let proxy = s_proxy.clone();
                     let wifi = s_wifi.clone();
                     let guard = s_guard.clone();
+                    let update = Arc::clone(&s_update);
                     thread::spawn(move || {
+                        let services = Services {
+                            flow_state,
+                            wifi,
+                            update,
+                        };
                         handle_connection(
                             stream,
                             &paths,
                             &running,
-                            &flow_state,
-                            &wifi,
+                            &services,
                             proxy.as_ref(),
                             &guard,
                         );
@@ -356,12 +363,18 @@ pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
     }
 }
 
+/// The state that every connection shares.
+struct Services {
+    flow_state: Arc<Mutex<Option<LoginFlow>>>,
+    wifi: WifiManager,
+    update: crate::update::Shared,
+}
+
 fn handle_connection(
     stream: TcpStream,
     paths: &Paths,
     running: &AtomicBool,
-    flow_state: &Arc<Mutex<Option<LoginFlow>>>,
-    wifi: &WifiManager,
+    services: &Services,
     proxy: Option<&EventLoopProxy<AppEvent>>,
     guard: &Guard,
 ) {
@@ -389,15 +402,17 @@ fn handle_connection(
             query: &request.query,
             body: &request.body,
             keep_alive,
-            wifi,
+            wifi: &services.wifi,
             proxy,
+            update: &services.update,
         };
         let stream = conn.stream();
-        let should_exit = respond(&req, stream, paths, flow_state);
+        let should_exit = respond(&req, stream, paths, &services.flow_state);
         let _ = stream.flush();
 
         if should_exit {
-            if req.path == "/api/shutdown" {
+            // An installed update has already started the new binary.
+            if req.path == "/api/shutdown" || req.path == "/api/update/install" {
                 running.store(false, Ordering::SeqCst);
                 if let Some(proxy) = proxy {
                     let _ = proxy.send_event(AppEvent::Shutdown);
@@ -429,6 +444,16 @@ struct HttpRequest<'a> {
     keep_alive: bool,
     wifi: &'a WifiManager,
     proxy: Option<&'a EventLoopProxy<AppEvent>>,
+    update: &'a crate::update::Shared,
+}
+
+/// Writes a JSON body with this status line.
+fn write_json(stream: &mut TcpStream, status: &str, conn_header: &str, json: &str) {
+    let response = format!(
+        "HTTP/1.1 {status}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+        json.len()
+    );
+    let _ = stream.write_all(response.as_bytes());
 }
 
 fn security_headers() -> String {
@@ -754,6 +779,63 @@ fn respond(
             );
             let _ = stream.write_all(response.as_bytes());
             false
+        }
+        ("GET", "/api/update") | ("POST", "/api/update/check") => {
+            if req.method == "POST" {
+                crate::update::check(req.update, &Config::load(paths));
+            }
+            let json = {
+                let held = req.update.lock().unwrap_or_else(|e| e.into_inner());
+                serde_json::to_string(&*held).unwrap_or_else(|_| "{}".to_string())
+            };
+            write_json(stream, "200 OK", conn_header, &json);
+            false
+        }
+        ("POST", "/api/update/open") => {
+            let page = req
+                .update
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .release
+                .as_ref()
+                .map(|r| r.page_url.clone());
+            match page {
+                Some(url) => {
+                    open_browser(&url);
+                    write_json(stream, "200 OK", conn_header, "{\"ok\":true}");
+                }
+                None => write_json(stream, "400 Bad Request", conn_header, "{\"ok\":false}"),
+            }
+            false
+        }
+        ("POST", "/api/update/install") => {
+            match crate::update::install(req.update, &Config::load(paths)) {
+                Ok(exe) => match rustybolt_update::restart(&exe) {
+                    Ok(()) => {
+                        write_json(
+                            stream,
+                            "200 OK",
+                            "close",
+                            "{\"ok\":true,\"restarted\":true}",
+                        );
+                        true
+                    }
+                    Err(error) => {
+                        let json = serde_json::json!({
+                            "ok": true,
+                            "restarted": false,
+                            "error": format!("installed, but the restart failed: {error}"),
+                        });
+                        write_json(stream, "200 OK", conn_header, &json.to_string());
+                        false
+                    }
+                },
+                Err(error) => {
+                    let json = serde_json::json!({ "ok": false, "error": error });
+                    write_json(stream, "400 Bad Request", conn_header, &json.to_string());
+                    false
+                }
+            }
         }
         ("POST", "/api/shutdown") => {
             let _ = stream.write_all(
