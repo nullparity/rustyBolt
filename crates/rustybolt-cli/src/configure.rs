@@ -367,7 +367,7 @@ pub(crate) fn forward_redirect(url: &str) -> Result<(), CliError> {
 struct Services {
     flow_state: Arc<Mutex<Option<LoginFlow>>>,
     wifi: WifiManager,
-    update: crate::update::Shared,
+    update: Arc<nullparity_update::Updater>,
 }
 
 fn handle_connection(
@@ -444,7 +444,7 @@ struct HttpRequest<'a> {
     keep_alive: bool,
     wifi: &'a WifiManager,
     proxy: Option<&'a EventLoopProxy<AppEvent>>,
-    update: &'a crate::update::Shared,
+    update: &'a nullparity_update::Updater,
 }
 
 /// Writes a JSON body with this status line.
@@ -475,6 +475,45 @@ fn respond(
         "close"
     };
     let sec_hdrs = security_headers();
+    if let Some(reply) = req.update.handle(req.method, req.path) {
+        use nullparity_update::Action;
+        let status = match reply.status {
+            200 => "200 OK",
+            409 => "409 Conflict",
+            _ => "400 Bad Request",
+        };
+        return match reply.action {
+            Action::None => {
+                write_json(stream, status, conn_header, &reply.body);
+                false
+            }
+            Action::OpenUrl(url) => {
+                open_browser(&url);
+                write_json(stream, status, conn_header, &reply.body);
+                false
+            }
+            // The new binary starts now; the connection loop shuts this one down.
+            Action::Restart(exe) => match nullparity_update::restart(&exe) {
+                Ok(()) => {
+                    write_json(stream, status, "close", &reply.body);
+                    true
+                }
+                Err(error) => {
+                    let json = serde_json::json!({
+                        "ok": false,
+                        "error": format!("installed, but the restart failed: {error}"),
+                    });
+                    write_json(
+                        stream,
+                        "500 Internal Server Error",
+                        conn_header,
+                        &json.to_string(),
+                    );
+                    false
+                }
+            },
+        };
+    }
     match (req.method, req.path) {
         ("GET", "/" | "/index.html") => {
             let config = Config::load(paths);
@@ -747,6 +786,7 @@ fn respond(
         ("POST" | "PUT", "/api/save" | "/api/config") => {
             if let Ok(config) = serde_json::from_slice::<Config>(req.body) {
                 let _ = config.save(paths);
+                req.update.set_token(crate::update::token(&config));
                 let plan = compute_preview(paths, &config, ClientKind::RuneLite);
                 let res = SaveResponse { ok: true, plan };
                 let json =
@@ -779,63 +819,6 @@ fn respond(
             );
             let _ = stream.write_all(response.as_bytes());
             false
-        }
-        ("GET", "/api/update") | ("POST", "/api/update/check") => {
-            if req.method == "POST" {
-                crate::update::check(req.update, &Config::load(paths));
-            }
-            let json = {
-                let held = req.update.lock().unwrap_or_else(|e| e.into_inner());
-                serde_json::to_string(&*held).unwrap_or_else(|_| "{}".to_string())
-            };
-            write_json(stream, "200 OK", conn_header, &json);
-            false
-        }
-        ("POST", "/api/update/open") => {
-            let page = req
-                .update
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .release
-                .as_ref()
-                .map(|r| r.page_url.clone());
-            match page {
-                Some(url) => {
-                    open_browser(&url);
-                    write_json(stream, "200 OK", conn_header, "{\"ok\":true}");
-                }
-                None => write_json(stream, "400 Bad Request", conn_header, "{\"ok\":false}"),
-            }
-            false
-        }
-        ("POST", "/api/update/install") => {
-            match crate::update::install(req.update, &Config::load(paths)) {
-                Ok(exe) => match rustybolt_update::restart(&exe) {
-                    Ok(()) => {
-                        write_json(
-                            stream,
-                            "200 OK",
-                            "close",
-                            "{\"ok\":true,\"restarted\":true}",
-                        );
-                        true
-                    }
-                    Err(error) => {
-                        let json = serde_json::json!({
-                            "ok": true,
-                            "restarted": false,
-                            "error": format!("installed, but the restart failed: {error}"),
-                        });
-                        write_json(stream, "200 OK", conn_header, &json.to_string());
-                        false
-                    }
-                },
-                Err(error) => {
-                    let json = serde_json::json!({ "ok": false, "error": error });
-                    write_json(stream, "400 Bad Request", conn_header, &json.to_string());
-                    false
-                }
-            }
         }
         ("POST", "/api/shutdown") => {
             let _ = stream.write_all(

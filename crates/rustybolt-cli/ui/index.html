@@ -1215,22 +1215,17 @@
       }
       clearTimeout(updateArmTimer);
       updateArmed = false;
-      const managed = updateState.install && updateState.install.kind === 'managed';
-      if (managed) {
-        await fetch('/api/update/open', { method: 'POST' });
-        renderVersionPill();
-        return;
-      }
       updateBusy = true;
       renderVersionPill();
       try {
         const res = await fetch('/api/update/install', { method: 'POST' });
         const data = await res.json();
-        if (data.ok && data.restarted) {
+        if (data.ok && data.restart) {
           showToast(t('update.restarting'));
           return;
         }
-        showToast(data.error || t('error.unknown'));
+        // A managed install: the launcher has opened the release page.
+        if (!data.page_url) showToast(data.error || t('error.unknown'));
       } catch (e) {
         showToast(t('update.failed', { error: e.message || String(e) }));
       }

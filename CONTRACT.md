@@ -18,8 +18,7 @@ rustyBolt splits them:
 | `rustybolt-jdk` | Java discovery and JVM argv | file system only |
 | `rustybolt-security` | egress allowlist and Content Security Policy | nothing, no I/O |
 | `rustybolt-core` | paths, config, sessions, client lookup, launch | `rustybolt-auth`, `rustybolt-jdk`, `rustybolt-security`, HTTP |
-| `rustybolt-update` | release check and in-place update of the binary | `rustybolt-security`, HTTP |
-| `rustybolt-cli` | portable CLI driver and configuration UI | `rustybolt-core`, `rustybolt-jdk`, `rustybolt-security`, `rustybolt-update` |
+| `rustybolt-cli` | portable CLI driver and configuration UI | `rustybolt-core`, `rustybolt-jdk`, `rustybolt-security`, `nullparity-update` |
 
 The launcher driver is portable across macOS, Linux, and Windows. It never repeats protocol or launch logic.
 
@@ -309,29 +308,9 @@ pub fn csp_meta_tag() -> &'static str;
 pub fn validate_url(raw_url: &str) -> Result<(), SecurityError>;
 ```
 
-## rustybolt-update
+## nullparity-update
 
-Reads the latest GitHub release, in the layout that `dist` makes, and swaps the running binary.
-
-```rust
-pub const REPO: &str;                       // nullparity/rustyBolt
-
-pub struct Release { pub version: String, pub page_url: String, /* archive and checksum URLs */ }
-pub enum InstallKind { InPlace, Managed { reason: String } }
-
-pub struct Updater { /* repo, token, target */ }
-impl Updater {
-    pub fn new(token: Option<String>) -> Updater;
-    /// The latest release when it is newer than `current`. Every hop passes `validate_url`.
-    pub fn newer_than(&self, current: &str) -> Result<Option<Release>, UpdateError>;
-    /// Downloads the archive of this target, checks the sha256 and replaces the running binary.
-    pub fn install(&self, release: &Release) -> Result<PathBuf, UpdateError>;
-}
-
-pub fn install_kind() -> InstallKind;       // package, AppImage and msi installs stay Managed
-pub fn restart(exe: &Path) -> io::Result<()>;
-pub fn target_triple() -> String;
-```
+The release check and the binary swap live in the shared [nullparity-wry](https://github.com/nullparity/nullparity-wry) workspace. `rustybolt-cli` builds one `Updater` with the app name `rustybolt-cli`, the binary `rustybolt`, the version of the launcher and `rustybolt_security::validate_url` as the URL check, and routes `/api/update*` to `Updater::handle`.
 
 ## Verification
 

@@ -1508,6 +1508,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
+name = "nullparity-update"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "self-replace",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tar",
+ "thiserror 2.0.20",
+ "ureq",
+ "url",
+ "zip",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2146,13 +2163,13 @@ dependencies = [
  "core-foundation 0.10.1",
  "default-net",
  "httparse",
+ "nullparity-update",
  "png",
  "rand",
  "rustybolt-auth",
  "rustybolt-core",
  "rustybolt-jdk",
  "rustybolt-security",
- "rustybolt-update",
  "serde",
  "serde_json",
  "sys-locale",
@@ -2192,23 +2209,6 @@ version = "0.4.0"
 dependencies = [
  "thiserror 2.0.20",
  "url",
-]
-
-[[package]]
-name = "rustybolt-update"
-version = "0.4.0"
-dependencies = [
- "flate2",
- "rustybolt-security",
- "self-replace",
- "semver",
- "serde",
- "serde_json",
- "sha2",
- "tar",
- "thiserror 2.0.20",
- "ureq",
- "zip",
 ]
 
 [[package]]
