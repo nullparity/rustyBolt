@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>rustyBolt template</title>
+  <!--
+    The monochrome menu-bar icon: hex head, shaft and threading as a black
+    silhouette. The alpha channel is the shape; macOS tints it to match the
+    menu bar. icon/build.sh renders it to rustybolt-tray-template.png.
+  -->
+  <defs>
+    <mask id="cut">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <!-- the gap between the head and the shaft -->
+      <rect x="360" y="498" width="304" height="30" fill="#000"/>
+      <!-- the edges between the three side faces of the head -->
+      <rect x="394" y="350" width="24" height="148" fill="#000"/>
+      <rect x="606" y="350" width="24" height="148" fill="#000"/>
+      <!-- the thread valleys, one helix turn each -->
+      <path d="M 396 560 Q 512 606 628 554 L 628 592 Q 512 644 396 598 Z" fill="#000"/>
+      <path d="M 396 648 Q 512 694 628 642 L 628 680 Q 512 732 396 686 Z" fill="#000"/>
+      <path d="M 396 736 Q 512 782 628 730 L 628 768 Q 512 820 396 774 Z" fill="#000"/>
+    </mask>
+  </defs>
+
+  <g transform="translate(512 532) scale(1.45) translate(-512 -532)">
+  <g fill="#000" mask="url(#cut)">
+    <!-- hex head: top face and three side faces -->
+    <path d="M 300 288 L 406 226 L 618 226 L 724 288 L 724 440 L 618 498 L 406 498 L 300 440 Z"/>
+    <!-- shaft -->
+    <path d="M 408 466 L 616 466 L 616 806 A 104 32 0 0 1 408 806 Z"/>
+  </g>
+  </g>
+</svg>

@@ -137,25 +137,33 @@ pub(crate) fn create_event_loop() -> (EventLoop<AppEvent>, EventLoopProxy<AppEve
     (event_loop, proxy)
 }
 
+/// The tray icon, rendered to 64 pixels by `icon/build.sh`. macOS gets the
+/// monochrome template from `icon/rustybolt-template.svg`, which the menu
+/// bar tints; the other systems get the colour `icon/rustybolt.svg`.
+#[cfg(target_os = "macos")]
+const TRAY_ICON_PNG: &[u8] = include_bytes!("../../../icon/rustybolt-tray-template.png");
+#[cfg(not(target_os = "macos"))]
+const TRAY_ICON_PNG: &[u8] = include_bytes!("../../../icon/rustybolt-tray.png");
+
 fn create_tray_icon() -> Result<Icon, Box<dyn std::error::Error>> {
-    let width = 32;
-    let height = 32;
-    let mut rgba = vec![0u8; (width * height * 4) as usize];
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y * width + x) * 4) as usize;
-            let in_bolt = ((4..16).contains(&y) && x >= 14 - (y - 4) / 2 && x <= 22 - (y - 4) / 3)
-                || ((14..18).contains(&y) && (8..=24).contains(&x))
-                || ((17..28).contains(&y) && x >= 10 + (y - 17) / 2 && x <= 18);
-            if in_bolt {
-                rgba[idx] = 229;
-                rgba[idx + 1] = 169;
-                rgba[idx + 2] = 60;
-                rgba[idx + 3] = 255;
-            }
-        }
-    }
-    Ok(Icon::from_rgba(rgba, width, height)?)
+    let decoder = png::Decoder::new(std::io::Cursor::new(TRAY_ICON_PNG));
+    let mut reader = decoder.read_info()?;
+    let mut buffer = vec![
+        0u8;
+        reader
+            .output_buffer_size()
+            .ok_or("tray icon is too large")?
+    ];
+    let info = reader.next_frame(&mut buffer)?;
+    let rgba = match info.color_type {
+        png::ColorType::Rgba => buffer[..info.buffer_size()].to_vec(),
+        png::ColorType::Rgb => buffer[..info.buffer_size()]
+            .chunks(3)
+            .flat_map(|p| [p[0], p[1], p[2], 255])
+            .collect(),
+        other => return Err(format!("tray icon has color type {other:?}, not RGB(A)").into()),
+    };
+    Ok(Icon::from_rgba(rgba, info.width, info.height)?)
 }
 
 pub(crate) fn run_window(
@@ -209,6 +217,10 @@ pub(crate) fn run_window(
         .with_tooltip("rustyBolt");
     if let Some(icon) = tray_icon {
         tray_builder = tray_builder.with_icon(icon);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        tray_builder = tray_builder.with_icon_as_template(true);
     }
     let _tray = tray_builder.build().ok();
 
@@ -363,4 +375,12 @@ pub(crate) fn run_window(
             _ => {}
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_embedded_tray_icon_decodes() {
+        super::create_tray_icon().expect("tray icon");
+    }
 }

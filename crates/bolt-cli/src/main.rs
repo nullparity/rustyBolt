@@ -101,10 +101,24 @@ impl From<bolt_auth::AuthError> for CliError {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    if let Err(error) = dispatch(&args) {
+    if let Err(error) = require_keychain().and_then(|()| dispatch(&args)) {
         error.report();
         std::process::exit(i32::from(error.exit_code()));
     }
+}
+
+/// Refuses to run when the operating system has no keychain.
+///
+/// The Jagex session lives in the keychain only. A Linux desktop without a
+/// Secret Service provider (GNOME Keyring, KDE Wallet, KeePassXC) cannot
+/// hold it, so the launcher stops before it does any work.
+fn require_keychain() -> Result<(), CliError> {
+    bolt_core::keychain_available().map_err(|error| {
+        CliError::Message(format!(
+            "{error}\nrustyBolt stores your Jagex session in the system keychain and does not run without one.\n\
+             On Linux, start a Secret Service provider such as GNOME Keyring or KDE Wallet and try again."
+        ))
+    })
 }
 
 /// Runs the command of the command line.

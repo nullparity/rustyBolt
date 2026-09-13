@@ -1,38 +1,120 @@
-//! The saved login sessions.
+//! The saved login sessions, held in the keychain of the operating system.
+//!
+//! macOS uses the Keychain, Windows uses the Credential Manager and Linux
+//! uses the Secret Service (GNOME Keyring, KDE Wallet, KeePassXC). One entry
+//! holds every session as a JSON array. A session file from an older version
+//! moves into the keychain on the first load.
 
 use std::fs;
 use std::io;
-use std::path::PathBuf;
 
 use bolt_auth::Session;
+use keyring::Entry;
 
-use crate::file::write_private;
 use crate::Paths;
 
-/// The sessions of the user, and the file that holds them.
+/// The keychain service name of the entry.
+const SERVICE: &str = "rustybolt";
+/// The keychain user name of the entry.
+const ACCOUNT: &str = "sessions";
+
+/// A place that holds one secret string.
+pub trait Vault: Send {
+    /// The secret, or `None` when the vault holds no entry.
+    fn read(&self) -> Result<Option<String>, KeychainError>;
+    /// Replaces the secret.
+    fn write(&self, secret: &str) -> Result<(), KeychainError>;
+}
+
+/// The keychain of the operating system is missing or refuses access.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("no keychain is available to hold the Jagex session: {0}")]
+pub struct KeychainError(pub String);
+
+impl From<KeychainError> for io::Error {
+    fn from(error: KeychainError) -> io::Error {
+        io::Error::new(io::ErrorKind::PermissionDenied, error.to_string())
+    }
+}
+
+/// The keychain entry of the operating system.
+struct Keychain;
+
+impl Keychain {
+    fn entry() -> Result<Entry, KeychainError> {
+        Entry::new(SERVICE, ACCOUNT).map_err(|error| KeychainError(error.to_string()))
+    }
+}
+
+impl Vault for Keychain {
+    fn read(&self) -> Result<Option<String>, KeychainError> {
+        match Self::entry()?.get_password() {
+            Ok(secret) => Ok(Some(secret)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(error) => Err(KeychainError(error.to_string())),
+        }
+    }
+
+    fn write(&self, secret: &str) -> Result<(), KeychainError> {
+        Self::entry()?
+            .set_password(secret)
+            .map_err(|error| KeychainError(error.to_string()))
+    }
+}
+
+/// Checks that the keychain of the operating system answers.
+///
+/// The launcher refuses to run without one, because the Jagex session
+/// must not sit in a plain file. On Linux this needs a Secret Service
+/// provider on the session bus, such as GNOME Keyring or KDE Wallet.
+pub fn keychain_available() -> Result<(), KeychainError> {
+    Keychain.read().map(|_| ())
+}
+
+/// The sessions of the user, and the vault that holds them.
 pub struct SessionStore {
-    path: PathBuf,
+    vault: Box<dyn Vault>,
     sessions: Vec<Session>,
 }
 
 impl SessionStore {
-    /// Reads the session file. An absent or malformed file gives no sessions.
+    /// Reads the sessions from the keychain. An absent or malformed entry
+    /// gives no sessions. A session file from an older version moves into
+    /// the keychain, and the file goes away.
     pub fn load(paths: &Paths) -> SessionStore {
-        let path = paths.credentials_file();
-        let sessions = fs::read_to_string(&path)
-            .ok()
-            .and_then(|text| serde_json::from_str::<Vec<Session>>(&text).ok())
-            .unwrap_or_default();
-        SessionStore { path, sessions }
+        let mut store = SessionStore::with_vault(Box::new(Keychain));
+        let legacy = paths.credentials_file();
+        if store.sessions.is_empty() {
+            if let Some(sessions) = fs::read_to_string(&legacy)
+                .ok()
+                .and_then(|text| serde_json::from_str::<Vec<Session>>(&text).ok())
+            {
+                store.sessions = sessions;
+                if store.save().is_ok() {
+                    let _ = fs::remove_file(&legacy);
+                }
+            }
+        }
+        store
     }
 
-    /// Writes the sessions as JSON.
-    ///
-    /// The write goes through a temporary file, and the mode is 0600 on unix.
+    /// Reads the sessions from this vault.
+    pub fn with_vault(vault: Box<dyn Vault>) -> SessionStore {
+        let sessions = vault
+            .read()
+            .ok()
+            .flatten()
+            .and_then(|text| serde_json::from_str::<Vec<Session>>(&text).ok())
+            .unwrap_or_default();
+        SessionStore { vault, sessions }
+    }
+
+    /// Writes the sessions as JSON into the vault.
     pub fn save(&self) -> io::Result<()> {
-        let text = serde_json::to_vec_pretty(&self.sessions)
+        let text = serde_json::to_string(&self.sessions)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        write_private(&self.path, &text, 0o600)
+        self.vault.write(&text)?;
+        Ok(())
     }
 
     /// Adds a session, or replaces the session with the same `sub` value.
@@ -52,7 +134,7 @@ impl SessionStore {
         self.sessions.retain(|held| held.sub != sub);
     }
 
-    /// The sessions, in file order.
+    /// The sessions, in vault order.
     pub fn sessions(&self) -> &[Session] {
         &self.sessions
     }
@@ -60,8 +142,35 @@ impl SessionStore {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::*;
-    use crate::test_support::{paths, TempDir};
+
+    /// A vault in memory. Clones share the same secret.
+    #[derive(Clone, Default)]
+    struct Memory(Arc<Mutex<Option<String>>>);
+
+    impl Vault for Memory {
+        fn read(&self) -> Result<Option<String>, KeychainError> {
+            Ok(self.0.lock().unwrap().clone())
+        }
+        fn write(&self, secret: &str) -> Result<(), KeychainError> {
+            *self.0.lock().unwrap() = Some(secret.to_string());
+            Ok(())
+        }
+    }
+
+    /// A vault that always fails, like a desktop without a Secret Service.
+    struct Absent;
+
+    impl Vault for Absent {
+        fn read(&self) -> Result<Option<String>, KeychainError> {
+            Err(KeychainError("no secret service".into()))
+        }
+        fn write(&self, _: &str) -> Result<(), KeychainError> {
+            Err(KeychainError("no secret service".into()))
+        }
+    }
 
     fn session(sub: &str, name: &str) -> Session {
         Session {
@@ -82,8 +191,7 @@ mod tests {
 
     #[test]
     fn upsert_replaces_a_session_with_the_same_sub() {
-        let temp = TempDir::new("sessions-upsert");
-        let mut store = SessionStore::load(&paths(temp.path()));
+        let mut store = SessionStore::with_vault(Box::new(Memory::default()));
         store.upsert(session("a", "Ada"));
         store.upsert(session("b", "Bea"));
         store.upsert(session("a", "Ada Two"));
@@ -95,8 +203,7 @@ mod tests {
 
     #[test]
     fn remove_drops_only_the_wanted_sub() {
-        let temp = TempDir::new("sessions-remove");
-        let mut store = SessionStore::load(&paths(temp.path()));
+        let mut store = SessionStore::with_vault(Box::new(Memory::default()));
         store.upsert(session("a", "Ada"));
         store.upsert(session("b", "Bea"));
         store.remove("a");
@@ -108,13 +215,12 @@ mod tests {
 
     #[test]
     fn save_and_load_keeps_the_sessions() {
-        let temp = TempDir::new("sessions");
-        let paths = paths(temp.path());
-        let mut store = SessionStore::load(&paths);
+        let vault = Memory::default();
+        let mut store = SessionStore::with_vault(Box::new(vault.clone()));
         store.upsert(session("a", "Ada"));
         store.save().unwrap();
 
-        let loaded = SessionStore::load(&paths);
+        let loaded = SessionStore::with_vault(Box::new(vault));
         assert_eq!(subs(&loaded), vec!["a".to_string()]);
         assert_eq!(loaded.sessions()[0].session_id, "id-a");
         assert_eq!(loaded.sessions()[0].suffix, "0001");
@@ -122,31 +228,25 @@ mod tests {
     }
 
     #[test]
-    fn an_absent_or_malformed_file_gives_no_sessions() {
-        let temp = TempDir::new("sessions-bad");
-        let paths = paths(temp.path());
-        assert!(SessionStore::load(&paths).sessions().is_empty());
+    fn an_absent_or_malformed_entry_gives_no_sessions() {
+        assert!(SessionStore::with_vault(Box::new(Memory::default()))
+            .sessions()
+            .is_empty());
 
-        fs::create_dir_all(&paths.config_dir).unwrap();
-        fs::write(paths.credentials_file(), "not json").unwrap();
-        assert!(SessionStore::load(&paths).sessions().is_empty());
+        let vault = Memory::default();
+        vault.write("not json").unwrap();
+        assert!(SessionStore::with_vault(Box::new(vault))
+            .sessions()
+            .is_empty());
     }
 
-    #[cfg(unix)]
     #[test]
-    fn save_uses_mode_0600() {
-        use std::os::unix::fs::PermissionsExt;
-
-        let temp = TempDir::new("sessions-mode");
-        let paths = paths(temp.path());
-        let mut store = SessionStore::load(&paths);
+    fn save_fails_without_a_keychain() {
+        let mut store = SessionStore::with_vault(Box::new(Absent));
+        assert!(store.sessions().is_empty());
         store.upsert(session("a", "Ada"));
-        store.save().unwrap();
-
-        let mode = fs::metadata(paths.credentials_file())
-            .unwrap()
-            .permissions()
-            .mode();
-        assert_eq!(mode & 0o777, 0o600);
+        let error = store.save().unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(error.to_string().contains("no keychain"));
     }
 }

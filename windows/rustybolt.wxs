@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Windows installer. `candle -dVersion=1.2.3 -arch x64 windows/rustybolt.wxs`
+  then `light rustybolt.wixobj` builds rustybolt.msi.
+  The release workflow runs both.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="rustyBolt"
+           Language="1033"
+           Version="$(var.Version)"
+           Manufacturer="nullparity"
+           UpgradeCode="7c0e4c2a-3f0b-4b7e-9a5c-1d2b0f6e8a41">
+    <Package InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="A free, portable launcher for RuneLite and HDOS" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of rustyBolt is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="rustybolt.ico" SourceFile="icon/rustybolt.ico" />
+    <Property Id="ARPPRODUCTICON" Value="rustybolt.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/nullparity/rustyBolt" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="rustyBolt" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder" />
+    </Directory>
+
+    <DirectoryRef Id="INSTALLDIR">
+      <Component Id="Binary" Guid="9e6d1f7b-2c4a-4a4f-8f3d-6b1e0c9a2d57">
+        <File Id="rustybolt.exe" Source="$(var.Binary)" KeyPath="yes" />
+        <Environment Id="Path" Name="PATH" Value="[INSTALLDIR]" Permanent="no"
+                     Part="last" Action="set" System="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ProgramMenuFolder">
+      <Component Id="StartMenu" Guid="b3a8d2e1-5f6c-4d0a-9b7e-2c1f4a8e6d93">
+        <Shortcut Id="StartMenuShortcut" Name="rustyBolt"
+                  Description="Launcher for RuneLite and HDOS"
+                  Target="[INSTALLDIR]rustybolt.exe" WorkingDirectory="INSTALLDIR"
+                  Icon="rustybolt.ico" />
+        <RegistryValue Root="HKCU" Key="Software\rustyBolt" Name="installed"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="Main" Title="rustyBolt" Level="1">
+      <ComponentRef Id="Binary" />
+      <ComponentRef Id="StartMenu" />
+    </Feature>
+  </Product>
+</Wix>

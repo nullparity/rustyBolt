@@ -160,15 +160,22 @@ pub struct Paths { pub config_dir: PathBuf, pub data_dir: PathBuf,
 impl Paths {
     pub fn resolve() -> io::Result<Paths>;   // creates the directories
     pub fn config_file(&self) -> PathBuf;    // launcher.json
-    pub fn credentials_file(&self) -> PathBuf; // creds.json, mode 0600 on unix
+    pub fn credentials_file(&self) -> PathBuf; // creds.json of older versions; load() moves it into the keychain
 }
 
 pub struct Config { /* serde, see src; keeps Bolt key names where they still apply */ }
 impl Config { pub fn load(p: &Paths) -> Config; pub fn save(&self, p: &Paths) -> io::Result<()>; }
 
-pub struct SessionStore { /* Vec<Session> plus file path */ }
+// One keychain entry (service `rustybolt`, user `sessions`) holds every session as JSON:
+// macOS Keychain, Windows Credential Manager, Linux Secret Service.
+pub trait Vault: Send { fn read(&self) -> Result<Option<String>, KeychainError>; fn write(&self, s: &str) -> Result<(), KeychainError>; }
+pub struct KeychainError(pub String);
+pub fn keychain_available() -> Result<(), KeychainError>; // the CLI refuses to run on Err
+
+pub struct SessionStore { /* Vec<Session> plus Box<dyn Vault> */ }
 impl SessionStore {
-    pub fn load(p: &Paths) -> SessionStore;
+    pub fn load(p: &Paths) -> SessionStore;           // keychain; imports and removes creds.json
+    pub fn with_vault(v: Box<dyn Vault>) -> SessionStore;
     pub fn save(&self) -> io::Result<()>;
     pub fn upsert(&mut self, s: Session);
     pub fn remove(&mut self, sub: &str);

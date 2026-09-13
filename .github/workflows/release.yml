@@ -21,10 +21,10 @@ jobs:
         include:
           - { os: macos-14,         target: aarch64-apple-darwin,       name: darwin_arm64  }
           - { os: macos-14,         target: x86_64-apple-darwin,        name: darwin_amd64  }
-          - { os: ubuntu-latest,    target: x86_64-unknown-linux-gnu,   name: linux_amd64   }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu,  name: linux_arm64   }
-          - { os: windows-latest,   target: x86_64-pc-windows-msvc,     name: windows_amd64 }
-          - { os: windows-latest,   target: aarch64-pc-windows-msvc,    name: windows_arm64 }
+          - { os: ubuntu-latest,    target: x86_64-unknown-linux-gnu,   name: linux_amd64,   deb: amd64, appimage: x86_64  }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu,  name: linux_arm64,   deb: arm64, appimage: aarch64 }
+          - { os: windows-latest,   target: x86_64-pc-windows-msvc,     name: windows_amd64, msi: x64   }
+          - { os: windows-latest,   target: aarch64-pc-windows-msvc,    name: windows_arm64, msi: arm64 }
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -36,7 +36,12 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libdbus-1-dev patchelf librsvg2-dev
+          # linuxdeploy builds the AppImage. The gtk plugin bundles GTK and WebKitGTK.
+          base=https://github.com/linuxdeploy
+          sudo curl -fsSL -o /usr/local/bin/linuxdeploy "$base/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.appimage }}.AppImage"
+          sudo curl -fsSL -o /usr/local/bin/linuxdeploy-plugin-gtk "$base/linuxdeploy-plugin-gtk/raw/master/linuxdeploy-plugin-gtk.sh"
+          sudo chmod +x /usr/local/bin/linuxdeploy /usr/local/bin/linuxdeploy-plugin-gtk
 
       - name: Build
         run: cargo build --release --locked -p bolt-cli --target ${{ matrix.target }}
@@ -52,6 +57,11 @@ jobs:
             cp "target/${{ matrix.target }}/release/rustybolt.exe" "$stem/"
             cp icon/rustybolt.ico "$stem/"
             7z a -tzip "$stem.zip" "$stem" >/dev/null
+            # WiX 3 ships on the Windows runner image.
+            candle -nologo -arch ${{ matrix.msi }} -dVersion="$version" \
+              -dBinary="target/${{ matrix.target }}/release/rustybolt.exe" \
+              -o rustybolt.wixobj windows/rustybolt.wxs
+            light -nologo -spdb -o "$stem.msi" rustybolt.wixobj
           elif [ "${{ runner.os }}" = "macOS" ]; then
             macos/build-app.sh "target/${{ matrix.target }}/release/rustybolt" "$version" "$stem/rustyBolt.app"
             cp "target/${{ matrix.target }}/release/rustybolt" "$stem/"
@@ -62,6 +72,8 @@ jobs:
             cp linux/install.sh "$stem/"
             cp icon/rustybolt.svg "$stem/"
             tar -czf "$stem.tar.gz" "$stem"
+            linux/build-deb.sh "target/${{ matrix.target }}/release/rustybolt" "$version" ${{ matrix.deb }} "$stem.deb"
+            linux/build-appimage.sh "target/${{ matrix.target }}/release/rustybolt" "$version" ${{ matrix.appimage }} "$PWD/$stem.AppImage"
           fi
 
       - uses: actions/upload-artifact@v4
@@ -70,6 +82,9 @@ jobs:
           path: |
             rustybolt_*.tar.gz
             rustybolt_*.zip
+            rustybolt_*.msi
+            rustybolt_*.deb
+            rustybolt_*.AppImage
           if-no-files-found: error
 
   release:

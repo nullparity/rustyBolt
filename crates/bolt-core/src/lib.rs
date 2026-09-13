@@ -32,7 +32,7 @@ pub use launch::{
 };
 pub use paths::Paths;
 pub use profile::{apply_to_profiles, PropertyOverrides};
-pub use session::SessionStore;
+pub use session::{keychain_available, KeychainError, SessionStore, Vault};
 pub use tuning::{GcChoice, HwAccel, LaunchMode, TuningConfig};
 pub use usage::UsageStore;
 

@@ -43,7 +43,8 @@ impl Paths {
         self.config_dir.join(CONFIG_FILE)
     }
 
-    /// The path of the saved session file. The file mode is 0600 on unix.
+    /// The session file of versions before the keychain. `SessionStore::load`
+    /// moves it into the keychain and removes it.
     pub fn credentials_file(&self) -> PathBuf {
         self.config_dir.join(CREDENTIALS_FILE)
     }
