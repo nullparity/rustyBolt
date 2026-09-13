@@ -376,9 +376,10 @@ fn client_bundle_candidates() -> Vec<PathBuf> {
     }
     #[cfg(target_os = "macos")]
     {
-        vec![PathBuf::from(
-            "/Applications/RuneLite.app/Contents/PlugIns/jre/Contents/Home",
-        )]
+        vec![
+            PathBuf::from("/Applications/RuneLite.app/Contents/Resources/jre"),
+            PathBuf::from("/Applications/RuneLite.app/Contents/PlugIns/jre/Contents/Home"),
+        ]
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
