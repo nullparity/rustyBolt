@@ -34,7 +34,7 @@ In rustyBolt a new shell implements the user interface only. It gives each URL t
 - Find RuneLite or HDOS where its own installer put it. You can also name the jar.
 - Find Java on its own. The launcher looks in `JAVA_HOME`, on `PATH` and in the standard places of each system. You can also name a Java binary.
 - Start RuneLite with a tuned set of JVM flags. The launcher drops each flag that your Java version does not accept.
-- Wi-Fi mode sends a 100ms ICMP keepalive to the default gateway to stop Wi-Fi sleep lag.
+- Wi-Fi mode sends a UDP keepalive to the default gateway every 10ms to stop Wi-Fi sleep lag, and pings it every 5s for the latency readout.
 - Closing the application window hides it to the system tray so the background keepalive stays active.
 - Lock down network egress to only official Jagex endpoints and localhost.
 - Start faster from the second run on, through a startup cache that the launcher rebuilds when the client updates.

@@ -999,7 +999,7 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
               <span class="wifi-pill" id="wifi-pill">OFF</span>
             </button>
             <div class="wifi-details">
-              <span class="wifi-desc" id="wifi-desc">Pings default gateway every 100ms to prevent 802.11 sleep jitter</span>
+              <span class="wifi-desc" id="wifi-desc">Sends a UDP keepalive to the default gateway every 10ms to prevent 802.11 sleep jitter</span>
               <span class="wifi-stat" id="wifi-stat"></span>
             </div>
           </div>
@@ -1786,12 +1786,12 @@ pub const HTML_PAGE: &str = r##"<!DOCTYPE html>
           const gwText = wifiState.gateway ? `${wifiState.gateway} • ` : '';
           stat.textContent = `${gwText}${latText}`;
         }
-        if (desc) desc.textContent = 'Pinging gateway every 100ms';
+        if (desc) desc.textContent = 'UDP keepalive to gateway every 10ms';
       } else {
         btn.classList.remove('active');
         if (pill) pill.textContent = 'OFF';
         if (stat) stat.textContent = '';
-        if (desc) desc.textContent = 'Pings default gateway every 100ms to prevent 802.11 sleep jitter';
+        if (desc) desc.textContent = 'Sends a UDP keepalive to the default gateway every 10ms to prevent 802.11 sleep jitter';
       }
     }
 

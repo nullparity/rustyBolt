@@ -13,7 +13,7 @@ use pinger::{get_pinger, run_ping, PingOptions, PingResult};
 
 /// UDP discard port; nothing listens, but the frame still wakes the radio.
 const KEEPALIVE_PORT: u16 = 9;
-const KEEPALIVE_INTERVAL: Duration = Duration::from_millis(100);
+const KEEPALIVE_INTERVAL: Duration = Duration::from_millis(10);
 const LATENCY_INTERVAL: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -168,7 +168,7 @@ fn run_wifi_worker(enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
         st.error = None;
     }
 
-    // Send a tiny UDP datagram to the gateway's discard port every 100ms.
+    // Send a tiny UDP datagram to the gateway's discard port every 10ms.
     // The payload is irrelevant; the point is to keep the radio out of
     // 802.11 power-save so game ticks do not see wake-up jitter.
     // Unlike ICMP this needs no privileges and no external binary.
