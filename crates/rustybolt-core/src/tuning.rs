@@ -222,9 +222,14 @@ impl TuningConfig {
         if let Some(nmt) = &self.native_memory_tracking {
             extra.push(format!("-XX:NativeMemoryTracking={nmt}"));
         }
+        let (heap_min, heap_max) = crate::memory::fit_heap(
+            self.heap_min.clone(),
+            self.heap_max.clone(),
+            crate::memory::total_bytes(),
+        );
         rustybolt_jdk::Tuning {
-            heap_min: self.heap_min.clone(),
-            heap_max: self.heap_max.clone(),
+            heap_min,
+            heap_max,
             stack_size: self.stack_size.clone(),
             gc: self.collector(),
             compact_object_headers: self.compact_object_headers,

@@ -12,6 +12,7 @@ mod file;
 mod http;
 mod import;
 mod launch;
+pub mod memory;
 mod paths;
 mod profile;
 mod session;
