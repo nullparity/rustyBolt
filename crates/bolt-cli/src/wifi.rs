@@ -1,15 +1,12 @@
 //! Wi-Fi keepalive manager for game tick latency stability.
 
-use std::io::{BufRead, BufReader};
-use std::net::{IpAddr, SocketAddr, UdpSocket};
+use std::io::ErrorKind;
+use std::net::{IpAddr, SocketAddr, TcpStream, UdpSocket};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-
-use pinger::{get_pinger, run_ping, PingOptions, PingResult};
 
 /// UDP discard port; nothing listens, but the frame still wakes the radio.
 const KEEPALIVE_PORT: u16 = 9;
@@ -189,13 +186,11 @@ fn run_wifi_worker(enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
     };
     let target = SocketAddr::new(gw_ip, KEEPALIVE_PORT);
 
-    // Separate slow ICMP probe for the latency readout in the UI. Uses the
-    // system ping binary via `pinger` (locale-pinned, cross-platform parsing).
+    // Separate slow probe for the latency readout in the UI.
     {
         let enabled = Arc::clone(&enabled);
         let status = Arc::clone(&status);
-        let gw_str = gw_ip.to_string();
-        thread::spawn(move || run_latency_probe(gw_str, enabled, status));
+        thread::spawn(move || run_latency_probe(gw_ip, enabled, status));
     }
 
     while enabled.load(Ordering::SeqCst) {
@@ -215,66 +210,41 @@ fn run_wifi_worker(enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
     }
 }
 
-fn run_latency_probe(target: String, enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
-    // Drive the ping child ourselves rather than via `pinger::ping` so we can
-    // kill it on toggle-off; pinger's own reader would block in
-    // `wait_with_output` forever on an interval ping that never exits.
-    let opts = PingOptions::new(target, LATENCY_INTERVAL, None);
-    let pinger = match get_pinger(opts) {
-        Ok(p) => p,
-        Err(e) => {
-            if let Ok(mut st) = status.lock() {
-                st.error = Some(format!("latency probe unavailable: {e}"));
-            }
-            return;
-        }
-    };
-    let (cmd, args) = pinger.ping_args();
-    let mut child = match run_ping(cmd, args) {
-        Ok(c) => c,
-        Err(e) => {
-            if let Ok(mut st) = status.lock() {
-                st.error = Some(format!("latency probe unavailable: {e}"));
-            }
-            return;
-        }
-    };
-    let parse = pinger.parse_fn();
+/// Ports to try for the TCP-connect RTT probe, in order. Most gateways run a
+/// web UI on 80/443 and DNS on 53; a SYN-ACK or RST from any of them is a
+/// valid round trip. Needs no privileges and no external binary.
+const LATENCY_PORTS: [u16; 3] = [80, 443, 53];
+const LATENCY_TIMEOUT: Duration = Duration::from_secs(1);
 
-    let (tx, rx) = mpsc::channel();
-    if let Some(stdout) = child.stdout.take() {
-        thread::spawn(move || {
-            for line in BufReader::new(stdout).lines() {
-                let Ok(line) = line else { break };
-                if let Some(r) = parse(line) {
-                    if tx.send(r).is_err() {
-                        break;
-                    }
-                }
+fn measure_tcp_rtt(gw: IpAddr) -> Option<f64> {
+    for port in LATENCY_PORTS {
+        let addr = SocketAddr::new(gw, port);
+        let start = Instant::now();
+        match TcpStream::connect_timeout(&addr, LATENCY_TIMEOUT) {
+            Ok(_) => return Some(start.elapsed().as_secs_f64() * 1000.0),
+            Err(e) if e.kind() == ErrorKind::ConnectionRefused => {
+                // RST is still a reply from the gateway.
+                return Some(start.elapsed().as_secs_f64() * 1000.0);
             }
-        });
+            // Timed out or unreachable on this port; try the next.
+            Err(_) => continue,
+        }
     }
+    None
+}
 
+fn run_latency_probe(gw: IpAddr, enabled: Arc<AtomicBool>, status: Arc<Mutex<WifiStatus>>) {
     while enabled.load(Ordering::SeqCst) {
-        // Poll so we notice `enabled` flipping without waiting a full interval.
-        match rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(PingResult::Pong(rtt, _)) => {
-                if let Ok(mut st) = status.lock() {
-                    st.latency_ms = Some(rtt.as_secs_f64() * 1000.0);
-                }
-            }
-            Ok(PingResult::Timeout(_)) => {
-                if let Ok(mut st) = status.lock() {
-                    st.latency_ms = None;
-                }
-            }
-            Ok(PingResult::Unknown(_)) | Err(RecvTimeoutError::Timeout) => {}
-            Ok(PingResult::PingExited(..)) | Err(RecvTimeoutError::Disconnected) => break,
+        let start = Instant::now();
+        let rtt = measure_tcp_rtt(gw);
+        if let Ok(mut st) = status.lock() {
+            st.latency_ms = rtt;
+        }
+        // Sleep in short slices so toggle-off is noticed promptly.
+        while enabled.load(Ordering::SeqCst) && start.elapsed() < LATENCY_INTERVAL {
+            thread::sleep(Duration::from_millis(100));
         }
     }
-
-    let _ = child.kill();
-    let _ = child.wait();
 }
 
 #[cfg(test)]

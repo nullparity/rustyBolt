@@ -67,7 +67,7 @@ fn attach_webview(
         use wry::WebViewBuilderExtUnix;
         let vbox = window
             .default_vbox()
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "no GTK vbox"))?;
+            .ok_or_else(|| std::io::Error::other("no GTK vbox"))?;
         Ok(builder.build_gtk(vbox)?)
     }
 }
