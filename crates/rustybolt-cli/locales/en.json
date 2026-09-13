@@ -119,5 +119,5 @@
   "profile.clear": "Clear",
   "profile.save": "Save overrides",
   "profile.saved": "Profile overrides saved",
-  "profile.example_gpu": "Load GPU example"
+  "profile.example_gpu": "Load example: GPU plugin on modern macOS"
 }

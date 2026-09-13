@@ -119,5 +119,5 @@
   "profile.clear": "Vaciar",
   "profile.save": "Guardar ajustes de perfil",
   "profile.saved": "Ajustes de perfil guardados",
-  "profile.example_gpu": "Cargar el ejemplo de GPU"
+  "profile.example_gpu": "Cargar ejemplo: plugin GPU en macOS moderno"
 }

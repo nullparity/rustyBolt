@@ -16,8 +16,9 @@ const BACKUP_EXTENSION: &str = "bak";
 /// The property prefixes that the GPU example removes.
 const GPU_PREFIXES: [&str; 2] = ["gpu.", "region-locker-gpu."];
 
-/// The forced pairs of the GPU example, in order: one laptop's fixed, modest GPU
-/// plugin setup. An example of the form, not a recommendation and not a default.
+/// The forced pairs of the GPU example, in order: what works well for the GPU
+/// plugin on a modern macOS laptop. An example of the form for other systems,
+/// not a recommendation there and never a default.
 const GPU_FORCED: [(&str, &str); 15] = [
     ("gpu.expandedMapLoadingChunks", "0"),
     ("gpu.vsyncMode", "OFF"),
