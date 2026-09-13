@@ -7,6 +7,7 @@ rustybolt launch runelite    # start RuneLite
 rustybolt launch hdos        # start HDOS
 rustybolt login              # log in to your Jagex account once
 rustybolt verify             # show what a launch does without starting anything
+rustybolt diagnose [dir]     # write a diagnostics zip for a bug report
 rustybolt configure          # open the settings page
 rustybolt help               # show usage
 ```
@@ -16,3 +17,5 @@ rustybolt help               # show usage
 `rustybolt verify` checks the client jar, the session and the Java runtime, then prints the command line that `launch` runs.
 
 `rustybolt launch runelite --jar <path>` starts a jar in a non-standard place.
+
+`rustybolt diagnose` writes `rustybolt-diagnostics-<time>.zip`: a report (version, system, memory, keychain state, the number of accounts and of characters per account, the Java runtimes, the clients, the config) and the last 400 lines of the RuneLite launcher and client logs. Account, character and user names, session and account ids, account hashes, profile names, the home directory, IP addresses and emails are replaced before anything is written; the keychain entry itself is never read. **Settings → Save diagnostics** writes the same file to Downloads.

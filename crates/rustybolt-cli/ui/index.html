@@ -241,6 +241,13 @@
           <div class="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-input-border bg-[#08090b] p-3 font-mono text-[0.78rem] text-muted" id="command-preview" data-i18n="settings.preview_loading">Loading preview...</div>
         </div>
 
+        <div class="card">
+          <div class="mb-3.5 text-[0.95rem] font-semibold text-text" data-i18n="diag.title">Diagnostics</div>
+          <div class="mb-3 text-[0.8rem] text-muted" data-i18n="diag.desc">Saves a zip with the launcher report and the client logs for a bug report. Account, character and user names, ids, addresses and emails are removed first.</div>
+          <button class="btn-secondary" id="diag-btn" onclick="saveDiagnostics()" data-i18n="diag.save">Save diagnostics</button>
+          <div class="mt-2 font-mono text-[0.76rem] text-subtle" id="diag-path"></div>
+        </div>
+
         <div class="mt-2 flex justify-end gap-3">
           <button class="btn-primary" id="save-settings-btn" onclick="saveSettings()" data-i18n="settings.save">
             Save Settings
@@ -898,6 +905,25 @@
         }
       } catch (e) {
         showToast(t('settings.save_failed', { error: e.message }));
+      }
+    }
+
+    async function saveDiagnostics() {
+      const btn = document.getElementById('diag-btn');
+      const out = document.getElementById('diag-path');
+      if (btn) btn.disabled = true;
+      try {
+        const data = await (await fetch('/api/diagnose', { method: 'POST' })).json();
+        if (data.ok) {
+          if (out) out.textContent = data.path;
+          showToast(t('diag.saved'));
+        } else {
+          showToast(t('diag.failed', { error: data.error || '' }));
+        }
+      } catch (e) {
+        showToast(t('diag.failed', { error: e.message }));
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
 

@@ -103,6 +103,11 @@ fn read_zip_entry(archive: &Path, wanted: &str) -> io::Result<Option<Vec<u8>>> {
 }
 
 #[cfg(test)]
+pub(crate) fn read_zip_entry_for_test(archive: &Path, wanted: &str) -> io::Result<Option<Vec<u8>>> {
+    read_zip_entry(archive, wanted)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;

@@ -1,5 +1,7 @@
 # Troubleshooting
 
+For a bug report, attach the file from **Settings → Save diagnostics** (or `rustybolt diagnose`). It holds no names, ids or addresses; see [cli.md](cli.md).
+
 **RuneLite is not installed.** Install it from the [wiki page](https://oldschool.runescape.wiki/w/RuneLite) and start it once. The error lists every place that the launcher looked. A jar in another place: set it under **Settings**, or run `rustybolt launch runelite --jar <path>`.
 
 **HDOS is not installed.** Install it from the [wiki page](https://oldschool.runescape.wiki/w/HDOS) and start it once.

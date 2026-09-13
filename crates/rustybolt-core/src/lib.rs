@@ -9,6 +9,7 @@ mod client;
 mod config;
 mod credentials;
 pub mod desktop;
+pub mod diagnose;
 mod file;
 mod http;
 mod import;

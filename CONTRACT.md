@@ -258,6 +258,12 @@ pub mod memory {  // the heap that fits the machine
 pub mod desktop {  // Linux: a hidden desktop entry that names the RuneLite window for GNOME
     pub fn ensure_runelite_entry(jar: &Path) -> io::Result<()>;
 }
+pub mod diagnose {  // a bug-report bundle with the personal parts replaced
+    pub struct Accounts { pub character_counts: Vec<Option<usize>> }
+    pub struct Redactor;  // new(secrets) learns names and ids; redact() also masks home, user, hashes, profiles, IPs, emails
+    pub fn collect(p: &Paths, c: &Config, a: &Accounts, r: &Redactor, version: &str) -> Vec<(String, Vec<u8>)>;
+    pub fn write_zip(path: &Path, files: &[(String, Vec<u8>)]) -> io::Result<()>;  // stored entries
+}
 impl<'a> HttpAuth<'a> {
     pub fn new(config: &'a AuthConfig) -> HttpAuth<'a>;
     /// Runs every network step that the flow asks for until the next UI step.

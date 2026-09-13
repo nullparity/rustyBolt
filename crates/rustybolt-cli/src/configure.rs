@@ -732,6 +732,20 @@ fn respond(
             }
             false
         }
+        ("POST", "/api/diagnose") => {
+            let dir = dirs_download().unwrap_or_else(|| paths.data_dir.clone());
+            let json = match crate::diagnose::write_bundle(paths, &dir) {
+                Ok(path) => serde_json::json!({ "ok": true, "path": path.display().to_string() }),
+                Err(error) => serde_json::json!({ "ok": false, "error": error.to_string() }),
+            }
+            .to_string();
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: {conn_header}\r\n\r\n{json}",
+                json.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+            false
+        }
         ("POST", "/api/shutdown") => {
             let _ = stream.write_all(
                 b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\nConnection: close\r\n\r\n{\"ok\":true}",
@@ -1060,6 +1074,13 @@ fn compute_preview(paths: &Paths, config: &Config, kind: ClientKind) -> Option<S
     let mut parts = vec![plan.program.to_string_lossy().into_owned()];
     parts.extend(plan.args);
     Some(parts.join(" "))
+}
+
+/// The user's Downloads directory, when it exists.
+fn dirs_download() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
+    let dir = PathBuf::from(home).join("Downloads");
+    dir.is_dir().then_some(dir)
 }
 
 pub(crate) fn open_browser(url: &str) {

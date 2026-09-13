@@ -6,6 +6,7 @@
 mod auth;
 mod configure;
 mod consent;
+mod diagnose;
 mod gui;
 mod httpd;
 mod i18n;
@@ -30,6 +31,7 @@ Usage:
                   [--configure] [--jar <path>]
   rustybolt login
   rustybolt verify [runelite|hdos] [--sub <sub>] [--character <id>] [--jar <path>]
+  rustybolt diagnose [directory]
   rustybolt help
   rustybolt version
 
@@ -135,6 +137,7 @@ fn dispatch(args: &[String]) -> Result<(), CliError> {
         "login" => auth::login(rest),
         "launch" => launch::run(rest),
         "verify" => verify::run(rest),
+        "diagnose" => diagnose::run(rest),
         "configure" => configure::run(rest),
         other => Err(CliError::Unknown(other.to_string())),
     }
