@@ -2061,7 +2061,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "rustybolt-auth"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "base64 0.22.1",
  "form_urlencoded",
@@ -2076,7 +2076,7 @@ dependencies = [
 
 [[package]]
 name = "rustybolt-cli"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "core-foundation 0.10.1",
  "default-net",
@@ -2098,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "rustybolt-core"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "keyring",
  "rustybolt-auth",
@@ -2112,7 +2112,7 @@ dependencies = [
 
 [[package]]
 name = "rustybolt-jdk"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "serde",
  "thiserror 2.0.20",
@@ -2120,7 +2120,7 @@ dependencies = [
 
 [[package]]
 name = "rustybolt-security"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "thiserror 2.0.20",
  "url",
