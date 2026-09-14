@@ -143,8 +143,9 @@ pub(crate) fn run(args: &[String]) -> Result<(), CliError> {
 
     let running = Arc::new(AtomicBool::new(true));
     let flow_state = Arc::new(Mutex::new(None));
-    let wifi_manager = WifiManager::new(false);
-    let update_state = crate::update::start(&Config::load(&paths));
+    let config = Config::load(&paths);
+    let wifi_manager = WifiManager::new(config.wifi_mode);
+    let update_state = crate::update::start(&config);
 
     let (event_loop_opt, proxy_opt) = if !use_browser && crate::gui::has_display() {
         let (event_loop, proxy) = crate::gui::create_event_loop();
@@ -588,6 +589,7 @@ fn respond(
                     let _ = req.wifi.toggle();
                 }
             }
+            persist_wifi_mode(paths, req.wifi.is_enabled());
             let status = req.wifi.status();
             let json = serde_json::to_string(&status).unwrap_or_else(|_| "{}".to_string());
             let response = format!(
@@ -784,7 +786,9 @@ fn respond(
             false
         }
         ("POST" | "PUT", "/api/save" | "/api/config") => {
-            if let Ok(config) = serde_json::from_slice::<Config>(req.body) {
+            if let Ok(mut config) = serde_json::from_slice::<Config>(req.body) {
+                // The page holds the wifi value of its load; the manager holds the current one.
+                config.wifi_mode = req.wifi.is_enabled();
                 let _ = config.save(paths);
                 req.update.set_token(crate::update::token(&config));
                 let plan = compute_preview(paths, &config, ClientKind::RuneLite);
@@ -1161,6 +1165,15 @@ fn dirs_download() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
     let dir = PathBuf::from(home).join("Downloads");
     dir.is_dir().then_some(dir)
+}
+
+/// Writes the wifi mode into the config, so the next start restores it.
+pub(crate) fn persist_wifi_mode(paths: &Paths, enabled: bool) {
+    let mut config = Config::load(paths);
+    if config.wifi_mode != enabled {
+        config.wifi_mode = enabled;
+        let _ = config.save(paths);
+    }
 }
 
 pub(crate) fn open_browser(url: &str) {

@@ -1,6 +1,7 @@
 //! The release check behind the version pill of the dashboard.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use nullparity_update::{Config as UpdateConfig, Updater};
 use rustybolt_core::Config;
@@ -14,7 +15,10 @@ pub(crate) fn token(config: &Config) -> Option<String> {
         .or_else(|| std::env::var("GITHUB_TOKEN").ok())
 }
 
-/// Starts the updater with one check in the background. Every request
+/// How often the launcher asks GitHub for a newer release.
+const CHECK_INTERVAL: Duration = Duration::from_secs(3600);
+
+/// Starts the updater with a check now and one every hour. Every request
 /// passes the egress allowlist of `rustybolt-security`.
 pub(crate) fn start(config: &Config) -> Arc<Updater> {
     let updater = Updater::new(
@@ -29,6 +33,6 @@ pub(crate) fn start(config: &Config) -> Arc<Updater> {
             rustybolt_security::validate_url(url).map_err(|e| e.to_string())
         })),
     );
-    updater.check_in_background();
+    updater.check_every(CHECK_INTERVAL);
     updater
 }

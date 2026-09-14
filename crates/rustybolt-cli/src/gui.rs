@@ -282,6 +282,7 @@ pub(crate) fn run_window(
             } else if menu_ev.id == wifi_item.id() {
                 let active = wifi_manager.toggle();
                 wifi_item.set_checked(active);
+                crate::configure::persist_wifi_mode(&paths, active);
             } else if menu_ev.id == quit_item.id() {
                 running.store(false, Ordering::SeqCst);
                 *control_flow = ControlFlow::Exit;

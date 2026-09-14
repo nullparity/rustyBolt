@@ -64,6 +64,9 @@ pub struct Config {
     /// A GitHub token for the release check. Optional: it raises the rate
     /// limit and reaches a private repository.
     pub github_token: Option<String>,
+    /// Wifi mode: the UDP keepalive to the gateway. The launcher restores
+    /// it at start, so a restart after an update keeps it.
+    pub wifi_mode: bool,
 }
 
 impl Default for Config {
@@ -87,6 +90,7 @@ impl Default for Config {
             language: None,
             session_max_age: None,
             github_token: None,
+            wifi_mode: false,
         }
     }
 }

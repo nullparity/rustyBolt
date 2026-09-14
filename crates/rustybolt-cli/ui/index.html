@@ -1157,6 +1157,8 @@
 
     // The version pill. It glows when a newer release exists; one click
     // shows the version, a second click within four seconds installs it.
+    // The launcher checks GitHub every hour; the page polls its answer.
+    const UPDATE_POLL_MS = 60000;
     let updateState = null;
     let updateArmed = false;
     let updateArmTimer = null;
@@ -1175,6 +1177,7 @@
         return;
       }
       renderVersionPill();
+      setTimeout(pollUpdate, UPDATE_POLL_MS);
     }
 
     function renderVersionPill() {
