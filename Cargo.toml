@@ -20,8 +20,7 @@ rustybolt-auth = { path = "crates/rustybolt-auth" }
 rustybolt-jdk = { path = "crates/rustybolt-jdk" }
 rustybolt-security = { path = "crates/rustybolt-security" }
 rustybolt-core = { path = "crates/rustybolt-core" }
-# Not yet on crates.io.
-nullparity-update = { path = "../../nullparity-wry/crates/nullparity-update" }
+nullparity-update = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

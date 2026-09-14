@@ -1510,6 +1510,8 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 [[package]]
 name = "nullparity-update"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5273fba61bf2981fd24fb055d6842850fd0003d38ce6956fcd876dedbdc1479"
 dependencies = [
  "flate2",
  "self-replace",
