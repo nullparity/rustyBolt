@@ -72,6 +72,9 @@ pub enum CoreError {
     /// A security policy rejected an operation or destination.
     #[error("security policy error: {0}")]
     Security(#[from] rustybolt_security::SecurityError),
+    /// A client of this kind is still starting or already running.
+    #[error("{0} is already running")]
+    AlreadyRunning(String),
 }
 
 impl From<ureq::Error> for CoreError {

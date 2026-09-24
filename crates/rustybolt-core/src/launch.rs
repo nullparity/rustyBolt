@@ -4,10 +4,18 @@
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 
 use rustybolt_jdk::{Invocation, JvmOptions};
 
 use crate::{ClientKind, Config, CoreError, Paths};
+
+/// Serializes the read-check-write of the pid file across threads.
+///
+/// The HTTP server runs each request on its own thread. Two closely timed
+/// launch requests can otherwise both pass the liveness check before either
+/// writes its pid.
+static LAUNCH_GUARD: Mutex<()> = Mutex::new(());
 
 #[cfg(unix)]
 extern "C" {
@@ -54,8 +62,24 @@ pub struct LaunchRequest<'a> {
 /// The child gets a new session on unix and a new process group on Windows.
 /// Standard input, output, and error streams are redirected to null so the child
 /// detaches completely from the parent. The function never waits for the child.
+///
+/// If the same character is still starting or already running this kind of
+/// client, the function returns [`CoreError::AlreadyRunning`] instead of a
+/// second process. A cold JVM start can take several seconds. A launcher
+/// button with no visible feedback during that time invites a second click.
+/// A different character can still start its own client at the same time.
 pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> {
     let plan = plan(paths, request)?;
+    let pid_file = client_pid_file(paths, request.kind, &session_key(request));
+
+    let _guard = LAUNCH_GUARD
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(pid) = read_pid(&pid_file) {
+        if client_process_alive(pid) {
+            return Err(CoreError::AlreadyRunning(request.kind.title().to_string()));
+        }
+    }
 
     // A missing entry only costs the window its name in the top bar.
     #[cfg(target_os = "linux")]
@@ -106,7 +130,59 @@ pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> 
     }
 
     let child = command.spawn()?;
-    Ok(child.id())
+    let pid = child.id();
+    let _ = std::fs::write(&pid_file, pid.to_string());
+    Ok(pid)
+}
+
+/// Where [`launch`] records the pid of the last client of this kind and
+/// session.
+fn client_pid_file(paths: &Paths, kind: ClientKind, session: &str) -> PathBuf {
+    paths
+        .cache_dir
+        .join(format!("{}-{session}.pid", kind.name()))
+}
+
+/// Names the session of a launch request, for [`client_pid_file`].
+///
+/// The launcher tracks one client per character, so a second character can
+/// start its own client while the first one is still running. The character
+/// id comes from the Jagex API, so the function keeps only characters that
+/// are safe in a file name.
+fn session_key(request: &LaunchRequest) -> String {
+    let raw = request
+        .credentials
+        .map(|credentials| credentials.character_id.as_str())
+        .unwrap_or("default");
+    let safe: String = raw
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect();
+    if safe.is_empty() {
+        "default".to_string()
+    } else {
+        safe
+    }
+}
+
+/// Reads the pid that a previous call to [`launch`] recorded.
+fn read_pid(path: &Path) -> Option<u32> {
+    std::fs::read_to_string(path).ok()?.trim().parse().ok()
+}
+
+/// Reports whether the process of `pid` still runs.
+///
+/// On Windows, the function always returns `false`. A stale pid file never
+/// blocks a launch there. [`launch`] still records the pid on every
+/// platform.
+#[cfg(unix)]
+fn client_process_alive(pid: u32) -> bool {
+    pid_alive(pid as i32)
+}
+
+#[cfg(not(unix))]
+fn client_process_alive(_pid: u32) -> bool {
+    false
 }
 
 /// Everything that the launcher needs to start one client process.
@@ -693,5 +769,76 @@ mod tests {
 
         let pid = launch(&paths, &request).expect("launch should succeed");
         assert!(pid > 0);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn launch_refuses_a_second_launch_of_the_same_character() {
+        let temp = TempDir::new("launch-duplicate");
+        let paths = paths(temp.path());
+        let jar = temp.path().join("client.jar");
+        std::fs::write(&jar, b"fake jar").unwrap();
+        let java = PathBuf::from("/bin/sh");
+
+        let request = LaunchRequest {
+            jar: &jar,
+            kind: ClientKind::RuneLite,
+            credentials: None,
+            java: Some(&java),
+            template: Some("/bin/sh -c 'sleep 5'"),
+            configure: false,
+        };
+
+        let first = launch(&paths, &request).expect("the first launch should succeed");
+        let second = launch(&paths, &request);
+        unsafe {
+            kill(first as i32, 9);
+        }
+
+        assert!(matches!(second, Err(CoreError::AlreadyRunning(_))));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn launch_allows_a_different_character_at_the_same_time() {
+        let temp = TempDir::new("launch-multi-account");
+        let paths = paths(temp.path());
+        let jar = temp.path().join("client.jar");
+        std::fs::write(&jar, b"fake jar").unwrap();
+        let java = PathBuf::from("/bin/sh");
+
+        let request_of = |character_id: &str| GameCredentials {
+            session_id: "session".to_string(),
+            character_id: character_id.to_string(),
+            display_name: "Ada".to_string(),
+        };
+        let first_credentials = request_of("111");
+        let second_credentials = request_of("222");
+
+        let first = LaunchRequest {
+            jar: &jar,
+            kind: ClientKind::RuneLite,
+            credentials: Some(&first_credentials),
+            java: Some(&java),
+            template: Some("/bin/sh -c 'sleep 5'"),
+            configure: false,
+        };
+        let second = LaunchRequest {
+            jar: &jar,
+            kind: ClientKind::RuneLite,
+            credentials: Some(&second_credentials),
+            java: Some(&java),
+            template: Some("/bin/sh -c 'sleep 5'"),
+            configure: false,
+        };
+
+        let first_pid = launch(&paths, &first).expect("the first character should launch");
+        let second_pid = launch(&paths, &second).expect("a different character should launch");
+        unsafe {
+            kill(first_pid as i32, 9);
+            kill(second_pid as i32, 9);
+        }
+
+        assert_ne!(first_pid, second_pid);
     }
 }
