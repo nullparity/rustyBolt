@@ -52,7 +52,8 @@ pub struct LaunchRequest<'a> {
 /// Starts a game client and returns the process id of the child.
 ///
 /// The child gets a new session on unix and a new process group on Windows.
-/// The function never waits for the child.
+/// Standard input, output, and error streams are redirected to null so the child
+/// detaches completely from the parent. The function never waits for the child.
 pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> {
     let plan = plan(paths, request)?;
 
@@ -77,6 +78,8 @@ pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> 
     command.args(&plan.args);
     command.current_dir(&plan.working_dir);
     command.stdin(Stdio::null());
+    command.stdout(Stdio::null());
+    command.stderr(Stdio::null());
     for (name, value) in &plan.env {
         command.env(name, value);
     }
@@ -661,5 +664,34 @@ mod tests {
         assert!(alive.exists());
         assert!(!dead.exists());
         assert!(other.exists());
+    }
+
+    #[test]
+    fn launch_spawns_detached_child() {
+        let temp = TempDir::new("launch-detached");
+        let paths = paths(temp.path());
+        let jar = temp.path().join("client.jar");
+        std::fs::write(&jar, b"fake jar").unwrap();
+
+        #[cfg(unix)]
+        let java = PathBuf::from("/bin/sh");
+        #[cfg(windows)]
+        let java = PathBuf::from("cmd.exe");
+
+        let request = LaunchRequest {
+            jar: &jar,
+            kind: ClientKind::RuneLite,
+            credentials: None,
+            java: Some(&java),
+            template: Some(if cfg!(windows) {
+                "cmd.exe /c exit 0"
+            } else {
+                "/bin/sh -c 'exit 0'"
+            }),
+            configure: false,
+        };
+
+        let pid = launch(&paths, &request).expect("launch should succeed");
+        assert!(pid > 0);
     }
 }
