@@ -14,7 +14,7 @@ use wry::{NewWindowResponse, WebContext, WebView, WebViewBuilder};
 
 use rustybolt_core::{LoginFlow, Paths};
 
-use crate::platform::claim_jagex_scheme;
+use crate::platform::{claim_jagex_scheme, release_jagex_scheme};
 
 use crate::configure::{complete_login, LoginOutcome};
 use crate::i18n::Lang;
@@ -266,6 +266,9 @@ pub(crate) fn run_window(
     let mut consent: Option<crate::consent::ConsentListener> = None;
     // Whether the current login started in the system browser.
     let mut browser_flow = false;
+    // Who held the `jagex:` scheme before this session claimed it.
+    // `release_jagex_scheme` gives it back once the login ends.
+    let mut jagex_scheme_owner: Option<String> = None;
 
     event_loop.run(move |event, target, control_flow| {
         *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(100));
@@ -284,6 +287,7 @@ pub(crate) fn run_window(
                 wifi_item.set_checked(active);
                 crate::configure::persist_wifi_mode(&paths, active);
             } else if menu_ev.id == quit_item.id() {
+                release_jagex_scheme(jagex_scheme_owner.take().as_deref());
                 running.store(false, Ordering::SeqCst);
                 *control_flow = ControlFlow::Exit;
                 return;
@@ -301,6 +305,7 @@ pub(crate) fn run_window(
 
         match event {
             Event::UserEvent(AppEvent::Shutdown) => {
+                release_jagex_scheme(jagex_scheme_owner.take().as_deref());
                 running.store(false, Ordering::SeqCst);
                 *control_flow = ControlFlow::Exit;
             }
@@ -315,7 +320,7 @@ pub(crate) fn run_window(
                 login = None;
                 consent.take();
                 browser_flow = true;
-                claim_jagex_scheme();
+                jagex_scheme_owner = claim_jagex_scheme();
                 crate::configure::open_browser(&url);
             }
             Event::UserEvent(AppEvent::ShowConsent(url)) if login.is_some() => {
@@ -373,6 +378,7 @@ pub(crate) fn run_window(
                 LoginOutcome::Done(json) => {
                     login = None;
                     consent.take();
+                    release_jagex_scheme(jagex_scheme_owner.take().as_deref());
                     window.set_visible(true);
                     window.set_focus();
                     let _ = webview.evaluate_script(&format!("onNativeLogin({json})"));
@@ -380,6 +386,7 @@ pub(crate) fn run_window(
                 LoginOutcome::Error(message) => {
                     login = None;
                     consent.take();
+                    release_jagex_scheme(jagex_scheme_owner.take().as_deref());
                     window.set_visible(true);
                     window.set_focus();
                     let _ = webview
@@ -403,6 +410,7 @@ pub(crate) fn run_window(
                 if login.as_ref().is_some_and(|w| w.window.id() == window_id) {
                     // The user gave up; drop the pending flow with the window.
                     login = None;
+                    release_jagex_scheme(jagex_scheme_owner.take().as_deref());
                     if let Ok(mut lock) = flow_state.lock() {
                         *lock = None;
                     }

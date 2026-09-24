@@ -68,9 +68,13 @@ pub(crate) fn browser_login_available() -> bool {
 
 /// Makes this app the default handler of the `jagex:` scheme.
 ///
-/// The official Jagex Launcher claims the same scheme, so the system must be
-/// told which app gets the login redirect before each browser login.
-pub(crate) fn claim_jagex_scheme() {
+/// Returns the previous handler, so [`release_jagex_scheme`] can restore it.
+/// The official Jagex Launcher uses the same scheme. The operating system
+/// must know which app gets the login redirect before each browser login.
+/// If the caller never releases the claim, the claim stays active after the
+/// login ends. Every `jagex:` URL then goes to rustyBolt instead of the
+/// official launcher.
+pub(crate) fn claim_jagex_scheme() -> Option<String> {
     #[cfg(target_os = "macos")]
     {
         use core_foundation::base::TCFType;
@@ -78,11 +82,27 @@ pub(crate) fn claim_jagex_scheme() {
 
         #[link(name = "CoreServices", kind = "framework")]
         extern "C" {
+            fn LSCopyDefaultHandlerForURLScheme(scheme: CFStringRef) -> CFStringRef;
             fn LSSetDefaultHandlerForURLScheme(scheme: CFStringRef, bundle_id: CFStringRef) -> i32;
         }
 
+        const OUR_BUNDLE_ID: &str = "net.runelite.rustybolt";
         let scheme = CFString::new("jagex");
-        let bundle_id = CFString::new("net.runelite.rustybolt");
+        // SAFETY: `scheme` is a valid CFString that outlives the call. A null
+        // result means the operating system has no default handler yet.
+        let previous = unsafe {
+            let handler = LSCopyDefaultHandlerForURLScheme(scheme.as_concrete_TypeRef());
+            if handler.is_null() {
+                None
+            } else {
+                Some(CFString::wrap_under_create_rule(handler).to_string())
+            }
+        };
+        if previous.as_deref() == Some(OUR_BUNDLE_ID) {
+            return None;
+        }
+
+        let bundle_id = CFString::new(OUR_BUNDLE_ID);
         // SAFETY: both arguments are valid CFStrings that outlive the call.
         let status = unsafe {
             LSSetDefaultHandlerForURLScheme(
@@ -93,21 +113,45 @@ pub(crate) fn claim_jagex_scheme() {
         if status != 0 {
             eprintln!("rustybolt: could not claim the jagex: URL scheme (status {status})");
         }
+        previous
     }
     #[cfg(target_os = "linux")]
     {
+        let previous = Command::new("xdg-mime")
+            .args(["query", "default", "x-scheme-handler/jagex"])
+            .output()
+            .ok()
+            .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+            .filter(|value| !value.is_empty());
+        if previous.as_deref() == Some("rustybolt.desktop") {
+            return None;
+        }
         let _ = Command::new("xdg-mime")
             .args(["default", "rustybolt.desktop", "x-scheme-handler/jagex"])
             .status();
+        previous
     }
     #[cfg(target_os = "windows")]
     {
         // HKCU\Software\Classes wins over the machine-wide registration of
         // the official launcher, and needs no elevation.
         let Ok(exe) = std::env::current_exe() else {
-            return;
+            return None;
         };
+        let previous = Command::new("reg")
+            .args([
+                "query",
+                r"HKCU\Software\Classes\jagex\shell\open\command",
+                "/ve",
+            ])
+            .output()
+            .ok()
+            .and_then(|out| registry_default_value(&String::from_utf8_lossy(&out.stdout)));
+
         let command = format!("\"{}\" \"%1\"", exe.display());
+        if previous.as_deref() == Some(command.as_str()) {
+            return None;
+        }
         let key = r"HKCU\Software\Classes\jagex";
         let steps: [Vec<&str>; 3] = [
             vec!["add", key, "/ve", "/d", "URL:Jagex Protocol", "/f"],
@@ -124,7 +168,75 @@ pub(crate) fn claim_jagex_scheme() {
         for args in steps {
             let _ = Command::new("reg").args(args).status();
         }
+        previous
     }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        None
+    }
+}
+
+/// Reverses [`claim_jagex_scheme`] at the end of a login.
+///
+/// If a login path skips this call, rustyBolt keeps the `jagex:` claim
+/// after the login ends. The previous handler then stops receiving its own
+/// `jagex:` URLs.
+pub(crate) fn release_jagex_scheme(previous: Option<&str>) {
+    let Some(previous) = previous else {
+        return;
+    };
+    #[cfg(target_os = "macos")]
+    {
+        use core_foundation::base::TCFType;
+        use core_foundation::string::{CFString, CFStringRef};
+
+        #[link(name = "CoreServices", kind = "framework")]
+        extern "C" {
+            fn LSSetDefaultHandlerForURLScheme(scheme: CFStringRef, bundle_id: CFStringRef) -> i32;
+        }
+
+        let scheme = CFString::new("jagex");
+        let bundle_id = CFString::new(previous);
+        // SAFETY: both arguments are valid CFStrings that outlive the call.
+        let status = unsafe {
+            LSSetDefaultHandlerForURLScheme(
+                scheme.as_concrete_TypeRef(),
+                bundle_id.as_concrete_TypeRef(),
+            )
+        };
+        if status != 0 {
+            eprintln!("rustybolt: could not release the jagex: URL scheme (status {status})");
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = Command::new("xdg-mime")
+            .args(["default", previous, "x-scheme-handler/jagex"])
+            .status();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = Command::new("reg")
+            .args([
+                "add",
+                r"HKCU\Software\Classes\jagex\shell\open\command",
+                "/ve",
+                "/d",
+                previous,
+                "/f",
+            ])
+            .status();
+    }
+}
+
+/// Reads the value of a `reg query ... /ve` command from its output.
+#[cfg(target_os = "windows")]
+fn registry_default_value(output: &str) -> Option<String> {
+    output.lines().find_map(|line| {
+        let trimmed = line.trim();
+        let rest = trimmed.strip_prefix("(Default)")?;
+        Some(rest.trim().strip_prefix("REG_SZ")?.trim().to_string())
+    })
 }
 
 /// Checks whether the consent redirect on `http://localhost` can reach us.
