@@ -14,6 +14,8 @@ mod file;
 mod http;
 mod import;
 mod launch;
+#[cfg(target_os = "macos")]
+mod macos_helper;
 pub mod memory;
 mod paths;
 mod profile;
@@ -32,6 +34,8 @@ pub use launch::{
     client_invocation, client_options, launch, plan, tuned_client_options, GameCredentials, Host,
     LaunchPlan, LaunchRequest,
 };
+#[cfg(target_os = "macos")]
+pub use macos_helper::{exec_client, EXEC_CLIENT_COMMAND, HELPERS_DIR};
 pub use paths::Paths;
 pub use profile::{apply_to_profiles, PropertyOverrides};
 pub use rustybolt_auth::{Action, AuthConfig, Character, LoginFlow, Session};

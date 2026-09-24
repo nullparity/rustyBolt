@@ -113,8 +113,34 @@ fn main() {
     }
 }
 
+/// Handles a start of the binary as a client helper bundle (macOS).
+///
+/// Each helper executable is a hard link to this binary. Launch Services
+/// starts it with [`rustybolt_core::EXEC_CLIENT_COMMAND`], and the helper
+/// then becomes the client. Any other start of a helper, such as a double
+/// click in Finder, ends with an error. It never opens a second launcher
+/// window.
+#[cfg(target_os = "macos")]
+fn run_as_client_helper(args: &[String]) -> Option<Result<(), CliError>> {
+    if args.first().map(String::as_str) == Some(rustybolt_core::EXEC_CLIENT_COMMAND) {
+        return Some(Err(CliError::Core(rustybolt_core::exec_client(&args[1..]))));
+    }
+    let exe = std::env::current_exe().ok()?;
+    let helpers = format!("/Contents/{}/", rustybolt_core::HELPERS_DIR);
+    if exe.to_string_lossy().contains(&helpers) {
+        return Some(Err(CliError::Message(
+            "this helper starts a game client for rustyBolt. Open rustyBolt instead.".to_string(),
+        )));
+    }
+    None
+}
+
 /// Runs the command of the command line.
 fn dispatch(args: &[String]) -> Result<(), CliError> {
+    #[cfg(target_os = "macos")]
+    if let Some(result) = run_as_client_helper(args) {
+        return result;
+    }
     let Some(command) = args.first().map(String::as_str) else {
         return configure::run(&[]);
     };

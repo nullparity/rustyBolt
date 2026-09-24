@@ -63,6 +63,10 @@ pub struct LaunchRequest<'a> {
 /// Standard input, output, and error streams are redirected to null so the child
 /// detaches completely from the parent. The function never waits for the child.
 ///
+/// On macOS, a client starts through its helper app bundle when rustyBolt
+/// runs from its app bundle. The client then gets its own name and Dock
+/// icon. See `macos_helper`.
+///
 /// If the same character is still starting or already running this kind of
 /// client, the function returns [`CoreError::AlreadyRunning`] instead of a
 /// second process. A cold JVM start can take several seconds. A launcher
@@ -96,6 +100,13 @@ pub fn launch(paths: &Paths, request: &LaunchRequest) -> Result<u32, CoreError> 
                 eprintln!("rustybolt: profile overrides not applied: {error}");
             }
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    if let Some(helper) = crate::macos_helper::helper_bundle(request.kind) {
+        let pid = crate::macos_helper::open_helper(&helper, &plan)?;
+        let _ = std::fs::write(&pid_file, pid.to_string());
+        return Ok(pid);
     }
 
     let mut command = Command::new(&plan.program);
