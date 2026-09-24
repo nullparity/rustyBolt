@@ -107,6 +107,8 @@
   "native.tray_open": "Abrir rustyBolt",
   "native.tray_wifi": "Modo wifi",
   "native.tray_quit": "Salir de rustyBolt",
+  "native.menu_edit": "Edición",
+  "native.menu_window": "Ventana",
   "keychain.title": "Llavero no disponible",
   "keychain.desc": "No se pueden guardar inicios de sesión hasta que funcione el llavero del sistema. En Linux debe haber un Secret Service como GNOME Keyring o KDE Wallet en marcha y desbloqueado.",
   "keychain.toast": "El llavero del sistema no está disponible; no se pudo guardar el inicio de sesión.",

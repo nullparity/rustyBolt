@@ -186,6 +186,67 @@ fn create_tray_icon() -> Result<Icon, Box<dyn std::error::Error>> {
     Ok(Icon::from_rgba(rgba, info.width, info.height)?)
 }
 
+/// Installs the macOS menu bar and returns it with its Quit item.
+///
+/// WKWebView takes Cmd+C, Cmd+V, Cmd+A, and Cmd+Z from the Edit menu. Without
+/// that menu, those keys do nothing in the text fields of the dashboard.
+/// Quit is a normal item, not the predefined one, so it goes through the
+/// event loop and releases the `jagex:` scheme like the Quit item of the tray.
+#[cfg(target_os = "macos")]
+fn install_menu_bar(lang: Lang) -> Result<(Menu, MenuItem), Box<dyn std::error::Error>> {
+    use tray_icon::menu::accelerator::{Accelerator, Code, Modifiers};
+    use tray_icon::menu::{AboutMetadata, Submenu};
+
+    let quit = MenuItem::new(
+        lang.tr("native.tray_quit"),
+        true,
+        Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyQ)),
+    );
+    let about = AboutMetadata {
+        name: Some("rustyBolt".to_string()),
+        version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        ..AboutMetadata::default()
+    };
+    let app = Submenu::with_items(
+        "rustyBolt",
+        true,
+        &[
+            &PredefinedMenuItem::about(None, Some(about)),
+            &PredefinedMenuItem::separator(),
+            &PredefinedMenuItem::hide(None),
+            &PredefinedMenuItem::hide_others(None),
+            &PredefinedMenuItem::show_all(None),
+            &PredefinedMenuItem::separator(),
+            &quit,
+        ],
+    )?;
+    let edit = Submenu::with_items(
+        lang.tr("native.menu_edit"),
+        true,
+        &[
+            &PredefinedMenuItem::undo(None),
+            &PredefinedMenuItem::redo(None),
+            &PredefinedMenuItem::separator(),
+            &PredefinedMenuItem::cut(None),
+            &PredefinedMenuItem::copy(None),
+            &PredefinedMenuItem::paste(None),
+            &PredefinedMenuItem::select_all(None),
+        ],
+    )?;
+    let window = Submenu::with_items(
+        lang.tr("native.menu_window"),
+        true,
+        &[
+            &PredefinedMenuItem::minimize(None),
+            &PredefinedMenuItem::close_window(None),
+        ],
+    )?;
+    let bar = Menu::with_items(&[&app, &edit, &window])?;
+    bar.init_for_nsapp();
+    window.set_as_windows_menu_for_nsapp();
+    Ok((bar, quit))
+}
+
 pub(crate) fn run_window(
     event_loop: EventLoop<AppEvent>,
     url: &str,
@@ -238,6 +299,13 @@ pub(crate) fn run_window(
     let quit_item = MenuItem::new(lang.tr("native.tray_quit"), true, None);
     tray_menu.append_items(&[&open_item, &wifi_item, &sep, &quit_item])?;
 
+    #[cfg(target_os = "macos")]
+    let (_menu_bar, app_quit_item) = install_menu_bar(lang)?;
+    #[cfg(target_os = "macos")]
+    let app_quit_id = Some(app_quit_item.id().clone());
+    #[cfg(not(target_os = "macos"))]
+    let app_quit_id: Option<tray_icon::menu::MenuId> = None;
+
     let tray_icon = create_tray_icon().ok();
     let mut tray_builder = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
@@ -286,7 +354,7 @@ pub(crate) fn run_window(
                 let active = wifi_manager.toggle();
                 wifi_item.set_checked(active);
                 crate::configure::persist_wifi_mode(&paths, active);
-            } else if menu_ev.id == quit_item.id() {
+            } else if menu_ev.id == quit_item.id() || app_quit_id.as_ref() == Some(&menu_ev.id) {
                 release_jagex_scheme(jagex_scheme_owner.take().as_deref());
                 running.store(false, Ordering::SeqCst);
                 *control_flow = ControlFlow::Exit;
